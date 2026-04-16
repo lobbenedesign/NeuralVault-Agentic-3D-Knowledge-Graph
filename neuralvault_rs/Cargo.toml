@@ -1,0 +1,26 @@
+[package]
+name = "neuralvault_rs"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "neuralvault_rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.21", features = ["extension-module"] }
+rayon = "1.10"
+half = "2.4"
+simsimd = "4.3"
+ordered-float = "4.2"
+numpy = "0.21"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rand = "0.8"
+libc = "0.2"
+
+[profile.release]
+lto = true
+codegen_units = 1
+opt-level = 3
+panic = "abort"

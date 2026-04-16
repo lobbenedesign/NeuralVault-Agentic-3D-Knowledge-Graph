@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            width: 250px;
+            padding: 1rem;
+            background: #0a0a0f;
+            color: #e2e8f0;
+            font-family: 'Segoe UI', sans-serif;
+            border: 1px solid #a855f7;
+        }
+        h3 { color: #a855f7; margin-top: 0; font-size: 0.9rem; }
+        .status { font-size: 0.7rem; margin-bottom: 1rem; color: #4ade80; }
+        textarea {
+            width: calc(100% - 10px);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(168,85,247,0.3);
+            color: white;
+            padding: 5px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            height: 60px;
+        }
+        button {
+            width: 100%;
+            margin-top: 10px;
+            background: #a855f7;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #3b82f6; }
+    </style>
+</head>
+<body>
+    <h3>Aura Bridge</h3>
+    <div class="status">● VAULT CONNECTED (8001)</div>
+    <textarea id="quick-note" placeholder="Quick synapse..."></textarea>
+    <button id="send-btn">SYNAPSE</button>
+    <script src="popup.js"></script>
+</body>
+</html>

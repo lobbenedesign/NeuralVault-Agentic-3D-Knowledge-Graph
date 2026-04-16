@@ -1,0 +1,64 @@
+# 🏺 NEURALVAULT v11.0 — REQUIREMENTS MASTER LIST (ENTERPRISE MESH)
+
+# 🏛️ Core & Math (The Sovereign Engine)
+numpy>=1.24.0
+scipy>=1.10.0
+msgpack>=1.0.5
+pandas>=2.0.0
+pyarrow>=12.0.0          # Parquet Semantic Tier
+lmdb>=1.4.1             # Episodic Cache Tier (Atomic Rocks)
+duckdb>=0.9.0           # SQL Metadata Prefilter & Analytics
+python-dotenv>=1.0.0
+
+# 🏎️ Performance & Rust (Hardened Backend)
+maturin>=1.1.0          # Rust Compiler
+pyo3>=0.19.0            # Python/Rust Bridge
+bm25s>=0.1.8            # Sparse Semantic Search (Hybrid Fusion)
+
+# 🧪 Testing & Benchmarking
+h5py>=3.8.0             # HDF5 Storage for ANN Data 
+scikit-learn>=1.2.0     # Dataset splits and synthetic Generation
+pyyaml>=6.0.0           # Config Loader for Mesh Nodes
+# ansicolors>=1.1.8       # (Optional) Framework CLI Aesthetics
+
+# 🧬 Agentic API & Distributed Mesh
+fastapi>=0.100.0
+uvicorn>=0.22.0
+httpx>=0.24.1           # Gossip Protocol (Node-to-Node)
+pydantic>=2.0.0
+python-multipart>=0.0.6 # File ingestion support
+psutil>=5.9.5           # HW Heartbeat for Mesh Nodes
+
+# 🛡️ Security & Privacy (Pillar 3)
+cryptography>=41.0.0    # Base for Homomorphic operations
+pycryptodome>=3.18.0    # Advanced crypto utilities
+
+# 🌌 AI & Multimodal (Intelligent Ingestion)
+sentence-transformers>=2.2.2  
+transformers>=4.41.0
+torch>=2.0.0            # Acceleration for CLIP/DinoV2 (METAL/MPS support)
+torchvision
+torchaudio
+einops
+timm
+# ImageBind va installata via git: git+https://github.com/facebookresearch/ImageBind.git
+
+# 🎬 Video Forensics & Audio
+opencv-python>=4.8.0
+scenedetect>=0.6.2
+faster-whisper>=1.0.0
+pydub>=0.25.1
+av>=11.0.0
+
+# ── Web Forager (Scraping + OCR + PDF)
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+PyPDF2>=3.0.0
+pdfminer.six>=20221105
+Pillow>=10.0.0
+pytesseract>=0.3.10
+
+# 📊 Telemetry & Dashboard
+rich>=13.4.2
+msgpack-python          # Assicura supporto msgpack completo
+xxhash

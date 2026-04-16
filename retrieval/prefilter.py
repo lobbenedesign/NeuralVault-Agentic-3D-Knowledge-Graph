@@ -1,0 +1,178 @@
+"""
+retrieval/prefilter.py
+───────────────────────
+DuckDB Prefilter: Database relazionale incorporato per pre-filtraggio metadati.
+Permette ricerche SQL-like ultra-veloci (Fisicamente pronti per un milione di nodi).
+"""
+
+import duckdb
+import pandas as pd
+from pathlib import Path
+from typing import List, Dict, Optional
+
+class DuckDBPrefilter:
+    """
+    Motore di ricerca su metadati strutturati (v0.2.5).
+    Responsabile del routing analitico del Query Planner.
+    """
+    def __init__(self, db_path: Optional[Path] = None):
+        if db_path:
+            try:
+                self.con = duckdb.connect(database=str(db_path / "vault_metadata.db"))
+                # [Optimization]: Consolidamento WAL per risparmio spazio
+                self.con.execute("PRAGMA checkpoint_threshold = '512MB';")
+                self.con.execute("CHECKPOINT;")
+                print("🦆 [DuckDB] Hyper-Optimization Active (Checkpoint/WAL consolidation).")
+            except Exception as e:
+                print(f"⚠️ [Prefilter] WAL Conflict or Internal Error: {e}")
+                db_file = str(db_path / "vault_metadata.db")
+                import os
+                wal_path = f"{db_file}.wal"
+                if os.path.exists(wal_path):
+                    try: os.remove(wal_path)
+                    except: pass
+                
+                try:
+                    self.con = duckdb.connect(db_file)
+                except:
+                    print(f"☣️ [Prefilter] Recovery failed. Resetting metadata index.")
+                    try: os.remove(db_file)
+                    except: pass
+                    self.con = duckdb.connect(db_file)
+        else:
+            self.con = duckdb.connect(":memory:")
+            
+        # Creazione schema iniziale (v0.5.0: Synaptic Pillars)
+        self.con.execute("""
+            CREATE TABLE IF NOT EXISTS vault_metadata (
+                id VARCHAR PRIMARY KEY,
+                collection VARCHAR,
+                created_at TIMESTAMP,
+                last_access TIMESTAMP,
+                access_count INTEGER DEFAULT 0,
+                importance DOUBLE DEFAULT 1.0,
+                modality VARCHAR DEFAULT 'text',
+                content_hash VARCHAR,
+                metadata JSON
+            )
+        """)
+        
+        # Migrazione schema se necessario (v0.5.5 Deduplication)
+        try:
+            cols = self.con.execute("PRAGMA table_info('vault_metadata')").fetchall()
+            col_names = [c[1] for c in cols]
+            if 'last_access' not in col_names:
+                print("🧠 [v0.5.0] Migrazione schema: Aggiunta pilastri cognitivi...")
+                self.con.execute("ALTER TABLE vault_metadata ADD COLUMN last_access TIMESTAMP DEFAULT now()")
+                self.con.execute("ALTER TABLE vault_metadata ADD COLUMN access_count INTEGER DEFAULT 1")
+                self.con.execute("ALTER TABLE vault_metadata ADD COLUMN importance DOUBLE DEFAULT 1.0")
+                self.con.execute("ALTER TABLE vault_metadata ADD COLUMN modality VARCHAR DEFAULT 'text'")
+            
+            if 'content_hash' not in col_names:
+                print("🔒 [v0.5.5] Inizializzazione motore di Deduplicazione...")
+                self.con.execute("ALTER TABLE vault_metadata ADD COLUMN content_hash VARCHAR")
+                self.con.execute("CREATE INDEX IF NOT EXISTS idx_content_hash ON vault_metadata(content_hash)")
+        except:
+            pass
+
+        print("🦆 NeuralVault: DuckDB Analytical Engine online.")
+
+    def add_node(self, node_id: str, collection: str, metadata: Dict):
+        """Indicizza un singolo nodo (Fallback)."""
+        import json
+        self.add_nodes_batch([(node_id, collection, metadata)])
+
+    def add_nodes_batch(self, nodes_data: List[tuple]):
+        """Indicizza nodi in batch con supporto cognitivo e transazione atomica (v0.5.2)."""
+        import json
+        
+        # Prepariamo i dati per l'inserimento di massa
+        data_to_insert = []
+        for node_id, collection, metadata in nodes_data:
+            meta_json = json.dumps(metadata)
+            modality = metadata.get("modality", "text")
+            importance = metadata.get("importance", 1.0)
+            c_hash = metadata.get("content_hash")
+            data_to_insert.append((node_id, collection, importance, modality, c_hash, meta_json))
+
+        # Esecuzione in una singola transazione (Turbo Mode)
+        try:
+            self.con.executemany("""
+                INSERT OR REPLACE INTO vault_metadata 
+                (id, collection, created_at, last_access, access_count, importance, modality, content_hash, metadata)
+                VALUES (?, ?, now(), now(), 1, ?, ?, ?, ?)
+            """, data_to_insert)
+        except Exception as e:
+            print(f"⚠️ Errore nel Batch Ingest Prefilter: {e}")
+
+    def check_duplicate(self, content_hash: str) -> Optional[str]:
+        """Controlla se esiste già un nodo con questo hash. Restituisce l'ID del primo duplicato."""
+        if not content_hash: return None
+        res = self.con.execute("SELECT id FROM vault_metadata WHERE content_hash = ? LIMIT 1", (content_hash,)).fetchone()
+        return res[0] if res else None
+
+    def hit_node(self, node_id: str):
+        """Rinforzo sinaptico: Aggiorna l'ultimo accesso e aumenta il conteggio."""
+        self.con.execute(
+            "UPDATE vault_metadata SET last_access = now(), access_count = access_count + 1 WHERE id = ?",
+            (node_id,)
+        )
+
+    def delete(self, node_id: str) -> bool:
+        """Rimuove permanentemente un nodo dai metadati DuckDB."""
+        try:
+            self.con.execute("DELETE FROM vault_metadata WHERE id = ?", (node_id,))
+            return True
+        except Exception as e:
+            print(f"DuckDB Delete Error: {e}")
+            return False
+
+    def filter(self, sql_where: str) -> List[str]:
+        """Esegue una query SQL per trovare gli ID che soddisfano il filtro."""
+        try:
+            # Query ultra-veloce (DuckDB vince su tutto per analytics locale)
+            query = f"SELECT id FROM vault_metadata WHERE {sql_where}"
+            res = self.con.execute(query).fetchall()
+            return [r[0] for r in res]
+        except Exception as e:
+            print(f"⚠️ Errore nel Prefilter SQL: {e}")
+            return []
+
+    def count(self) -> int:
+        return self.con.execute("SELECT count(*) FROM vault_metadata").fetchone()[0]
+
+    def get_knowledge_sources(self) -> List[Dict]:
+        """Raggruppa la conoscenza per sorgente originaria (Analytic Hub)."""
+        try:
+            # Estraiamo 'source' e 'title' dal JSON dei metadati
+            query = """
+                SELECT 
+                    metadata->>'$.source' as source,
+                    metadata->>'$.title' as title,
+                    count(*) as node_count,
+                    min(created_at) as first_seen,
+                    max(created_at) as last_seen
+                FROM vault_metadata
+                GROUP BY source, title
+                ORDER BY first_seen DESC
+            """
+            res = self.con.execute(query).fetchall()
+            sources = []
+            for r in res:
+                sources.append({
+                    "source": r[0] or "Unknown Source",
+                    "title": r[1] or r[0] or "Agent Asset",
+                    "nodes": r[2],
+                    "date": r[3].strftime("%Y-%m-%d %H:%M:%S") if r[3] else "---",
+                    "timestamp": r[3].timestamp() if r[3] else 0
+                })
+            return sources
+        except Exception as e:
+            print(f"⚠️ Errore aggregazione Inventory: {e}")
+            return []
+
+    def close(self):
+        """Chiude la connessione DuckDB in modo sicuro."""
+        if self.con:
+            self.con.close()
+            self.con = None

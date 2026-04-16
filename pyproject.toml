@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "neuralvault"
+version = "0.1.0"
+description = "Agent-native vector database with context graph and adaptive memory tiers"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.6",
+    "httpx>=0.27",
+    "msgpack>=1.0",
+]
+
+[project.optional-dependencies]
+full = [
+    "sentence-transformers>=3.0",    
+    "lmdb>=1.4",                     
+    "pyarrow>=15.0",                 
+    "duckdb>=0.9.0",                 # SQL Metadata Pruning
+    "rich>=13.0",                    # Dashboard
+    "psutil>=5.0",
+]
+ai = [
+    "torch>=2.0",
+    "clip-by-openai>=1.0",           # Multi-modal
+    "torchvision>=0.15",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",
+    "ruff>=0.4",
+    "mypy>=1.9",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
