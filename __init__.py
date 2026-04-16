@@ -210,9 +210,9 @@ class NeuralVaultEngine:
         snapshot_loaded = self.snapshot_engine.load_snapshot()
         
         # 4. Hot Hydration (Dati Nodi -> RAM)
-        # v11.6.8: Carichiamo sempre fino a 5000 nodi recenti per visibilità 3D, 
-        # indipendentemente dal caricamento dello snapshot (che serve per la struttura HNSW).
-        limit = 5000 
+        # v11.6.8: Carichiamo sempre i nodi per visibilità 3D.
+        # Con il backend Rust, possiamo gestire 50.000+ nodi senza rallentamenti.
+        limit = 50000 
         print(f"🕯️ [Boot] Avvio Hot Hydration (Limit: {limit})...")
         
         recent_nodes = self._tiers.get_all_recent(limit=limit)
@@ -591,9 +591,9 @@ class NeuralVaultEngine:
 
         print(f"✅ [Kernel] Engine now contains {len(self._nodes)} active nodes.")
         
-        # v1.2.0: Active Decay Trigger (Expanded to 20k for High-Density Foraging)
-        if len(self._nodes) > 20000:
-            self.apply_cognitive_decay(max_nodes=20000)
+        # v2.2.0: Active Decay Trigger (Expanded to 100k for High-Density Storage)
+        if len(self._nodes) > 100000:
+            self.apply_cognitive_decay(max_nodes=100000)
             
         # v1.3.0: Autonomous Synaptic Discovery Trigger
         self.discover_synapses()
@@ -811,6 +811,8 @@ class NeuralVaultEngine:
         for n in all_nodes[:500]:
             if str(n.id) not in node_positions:
                 continue
+            
+            # 1. Sinapsi Reali (SemanticEdges)
             for edge in (n.edges or []):
                 try:
                     target_id = str(edge.target_id)
@@ -821,10 +823,28 @@ class NeuralVaultEngine:
                             "source_pos": list(node_positions[str(n.id)]),
                             "target_pos": list(node_positions[target_id]),
                             "color": "#ffffff",
+                            "is_aura": False, # Link standard
                             "created_at": time.time()
                         })
-                except Exception:
-                    continue
+                except Exception: continue
+
+            # 2. 🌈 Super-Sinapsi Aura (Code-Doc Bridges)
+            if "code_bridges" in n.metadata:
+                for target_path in n.metadata["code_bridges"]:
+                    # Cerchiamo se esiste un nodo che rappresenta questo file
+                    # Per ora cerchiamo match parziali nell'ID o nel testo
+                    for other_id, other_pos in node_positions.items():
+                        if target_path in other_id or (other_id in self._nodes and target_path in self._nodes[other_id].text):
+                            all_edges.append({
+                                "source": str(n.id),
+                                "target": other_id,
+                                "source_pos": list(node_positions[str(n.id)]),
+                                "target_pos": list(other_pos),
+                                "color": "rainbow", # Placeholder per il frontend
+                                "is_aura": True,    # IL TRIGGER PER IL RGB LED
+                                "created_at": time.time()
+                            })
+                            break
 
         res = {
             "nodes_count": len(self._nodes),

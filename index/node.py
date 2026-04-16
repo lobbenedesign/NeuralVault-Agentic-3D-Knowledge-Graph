@@ -28,6 +28,8 @@ class RelationType(str, Enum):
     SAME_ENTITY  = "same_entity"
     SEQUENTIAL   = "sequential"
     SYNAPSE      = "synapse"
+    CENTROID_OF  = "centroid_of"
+    QUANTUM_LINK = "quantum_link"
 
 
 @dataclass

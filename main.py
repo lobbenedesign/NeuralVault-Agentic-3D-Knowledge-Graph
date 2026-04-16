@@ -260,6 +260,45 @@ def root():
         "docs":    "/docs",
     }
 
+# ─────────────────────────────────────────────
+# Routes: Swarm & Model Hub (v3.0)
+# ─────────────────────────────────────────────
+
+@app.get("/settings/swarm")
+def get_swarm_settings():
+    from utils.settings_manager import SwarmSettingsManager
+    # Usiamo la prima collection come riferimento per il data_dir
+    if not _vaults: return {}
+    vault = next(iter(_vaults.values()))
+    sm = SwarmSettingsManager(vault.data_dir)
+    
+    # Lista modelli installati per la UI
+    import os
+    res = os.popen("ollama list").read()
+    installed = [line.split()[0] for line in res.splitlines()[1:] if line.strip()]
+    
+    return {
+        "settings": sm.get_all(),
+        "available_models": installed
+    }
+
+@app.post("/settings/swarm")
+def update_swarm_settings(req: dict):
+    from utils.settings_manager import SwarmSettingsManager
+    if not _vaults: return {"error": "No collections"}
+    vault = next(iter(_vaults.values()))
+    sm = SwarmSettingsManager(vault.data_dir)
+    
+    if "routing" in req:
+        sm.update_routing(req["routing"])
+    
+    # Aggiorna anche altri campi se presenti
+    if "agents" in req:
+        sm.settings["agents"].update(req["agents"])
+        sm._save(sm.settings)
+        
+    return {"updated": True}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -119,8 +119,8 @@ class SovereignWebForager:
 
     def __init__(
         self,
-        max_depth: int = 5,
-        max_pages: int = 500,
+        max_depth: int = 10,
+        max_pages: int = 5000,
         rate_limit_sec: float = 0.2,
         same_domain_only: bool = True,
         timeout_sec: float = 20.0,

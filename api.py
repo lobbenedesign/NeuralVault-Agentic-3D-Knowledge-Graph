@@ -1394,12 +1394,17 @@ async def sse_stream(request: Request):
 
         # KEEPALIVE INIZIALE: invia subito il conteggio nodi (senza SVD) per evitare timeout del browser
         try:
+            # v2.7.6: Fetch immediate stats for zero-latency initial rendering
+            initial_stats = engine.stats(limit=10000)
             initial_data = {
-                "points": [], "links": [],
+                "points": initial_stats.get("point_cloud", []),
+                "links": initial_stats.get("edge_sample", []),
                 "nodes_count": len(engine._nodes),
-                "edges_count": 0,
+                "edges_count": initial_stats.get("edges_count", 0),
                 "storage": {"total": "...", "pulse": "SYNCING"},
-                "lab": {}, "system": {}, "agent007": {"entities_count": 0, "relations_count": 0}
+                "lab": app.state.lab.get_status() if hasattr(app.state, 'lab') else {}, 
+                "system": {}, 
+                "agent007": {"entities_count": 0, "relations_count": 0}
             }
             yield f"data: {json.dumps(initial_data)}\n\n"
             print(f"📡 [SSE] Keepalive inviato: {len(engine._nodes)} nodi")

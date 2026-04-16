@@ -395,6 +395,12 @@ function animate() {
         cube.material.opacity = 0.2 + Math.abs(Math.sin(time * 0.5)) * 0.1;
     }
     
+    // 🧬 [v15.0] AURA-RGB Rainbow Cycle
+    if (window._auraMat) {
+        const hue = (time * 0.2) % 1.0; // Ciclo completo ogni 5 secondi
+        window._auraMat.color.setHSL(hue, 0.8, 0.6);
+    }
+
     if (renderer && scene && camera) {
         renderer.render(scene, camera);
     }
@@ -618,6 +624,23 @@ function updateThreeScene(nodes, links = []) {
     // 2. Rendering Link (Rete Neurale)
     if (links && links.length > 0) {
         const lineMat = new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.15 });
+        
+        // 🌈 [v15.0] AURA-RGB MATERIAL
+        if (!window._auraMat) {
+            window._auraMat = new THREE.LineBasicMaterial({ 
+                color: 0xffffff, 
+                transparent: true, 
+                opacity: 0.8,
+                linewidth: 2 // Nota: linewidth > 1 funziona solo su alcuni driver
+            });
+        }
+        
+        if (!window.auraLinks) {
+            window.auraLinks = new THREE.Group();
+            scene.add(window.auraLinks);
+        }
+        window.auraLinks.clear();
+
         links.forEach(l => {
             if (l.source_pos && l.target_pos) {
                 const points = [
@@ -625,8 +648,14 @@ function updateThreeScene(nodes, links = []) {
                     new THREE.Vector3(l.target_pos[0], l.target_pos[1], l.target_pos[2])
                 ];
                 const geo = new THREE.BufferGeometry().setFromPoints(points);
-                const line = new THREE.Line(geo, lineMat);
-                neuralLinks.add(line);
+                
+                if (l.is_aura) {
+                    const line = new THREE.Line(geo, window._auraMat);
+                    window.auraLinks.add(line);
+                } else {
+                    const line = new THREE.Line(geo, lineMat);
+                    neuralLinks.add(line);
+                }
             }
         });
     }
@@ -1235,18 +1264,33 @@ function initSSE() {
                 if (data.lab.blackboard) {
                     const miniLog = document.getElementById('agent-mini-log');
                     if (miniLog) {
-                        const currentMsgs = Array.from(miniLog.children).map(c => c.innerHTML);
+                        // v24.3.12: Clear initial placeholder
+                        if (miniLog.innerText.includes("Probing synaptic grid...")) miniLog.innerHTML = '';
+                        
+                        const currentMessages = Array.from(miniLog.children).map(c => c.getAttribute('data-sig') || c.innerText);
+                        
                         data.lab.blackboard.forEach(signal => {
-                            const timeStr = signal.timestamp ? new Date(signal.timestamp * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-                            const color = signal.sender_id?.includes("JANITRON") ? "#facc15" : "#a855f7";
-                            const entryHTML = `<span style="color:#6e7681;">[${timeStr}]</span> <span style="color:${color}; font-weight:bold;">[${signal.sender_id}]</span> ${signal.msg}`;
-                            
-                            if (!currentMsgs.some(m => m.includes(signal.msg.substring(0, 20)))) {
+                            const sigId = `${signal.sender_id}_${signal.timestamp || Date.now()}`;
+                            if (!currentMessages.includes(sigId)) {
+                                const timeStr = signal.timestamp ? new Date(signal.timestamp * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                                
+                                let color = "#a855f7";
+                                if (signal.sender_id?.includes("JANITRON") || signal.sender_id === "JA-001") color = "#facc15";
+                                if (signal.sender_id?.includes("REAPER") || signal.sender_id === "RP-001") color = "#ef4444";
+                                if (signal.sender_id?.includes("SNAKE") || signal.sender_id === "SN-008") color = "#10b981";
+                                if (signal.sender_id?.includes("QUANTUM") || signal.sender_id === "QA-101") color = "#3b82f6";
+                                if (signal.sender_id?.includes("SYNTH") || signal.sender_id === "SY-009") color = "#f472b6";
+                                if (signal.sender_id?.includes("SENTINEL") || signal.sender_id === "SE-007") color = "#a855f7";
+                                
                                 const entry = document.createElement('div');
-                                entry.innerHTML = entryHTML;
-                                entry.style.marginBottom = "4px";
+                                entry.setAttribute('data-sig', sigId);
+                                entry.style.marginBottom = "6px";
+                                entry.style.borderLeft = `2px solid ${color}`;
+                                entry.style.paddingLeft = "8px";
+                                entry.innerHTML = `<span style="color:#6e7681; font-size:0.45rem;">[${timeStr}]</span> <span style="color:${color}; font-weight:bold;">${signal.sender_id}:</span> ${signal.msg}`;
+                                
                                 miniLog.prepend(entry);
-                                if (miniLog.children.length > 30) miniLog.lastElementChild.remove();
+                                if (miniLog.children.length > 25) miniLog.lastElementChild.remove();
                             }
                         });
                     }
@@ -1335,7 +1379,7 @@ function renderLabSwarm(agents) {
     if (!grid) return;
     if (!agents) return;
 
-    grid.innerHTML = Object.entries(agents).map(([id, a]) => {
+    let html = Object.entries(agents).map(([id, a]) => {
         if (!a || !a.identity) return ''; 
         return `
             <div class="agent-card-v2" onclick="openAgentConsole('${id}')">
@@ -1350,6 +1394,18 @@ function renderLabSwarm(agents) {
             </div>
         `;
     }).join('');
+
+    // v2.7.6: Add Custom Agent Factory Shortcut
+    html += `
+        <div class="agent-card-v2" onclick="openCustomAgentModal()" style="border: 2px dashed rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; min-height: 100px; cursor: pointer; background: transparent;">
+            <div style="text-align: center;">
+                <i class="fas fa-plus-circle" style="font-size: 1.2rem; color: #8b949e; margin-bottom: 0.3rem;"></i>
+                <div style="font-size: 0.5rem; color: #8b949e; font-weight: 800; letter-spacing: 1px;">FACTORY</div>
+            </div>
+        </div>
+    `;
+    
+    grid.innerHTML = html;
     
     window._latestAgents = agents;
     checkMissionHolds(agents);
@@ -1730,8 +1786,11 @@ function initLab3D() {
     const container = document.getElementById('lab-three-container');
     if (!container) return;
     
-    // Clear previous
-    container.innerHTML = '<canvas id="lab-canvas" style="width:100%; height:100%; cursor: move;"></canvas>';
+    const canvas = document.getElementById('lab-canvas');
+    if (!canvas) {
+        container.innerHTML = '<canvas id="lab-canvas" style="width:100%; height:100%; cursor: move;"></canvas>';
+    }
+    const targetCanvas = document.getElementById('lab-canvas');
     
     labScene = new THREE.Scene();
     const width = container.clientWidth || 600;
@@ -1741,8 +1800,7 @@ function initLab3D() {
     labCamera.position.set(300000, 300000, 300000);
     labCamera.lookAt(0, 0, 0);
 
-    const canvas = document.getElementById('lab-canvas');
-    labRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    labRenderer = new THREE.WebGLRenderer({ canvas: targetCanvas, antialias: true, alpha: true });
     labRenderer.setSize(width, height);
     labRenderer.setClearColor(0x000000, 0);
 
@@ -2501,9 +2559,26 @@ window.showSection = (s) => {
         initNets();
         setTimeout(() => { if(cy) { cy.resize(); updateNets(vaultPoints); } }, 100);
     }
+    if (s === 'overview') {
+        const overviewContainer = document.getElementById('memory-graph-container');
+        // v2.7.6: Force Resize and Refresh to prevent 3D disappearance
+        if (renderer && overviewContainer) {
+            const w = overviewContainer.clientWidth;
+            const h = overviewContainer.clientHeight;
+            if (w > 0 && h > 0) {
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+                // Trigger an immediate frame if animate isn't enough
+                renderer.render(scene, camera);
+            }
+        }
+    }
+    
     if (s === 'lab') {
-        initLab3D();
-        renderAgentSwarm();
+        if (!labRenderer) initLab3D();
+        // Use latest agents received from SSE for immediate consistency
+        if (window._latestAgents) renderLabSwarm(window._latestAgents);
     }
 
     // Aggiorna navigazione
@@ -2586,68 +2661,7 @@ const DEFAULT_AGENTS = [
     { name: "JANITRON", role: "Mechanical Chomp", icon: "fa-trash-alt", color: "#facc15", bio: "Il mangiatore meccanico: pulisce i nodi obsoleti e mantiene il Vault leggero." }
 ];
 
-function renderAgentSwarm() {
-    const grid = document.getElementById('agent-grid');
-    if (!grid) return;
-    
-    // Recupera anche eventuali agenti custom salvati
-    fetch('/api/intelligence/status', { headers: { 'X-API-KEY': VAULT_KEY }})
-    .then(r => r.json())
-    .then(data => {
-        let html = '';
-        
-        // 1. Agenti Predefiniti
-        DEFAULT_AGENTS.forEach(a => {
-            html += createAgentCard(a, false);
-        });
-        
-        // 2. Agenti Custom (dal Lab Orchestrator)
-        if (data.custom_agents) {
-            Object.entries(data.custom_agents).forEach(([name, config]) => {
-                html += createAgentCard({
-                    name: name,
-                    role: config.role || "Custom Specialist",
-                    icon: "fa-user-cog",
-                    color: config.color || "#00ffcc",
-                    bio: config.prompt || "Agente creato dall'utente."
-                }, true);
-            });
-        }
-        
-        // 3. Bottone ADD CUSTOM
-        html += `
-            <div class="agent-card" onclick="openCustomAgentModal()" style="border: 2px dashed rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; min-height: 120px; cursor: pointer; transition: 0.3s;">
-                <div style="text-align: center;">
-                    <i class="fas fa-plus-circle" style="font-size: 1.5rem; color: #8b949e; margin-bottom: 0.5rem;"></i>
-                    <div style="font-size: 0.6rem; color: #8b949e; font-weight: 800;">ADD CUSTOM AGENT</div>
-                </div>
-            </div>
-        `;
-        
-        grid.innerHTML = html;
-    });
-}
-
-function createAgentCard(a, isCustom) {
-    return `
-        <div class="agent-card" style="position: relative; padding: 1rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; transition: 0.3s; cursor: pointer;">
-            <div style="display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem;">
-                <div style="width: 35px; height: 35px; border-radius: 50%; background: ${a.color}20; border: 1px solid ${a.color}; display: flex; align-items: center; justify-content: center; color: ${a.color};">
-                    <i class="fas ${a.icon}"></i>
-                </div>
-                <div>
-                    <div style="font-size: 0.75rem; font-weight: 800; color: #fff;">${a.name}</div>
-                    <div style="font-size: 0.55rem; color: ${a.color}; font-weight: 900; letter-spacing: 1px;">${a.role.toUpperCase()}</div>
-                </div>
-            </div>
-            <p style="font-size: 0.6rem; color: #8b949e; line-height: 1.4; margin-bottom: 1rem;">${a.bio.slice(0, 60)}...</p>
-            <div style="display: flex; gap: 0.5rem;">
-                <button onclick="dispatchAgentAction('${a.name}')" style="flex: 1; background: ${a.color}; color: white; border: none; padding: 0.3rem; border-radius: 6px; font-size: 0.6rem; font-weight: 900; cursor: pointer;">DISPATCH</button>
-                ${isCustom ? `<button onclick="deleteCustomAgent('${a.name}')" style="background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; padding: 0.3rem; border-radius: 6px; font-size: 0.6rem; cursor: pointer;"><i class="fas fa-trash"></i></button>` : ''}
-            </div>
-        </div>
-    `;
-}
+// [v2.7.6] Agents consolidated in renderLabSwarm
 
 function dispatchAgentAction(agentName) {
     log(`🛰️ [Dispatch] Segnale inviato a ${agentName}. In attesa di sintonizzazione...`, "#3b82f6");
@@ -2702,7 +2716,7 @@ async function saveCustomAgent() {
         if (r.ok) {
             log(`🧬 Agente "${name}" creato con successo Factory.`, "#4ade80");
             closeCustomAgentModal();
-            renderAgentSwarm();
+            // SSE will update the grid automatically
         }
     } catch (e) { log("Errore creazione agente custom.", "#ef4444"); }
 }
@@ -2715,7 +2729,7 @@ async function deleteCustomAgent(name) {
             headers: { 'X-API-KEY': VAULT_KEY }
         });
         if (r.ok) {
-            renderAgentSwarm();
+            // SSE will update the grid automatically
         }
     } catch (e) {}
 }
@@ -2999,6 +3013,22 @@ async function createCustomAgent() {
 }
 
 // Global Exports
+window.toggleMissionControl = function() {
+    const mc = document.getElementById('right-mission-control');
+    const icon = document.getElementById('mc-toggle-icon');
+    
+    if (mc) {
+        mc.classList.toggle('collapsed');
+        const isCollapsed = mc.classList.contains('collapsed');
+        
+        if (icon) {
+            icon.className = isCollapsed ? 'fas fa-chevron-left' : 'fas fa-chevron-right';
+        }
+        
+        log(`📊 Mission Control ${isCollapsed ? 'STANDBY' : 'ACTIVE'}`, isCollapsed ? "#8b949e" : "#a855f7");
+    }
+};
+
 window.toggleFollow = toggleFollow;
 window.openAuditLedger = openAuditLedger;
 window.closeAuditLedger = closeAuditLedger;
@@ -3007,3 +3037,164 @@ window.enableAutoPilotFromModal = enableAutoPilotFromModal;
 window.openAgentFactory = openAgentFactory;
 window.closeAgentFactory = closeAgentFactory;
 window.createCustomAgent = createCustomAgent;
+// 🧠 [v3.0.0] SWARM MODEL HUB CONTROLLER
+async function loadSwarmSettings() {
+    try {
+        const resp = await fetch('/settings/swarm');
+        const data = await resp.json();
+        const settings = data.settings;
+        const available = data.available_models || [];
+
+        // Populate all swarm selects
+        const selects = ['route-audit', 'route-extraction', 'route-crossref', 'route-synthesis'];
+        selects.forEach(id => {
+            const select = document.getElementById(id);
+            if (!select) return;
+            select.innerHTML = '';
+            
+            // Add preferred model from settings if it exists
+            const task = id.replace('route-', '');
+            const current = settings.routing[task === 'crossref' ? 'foraging_analysis' : task] || 'llama3.2';
+
+            available.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                if (m === current) opt.selected = true;
+                select.appendChild(opt);
+            });
+        });
+
+        log("🧠 Model Hub: Settings Synced.", "#a855f7");
+    } catch (e) {
+        console.error("Failed to load swarm settings", e);
+    }
+}
+
+async function saveSwarmRouting() {
+    const payload = {
+        routing: {
+            audit: document.getElementById('route-audit').value,
+            entity_extraction: document.getElementById('route-extraction').value,
+            foraging_analysis: document.getElementById('route-crossref').value,
+            synthesis: document.getElementById('route-synthesis').value
+        }
+    };
+
+    try {
+        const resp = await fetch('/settings/swarm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (resp.ok) {
+            log("✅ Swarm Configuration Saved & Propagated.", "#10b981");
+            alert("Configurazione salvata con successo. Gli agenti utilizzeranno i nuovi parametri al prossimo compito.");
+        }
+    } catch (e) {
+        log("❌ Failed to save swarm configuration.", "#ef4444");
+    }
+}
+
+// 🧩 SETTINGS NAVIGATION (v3.5)
+window.switchSettingsTab = (tab) => {
+    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.settings-content').forEach(c => c.style.display = 'none');
+    
+    const targetTab = document.querySelector(`.settings-tab[onclick*="${tab}"]`);
+    if (targetTab) targetTab.classList.add('active');
+    
+    const targetContent = document.getElementById(`tab-${tab}`);
+    if (targetContent) targetContent.style.display = 'block';
+    
+    if (tab === 'hub') refreshModels();
+};
+
+window.refreshModels = async () => {
+    const tbody = document.getElementById('model-hub-table-body');
+    if (!tbody) return;
+    
+    try {
+        const r = await fetch('/api/models/status', { headers: { 'X-API-KEY': VAULT_KEY }});
+        const data = await r.json();
+        
+        if (!data.models || data.models.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem; color:#8b949e;">Nessun modello rilevato. Assicurati che Ollama sia attivo.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = data.models.map(m => {
+            const isInstalled = m.status === 'installed' || m.size > 0;
+            const sizeGB = m.size ? (m.size / (1024*1024*1024)).toFixed(2) + " GB" : "N/D";
+            
+            // Hardcoded synergy logic for visual fidelity based on archetype
+            let synergy = "Standard";
+            if (m.name.includes("deepseek")) synergy = "High (Logic)";
+            if (m.name.includes("llama")) synergy = "Extreme (General)";
+            if (m.name.includes("mistral")) synergy = "Optimal (RAG)";
+
+            return `
+                <tr>
+                    <td style="font-family:'JetBrains Mono'; font-weight:800;">${m.name}</td>
+                    <td>
+                        <span style="color: ${isInstalled ? '#10b981' : '#facc15'}; font-size: 0.6rem; font-weight:900;">
+                            <i class="fas ${isInstalled ? 'fa-check-circle' : 'fa-cloud-download-alt'}"></i> 
+                            ${isInstalled ? 'ATTIVO' : 'DISPONIBILE'}
+                        </span>
+                    </td>
+                    <td><span style="color:#8b949e;">${sizeGB}</span></td>
+                    <td><span class="synergy-badge">${synergy}</span></td>
+                    <td>
+                        <div style="display:flex; gap:0.5rem;">
+                            ${isInstalled ? 
+                                `<button onclick="deleteModel('${m.name}')" style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; color:#ef4444; padding:0.3rem 0.6rem; border-radius:4px; font-size:0.5rem; cursor:pointer;"><i class="fas fa-trash"></i> DELETE</button>` :
+                                `<button onclick="installModel('${m.name}')" style="background:rgba(59,130,246,0.1); border:1px solid #3b82f6; color:#3b82f6; padding:0.3rem 0.6rem; border-radius:4px; font-size:0.5rem; cursor:pointer;"><i class="fas fa-download"></i> INSTALL</button>`
+                            }
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (e) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:2rem; color:#ef4444;">Errore nel recupero del catalogo.</td></tr>';
+    }
+};
+
+window.deleteModel = async (name) => {
+    if (!confirm(`Sei sicuro di voler eliminare definitivamente il modello ${name}?`)) return;
+    try {
+        const r = await fetch(`/api/models/delete/${encodeURIComponent(name)}`, { 
+            method: 'DELETE',
+            headers: { 'X-API-KEY': VAULT_KEY }
+        });
+        if (r.ok) {
+            log(`🗑️ Modello ${name} eliminato.`, "#ef4444");
+            refreshModels();
+        }
+    } catch (e) { log("Errore durante l'eliminazione del modello.", "#ef4444"); }
+};
+
+window.installModel = async (name) => {
+    log(`📥 Avvio installazione modello ${name}...`, "#3b82f6");
+    try {
+        const r = await fetch('/api/models/install', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-KEY': VAULT_KEY },
+            body: JSON.stringify({ model_name: name })
+        });
+        if (r.ok) {
+            log(`⚙️ Segnale di installazione inviato per ${name}. Monitora il sistema.`, "#a855f7");
+            refreshModels();
+        }
+    } catch (e) { log("Errore durante l'avvio dell'installazione.", "#ef4444"); }
+};
+
+// [Final Override Sync]
+const originalShowSection = window.showSection;
+window.showSection = function(id) {
+    if (id === 'settings') {
+        loadSwarmSettings();
+        switchSettingsTab('swarm'); // Reset to default tab
+    }
+    if (typeof originalShowSection === 'function') originalShowSection(id);
+};

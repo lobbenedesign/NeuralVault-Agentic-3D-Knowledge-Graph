@@ -1,55 +1,54 @@
-"""
-retrieval/bridge.py — [v0.5.0 Multi-Sensory Latent Bridge]
-────────────────────────────────────────────────────────
-Permette il Cross-Modal alignment tra Testo, Immagini e Audio.
-Usa matrici di proiezione (Semantic Hooks) per unificare gli spazi vettoriali.
-"""
-
+import os
+import hashlib
+from pathlib import Path
+from typing import List, Dict
 import numpy as np
-import torch
-import torch.nn as nn
-
-class SemanticHook(nn.Module):
-    """Piccolo MLP (Hook) per proiettare una modalità nello spazio unificato."""
-    def __init__(self, in_dim: int, out_dim: int):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(in_dim, 512),
-            nn.GELU(),
-            nn.Linear(512, out_dim)
-        )
-    
-    def forward(self, x):
-        return self.net(x)
 
 class LatentBridge:
-    """Orchestra l'allineamento cross-modale (v0.5.0) con risoluzione dinamica."""
-    def __init__(self, unified_dim: int = 1024):
-        self.unified_dim = unified_dim
-        # Registro degli hook inizializzati on-demand per gestire dimensioni variabili
-        self._hooks = nn.ModuleDict()
-    
-    def _get_hook(self, modality: str, in_dim: int) -> SemanticHook:
-        key = f"{modality}_{in_dim}"
-        if key not in self._hooks:
-            print(f"🌉 [Bridge] Inizializzazione Hook: {modality} ({in_dim} -> {self.unified_dim})")
-            self._hooks[key] = SemanticHook(in_dim, self.unified_dim)
-        return self._hooks[key]
+    """🔗 [Super-Synapse] Collega la documentazione web al codice sorgente locale.
+    Ridenominato da CodeDocBridger per compatibilità con il Kernel v0.5.0.
+    """
+    def __init__(self, vault=None, project_root=None, **kwargs):
+        self.vault = vault
+        # Se project_root non è fornito, cerchiamo di indovinarlo o usiamo la cartella corrente
+        self.project_root = Path(project_root) if project_root else Path(".").absolute()
+        self.code_signatures = self._scan_codebase()
+        self.unified_dim = kwargs.get("unified_dim", 1024)
 
-    def align(self, vector: np.ndarray, modality: str) -> np.ndarray:
-        """Proietta il vettore originale nello spazio unificato della Mesh."""
-        # Se il vettore è 1D, prendiamo la sua lunghezza
-        in_dim = vector.shape[0] if len(vector.shape) == 1 else vector.shape[1]
-        hook = self._get_hook(modality, in_dim)
+    def _scan_codebase(self) -> Dict[str, Path]:
+        signatures = {}
+        for ext in ['*.py', '*.md', '*.rs', '*.js']:
+            for path in self.project_root.rglob(ext):
+                if 'venv' in str(path) or '.git' in str(path): continue
+                try:
+                    content = path.read_text()
+                    for line in content.splitlines():
+                        if 'class ' in line or 'def ' in line:
+                            parts = line.split('(')
+                            if len(parts) > 0:
+                                name = parts[0].replace('class', '').replace('def', '').strip()
+                                if len(name) > 3:
+                                    signatures[name.lower()] = path
+                except: pass
+        return signatures
+
+    def bridge_nodes(self, vault=None) -> int:
+        target_vault = vault or self.vault
+        if not target_vault: return 0
         
-        with torch.no_grad():
-            tensor_v = torch.from_numpy(vector).float()
-            # Se batch dimension manca, la aggiungiamo
-            was_1d = len(tensor_v.shape) == 1
-            if was_1d: tensor_v = tensor_v.unsqueeze(0)
-            
-            aligned = hook(tensor_v).numpy()
-            
-            if was_1d: aligned = aligned.squeeze(0)
-            
-        return aligned
+        bridges_created = 0
+        recent_nodes = [nid for nid, node in target_vault._nodes.items() 
+                        if node.metadata.get("origin") == "web_forager"]
+        
+        for nid in recent_nodes:
+            node = target_vault._nodes[nid]
+            text_lower = node.text.lower()
+            for sig, path in self.code_signatures.items():
+                if sig in text_lower:
+                    rel_path = str(path.relative_to(self.project_root))
+                    if "code_bridges" not in node.metadata:
+                        node.metadata["code_bridges"] = []
+                    if rel_path not in node.metadata["code_bridges"]:
+                        node.metadata["code_bridges"].append(rel_path)
+                        bridges_created += 1
+        return bridges_created

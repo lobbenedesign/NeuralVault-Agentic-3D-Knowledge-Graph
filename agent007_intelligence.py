@@ -87,16 +87,20 @@ class Agent007Intelligence:
                 TESTO: {text}
                 """
                 
-                # v2.9.0: DYNAMIC MODEL ROUTING & BENCHMARKING
-                import os, time
+                # v3.0.0: SWARM-ROUTED MODEL SELECTION
+                from utils.settings_manager import SwarmSettingsManager
+                settings = SwarmSettingsManager(self.engine.data_dir if self.engine else Path("./data"))
+                selected_model = settings.get_model("entity_extraction")
+                
+                # Verifica se il modello è effettivamente installato
                 res = os.popen("ollama list").read()
                 installed = [line.split()[0] for line in res.splitlines()[1:] if line.strip()]
                 
-                # Strategia Ensemble: Preferiamo llama3.2, poi mistral, poi phi3, altrimenti il primo disponibile
-                selected_model = "llama3.2" if "llama3.2:latest" in installed or "llama3.2" in installed else \
-                                 ("mistral" if "mistral:latest" in installed or "mistral" in installed else \
-                                 ("phi3" if "phi3:latest" in installed or "phi3" in installed else \
-                                 (installed[0] if installed else "llama3")))
+                if not any(selected_model in m for m in installed):
+                    print(f"⚠️ [Agent007] Modello configurato '{selected_model}' non trovato. Fallback Ensemble.")
+                    if any("deepseek-v3" in m for m in installed): selected_model = "deepseek-v3"
+                    elif any("llama3.2" in m for m in installed): selected_model = "llama3.2"
+                    else: selected_model = installed[0] if installed else "llama3"
                 
                 start_time = time.time()
                 # Timeout rimosso per permettere code di elaborazione (utile per grossi batch web)

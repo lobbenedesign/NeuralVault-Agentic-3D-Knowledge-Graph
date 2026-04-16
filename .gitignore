@@ -24,6 +24,7 @@ vault_data/
 *.log
 backup/
 Dashboard-BACKUP/
+Dashboard_BACKUP/
 .checkpoints/
 .snapshots/
 
