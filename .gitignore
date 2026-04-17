@@ -28,6 +28,17 @@ Dashboard_BACKUP/
 .checkpoints/
 .snapshots/
 
+# LLM & Large Binary Models
+models/
+**/*.bin
+**/*.gguf
+**/*.onnx
+**/*.pt
+**/*.h5
+**/*.joblib
+**/*.model
+node_modules/
+
 # System Files
 .DS_Store
 Thumbs.db
@@ -45,4 +56,6 @@ PROJECT_AUDIT_REPORT.md
 V0.3.0_FINAL_AUDIT.md
 MULTIMODAL_FUTURE_IDEAS.md
 MATH_SPEC.md
+*copy.md
+*BACKUP*.md
 

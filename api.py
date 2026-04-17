@@ -438,12 +438,12 @@ async def install_model(request: Request, background_tasks: BackgroundTasks, api
     import shutil
     
     data = await request.json()
-    model_name = data.get("model")
+    model_name = data.get("model", "").strip()
     
     # 🧬 HARDWARE DNA CHECK
     os_name = platform.system()
-    arch = platform.machine() # arm64, x86_64, etc.
-    print(f"🧠 [Auto-Installer] Platform Detected: {os_name} {arch}")
+    arch = platform.machine()
+    print(f"🧠 [Auto-Installer] Platform: {os_name} {arch} | Requested Model: '{model_name}'")
 
     if model_name in install_progress and install_progress[model_name]["status"] == "pulling":
         return {"status": "already_installing", "model": model_name}
@@ -533,8 +533,8 @@ async def install_model(request: Request, background_tasks: BackgroundTasks, api
                             })
 
             # 3. Post-Pull Verification
-            async with httpx.AsyncClient() as client:
-                v_resp = await client.get("http://localhost:11434/api/tags")
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                v_resp = await client.get("http://127.0.0.1:11434/api/tags")
                 if v_resp.status_code == 200:
                     models = [m["name"] for m in v_resp.json().get("models", [])]
                     # Check both exact match and without :latest
@@ -744,33 +744,42 @@ async def get_models_status(api_key: str = Depends(get_api_key)):
     installed = []
     seen_in_api = set()
 
-    # 1. Check via API (Ollama) - Metodo primario
-    try:
-        async with httpx.AsyncClient(timeout=2.0) as client:
-            r = await client.get("http://localhost:11434/api/tags")
-            if r.status_code == 200:
-                data = r.json()
-                for m in data.get("models", []):
-                    size_gb = round(m.get("size", 0) / (1024**3), 2)
-                    name = m.get("name")
-                    cat_info = MODEL_CATALOG.get(name)
-                    # Fallback intelligente: prova a cercare senza tag :latest
-                    if not cat_info and ":" in name:
-                        base_name = name.split(":")[0]
-                        cat_info = MODEL_CATALOG.get(f"{base_name}:latest")
-                    
-                    if not cat_info:
-                        cat_info = {"pros": "Modello Utente", "cons": "N/D", "synergy": [], "category": "Custom"}
-
-                    installed.append({
-                        "name": name,
-                        "size": f"{size_gb}GB",
-                        "metadata": cat_info,
-                        "source": "Ollama API"
-                    })
-                    seen_in_api.add(name)
-    except Exception as e:
-        print(f"⚠️ [Ollama API] Offline, procedo con scansione autonoma del disco... ({e})")
+    # 1. Check via API (Ollama) - Metodo primario (Stabilized v2.9.1)
+    # Tenta sia 127.0.0.1 che localhost per massimizzare la compatibilità su Mac
+    ollama_urls = [os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434"), "http://localhost:11434"]
+    
+    for url in ollama_urls:
+        if seen_in_api: break # Se abbiamo già popolato via il primo URL, non procedere
+        try:
+            # Aumentiamo il timeout per gestire i cold-start dei modelli su Apple Silicon
+            async with httpx.AsyncClient(timeout=45.0) as client:
+                r = await client.get(f"{url.rstrip('/')}/api/tags")
+                if r.status_code == 200:
+                    data = r.json()
+                    for m in data.get("models", []):
+                        name = m.get("name")
+                        size_gb = round(m.get("size", 0) / (1024**3), 2)
+                        
+                        # Arricchimento dal catalogo sovrano
+                        cat_info = MODEL_CATALOG.get(name)
+                        if not cat_info and ":" in name:
+                            cat_info = MODEL_CATALOG.get(name.split(":")[0] + ":latest")
+                        
+                        if not cat_info:
+                            cat_info = {"pros": "Modello Utente", "cons": "N/D", "synergy": [], "category": "Custom"}
+                        
+                        installed.append({
+                            "name": name,
+                            "size": m.get("size", 0), # Raw bytes for frontend calculation
+                            "status": "installed",
+                            "metadata": cat_info,
+                            "source": f"Ollama API ({url})"
+                        })
+                        seen_in_api.add(name)
+                    print(f"✅ [Ollama] Sincronizzato con successo via {url}")
+        except Exception as e:
+            if url == ollama_urls[-1] and not seen_in_api:
+                print(f"⚠️ [Ollama API] Offline su {url} ({type(e).__name__}: {e})")
 
     # 2. Scansione Autonoma (Verifica se ci sono modelli non visti dall'API o API offline)
     local_discoveries = await _autonomous_model_scan()
@@ -1384,113 +1393,90 @@ async def sse_stream(request: Request):
     last_size = get_dir_size(v_initial)
 
     async def event_generator():
-        nonlocal last_size
-        t_limit = request.query_params.get("t_limit")
+        last_size = 0
         try:
-            t_limit = float(t_limit) if t_limit else None
-        except: t_limit = None
-
-        print("🔌 [SSE] Client connesso — avvio stream telemetria")
-
-        # KEEPALIVE INIZIALE: invia subito il conteggio nodi (senza SVD) per evitare timeout del browser
-        try:
-            # v2.7.6: Fetch immediate stats for zero-latency initial rendering
-            initial_stats = engine.stats(limit=10000)
+            # 1. KEEPALIVE / INITIAL SYNC
+            loop = asyncio.get_event_loop()
+            stats = await loop.run_in_executor(None, engine.stats, 10000)
             initial_data = {
-                "points": initial_stats.get("point_cloud", []),
-                "links": initial_stats.get("edge_sample", []),
+                "points": stats.get("point_cloud", []),
+                "links": stats.get("edge_sample", []),
                 "nodes_count": len(engine._nodes),
-                "edges_count": initial_stats.get("edges_count", 0),
-                "storage": {"total": "...", "pulse": "SYNCING"},
+                "edges_count": stats.get("edges_count", 0),
+                "storage": {"total": "INIT", "pulse": "SYNCING"},
                 "lab": app.state.lab.get_status() if hasattr(app.state, 'lab') else {}, 
                 "system": {}, 
                 "agent007": {"entities_count": 0, "relations_count": 0}
             }
-            yield f"data: {json.dumps(initial_data)}\n\n"
-            print(f"📡 [SSE] Keepalive inviato: {len(engine._nodes)} nodi")
-        except Exception as e:
-            print(f"⚠️ [SSE/init] {e}")
-
-        while True:
-            if await request.is_disconnected():
-                print("🔌 [SSE] Client disconnesso")
-                break
-
-            try:
-                # 1. Telemetria Storage & Crescita
-                v_path = engine.data_dir if engine else Path("./data")
-                current_size = get_dir_size(v_path)
-                growth = current_size - last_size
-                last_size = current_size
-                
-                size_mb = round(current_size / (1024 * 1024), 2)
-                storage_hud = {
-                    "total": f"{size_mb} MB" if size_mb < 1024 else f"{round(size_mb/1024, 2)} GB",
-                    "pulse": f"+{round(growth/1024, 1)} KB" if growth > 0 else "STABLE",
-                    "vault_path": str(v_path)
-                }
-
-                # 2. Telemetria 3D – FUORI dal lock
-                points = []
-                links = []
-                try:
-                    loop = asyncio.get_event_loop()
-                    stats = await loop.run_in_executor(None, engine.stats)
-                    points = stats.get("point_cloud", [])
-                    links = stats.get("edge_sample", [])
-                except Exception as e:
-                    print(f"⚠️ [SSE/Stats] {e}")
-
-                # 3. Metriche leggere – dentro il lock
-                async with engine_lock:
-                    nodes_count = len(engine._nodes)
-                    edges_count = sum(len(n.edges) for n in engine._nodes.values())
-                    lab_status = app.state.lab.get_status()
-                    cpu_percent = psutil.cpu_percent(percpu=True)
-                    ram = psutil.virtual_memory()
-
-                    data = {
-                        "points": points,
-                        "links": links,
-                        "nodes_count": nodes_count,
-                        "edges_count": edges_count,
-                        "storage": storage_hud,
-                        "lab": {
-                            "weather": lab_status.get("weather", {}),
-                            "agents": lab_status.get("agents", {}),
-                            "custom_agents": lab_status.get("custom_agents", {}),
-                            "distiller": lab_status.get("distiller", {}),
-                            "janitor": lab_status.get("janitor", {}),
-                            "blackboard": lab_status.get('blackboard', [])[-12:]
-                        },
-                        "system": {
-                            "cpu": {"cores": cpu_percent, "overall": sum(cpu_percent)/len(cpu_percent)},
-                            "ram": {"used": ram.percent, "total": ram.total},
-                            "compute_mode": "WARP" if torch.backends.mps.is_available() else "SUSTAINED",
-                            "hardware_dna": f"APPLE-{platform.machine()}",
-                            "embedding_engine": "BGE-M3 (LOCAL)",
-                            "ai_intelligence": {
-                                "model": "Llama 3.2 (Neural-8B)",
-                                "quantization": "TurboQuant 4-bit",
-                                "learning_status": "ONLINE (Synaptic Reinforcement)",
-                                "inference_speed": f"{round(random.uniform(15, 25), 1)} tok/s"
-                            }
-                        }
-                    }
-                    data["agent007"] = {"entities_count": 0, "relations_count": 0}
-                    try:
-                        data["agent007"]["entities_count"] = engine.agent007.con.execute("SELECT count(*) FROM agent007_entities").fetchone()[0]
-                        data["agent007"]["relations_count"] = engine.agent007.con.execute("SELECT count(*) FROM agent007_relations").fetchone()[0]
-                    except: pass
-
-                    yield f"data: {json.dumps(data, default=json_serializer)}\n\n"
-
-            except Exception as e:
-                print(f"⚠️ [SSE/Loop] {e}")
-                yield f"data: {json.dumps({'status': 'RECOVERING', 'error': str(e)})}\n\n"
-                await asyncio.sleep(2)
+            yield f"data: {json.dumps(initial_data, default=json_serializer)}\n\n"
             
-            await asyncio.sleep(1.0)
+            while True:
+                if await request.is_disconnected():
+                    break
+
+                try:
+                    # 2. Storage Metrics
+                    v_path = engine.data_dir if engine else Path("./data")
+                    current_size = get_dir_size(v_path)
+                    growth = current_size - last_size
+                    last_size = current_size
+                    
+                    size_mb = round(current_size / (1024 * 1024), 2)
+                    storage_hud = {
+                        "total": f"{size_mb} MB" if size_mb < 1024 else f"{round(size_mb/1024, 2)} GB",
+                        "pulse": f"+{round(growth/1024, 1)} KB" if growth > 0 else "STABLE"
+                    }
+
+                    # 3. 3D Engine Stats (Offloaded)
+                    try:
+                        stats = await loop.run_in_executor(None, engine.stats)
+                    except: stats = {}
+                    
+                    # 4. Neural Lab & System Status
+                    async with engine_lock:
+                        lab_status = app.state.lab.get_status() if hasattr(app.state, 'lab') else {}
+                        cpu_percent = psutil.cpu_percent(percpu=True)
+                        ram = psutil.virtual_memory()
+
+                        # 🕵️ Agent007 Hardbank (Protect from DB Locks)
+                        a007_data = {"entities_count": 0, "relations_count": 0}
+                        try:
+                            if hasattr(engine, 'agent007') and engine.agent007:
+                                ent = engine.agent007.con.execute("SELECT count(*) FROM agent007_entities").fetchone()[0]
+                                rel = engine.agent007.con.execute("SELECT count(*) FROM agent007_relations").fetchone()[0]
+                                a007_data = {"entities_count": ent, "relations_count": rel}
+                        except Exception as e:
+                            print(f"🕵️ [Agent007/DB] {e}")
+
+                        data = {
+                            "points": stats.get("point_cloud", []),
+                            "links": stats.get("edge_sample", []),
+                            "nodes_count": len(engine._nodes),
+                            "edges_count": stats.get("edges_count", 0),
+                            "storage": storage_hud,
+                            "lab": lab_status,
+                            "system": {
+                                "cpu": {"cores": cpu_percent, "overall": sum(cpu_percent)/len(cpu_percent)},
+                                "ram": {"used": ram.percent, "total": ram.total},
+                                "hardware_dna": f"APPLE-{platform.machine()}",
+                                "ai_intelligence": {
+                                    "model": "Llama 3.2 (Neural-8B)",
+                                    "quantization": "TurboQuant 4-bit",
+                                    "inference_speed": f"{round(random.uniform(15, 25), 1)} tok/s"
+                                }
+                            },
+                            "agent007": a007_data
+                        }
+                        yield f"data: {json.dumps(data, default=json_serializer)}\n\n"
+
+                except Exception as e:
+                    print(f"⚠️ [SSE/Loop] {e}")
+                    yield f"data: {json.dumps({'status': 'RECOVERING'})}\n\n"
+                    await asyncio.sleep(2)
+                
+                await asyncio.sleep(1.0)
+        finally:
+            print("🔌 [SSE] Stream telemetria terminato pulitamente.")
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -1513,6 +1499,15 @@ async def update_config(req: ConfigUpdateRequest):
         app.state.lab.settings.update(req.key, req.value)
         return {"status": "success", "settings": app.state.lab.settings.settings}
     return JSONResponse(status_code=500, content={"message": "Lab not initialized"})
+
+@app.get("/api/audit/ledger")
+async def get_audit_ledger(full: bool = False, key: str = Depends(get_api_key)):
+    """[Chrono-Log] Recupera l'intera mission history degli agenti."""
+    if hasattr(app.state, 'lab'):
+        if full and hasattr(app.state.lab, 'archiver'):
+            return app.state.lab.archiver.history
+        return app.state.lab.get_audit_ledger()
+    return []
 
 # 🏛️ MISSION CONTROL & ORACLE ENDPOINTS (v10.6)
 class MissionResolution(BaseModel):
@@ -1590,4 +1585,5 @@ async def consult_oracle(req: Dict[str, str], key: str = Depends(get_api_key)):
         }
 
 if __name__ == "__main__":
+    print("🚀 [BOOT-TRACE-77i] CARICAMENTO CORE NEURALE v2.7.6...")
     uvicorn.run(app, host="0.0.0.0", port=8001, log_level="warning")

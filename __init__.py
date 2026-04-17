@@ -190,6 +190,7 @@ class NeuralVaultEngine:
         # v1.0.0 Enterprise: Ledger Initializer (Immutability)
         self.ledger = SovereignLedger()
         
+        self._synaptic_cursor = 0; # v17.0: Global scan cursor
         print("🕵️ Agent007-march: Sovereign Intelligence Engine ONLINE.")
         print("🏛️ Agent007-Blueprint: Mission Architect READY.")
         print("🏛️ Sovereign Ledger: Integrity Chain ACTIVE.")
@@ -807,8 +808,8 @@ class NeuralVaultEngine:
             except Exception:
                 continue
 
-        # ── Costruzione Sinapsi (limite 500 nodi per prestazioni UI) ──────
-        for n in all_nodes[:500]:
+        # ── Costruzione Sinapsi (limite 2000 nodi per visibilità strutturale) ──────
+        for n in all_nodes[:2000]:
             if str(n.id) not in node_positions:
                 continue
             
@@ -877,34 +878,42 @@ class NeuralVaultEngine:
             
         print(f"✅ [Decay] Memory optimized. Current active: {len(self._nodes)}")
 
-    def discover_synapses(self, threshold: float = 0.85):
+    def discover_synapses(self, threshold: float = 0.88):
         """
-        v1.3.0: Autonomous Synaptic Discovery
-        Scans active nodes for latent semantic connections.
+        v17.0: Global Neural Scan Protocol
+        Cycles through the entire vault in throttled batches to ensure NO node is ignored.
         """
-        nodes = list(self._nodes.values())
-        if len(nodes) < 2: return
+        if not self._nodes: return
+        node_list = list(self._nodes.values())
+        total = len(node_list)
+        batch_size = 50
         
-        # Prendiamo gli ultimi 20 nodi per una scansione proattiva (performance optimization)
-        recent = nodes[-20:]
+        # 1. Select the current window for this heart-beat
+        start = self._synaptic_cursor % total
+        batch = node_list[start : start + batch_size]
+        self._synaptic_cursor += batch_size
+        
+        # 2. Global Comparison (Throttled sampling against the broad mesh)
+        global_sample = random.sample(node_list, min(total, 200))
         found_links = 0
         
-        for i, node_a in enumerate(recent):
-            for node_b in recent[i+1:]:
-                # Evitiamo auto-link o link già esistenti
+        for node_a in batch:
+            if node_a.vector is None: continue
+            for node_b in global_sample:
                 if node_a.id == node_b.id: continue
                 if any(e.target_id == node_b.id for e in node_a.edges): continue
                 
-                # Calcolo similarità coseno
-                if node_a.vector is not None and node_b.vector is not None:
-                    sim = np.dot(node_a.vector, node_b.vector) / (np.linalg.norm(node_a.vector) * np.linalg.norm(node_b.vector))
+                if node_b.vector is not None:
+                    # Cosine Similarity
+                    sim = np.dot(node_a.vector, node_b.vector) / (np.linalg.norm(node_a.vector) * np.linalg.norm(node_b.vector) + 1e-9)
                     if sim > threshold:
                         node_a.add_edge(node_b.id, RelationType.SYNAPSE, weight=float(sim))
+                        # Bidirectional reinforcement
                         node_b.add_edge(node_a.id, RelationType.SYNAPSE, weight=float(sim))
                         found_links += 1
         
         if found_links > 0:
-            print(f"🧬 [Auto-Linker] Discovered {found_links} latent synapses.")
+            print(f"🧬 [Global-Scan] Cursor: {start}/{total} | New Links: {found_links}")
 
     def _query_internal(self, query_text, query_vector, intent, **kwargs):
         k = kwargs.get('k', 10)

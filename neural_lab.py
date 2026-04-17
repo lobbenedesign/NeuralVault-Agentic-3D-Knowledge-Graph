@@ -52,6 +52,23 @@ class SynapticSignal:
         self.motivation = motivation
         self.savings = savings
 
+class SovereignHistoryArchiver:
+    def __init__(self, data_dir: str):
+        self.log_path = Path(data_dir) / "audit_ledger.json"
+        self.history = self._load()
+    def _load(self):
+        if self.log_path.exists():
+            try:
+                with open(self.log_path, "r") as f: return json.load(f)
+            except: pass
+        return []
+    def record(self, entry: Dict):
+        self.history.insert(0, entry)
+        if len(self.history) > 1000: self.history.pop() # Global history cap
+        try:
+            with open(self.log_path, "w") as f: json.dump(self.history, f, indent=2)
+        except: pass
+
 class NeuralBlackboard:
     def __init__(self, vault_engine=None):
         self.vault = vault_engine
@@ -110,6 +127,7 @@ class JanitorAgent:
         self.target_node = None
         self.mode = "Interviewing"
         self.last_eat_time = 0; self.eaten_count = 0
+        self.survey_cycles = 0 # 🛡️ Pause between tasks
 
     def get_xyz(self, n):
         x = getattr(n, 'x', n.metadata.get('x'))
@@ -142,11 +160,17 @@ class JanitorAgent:
                 "savings": "0.15 MB (Binary Header Recovery)"
             }
             self.mode = "Interviewing"; self.target_node = None
+            self.survey_cycles = 15 # ⚡ Survey phase
             return report
 
         # 2. Semantic Discernment: Find suitable targets (Orphans or Fragments)
         if not self.target_node or self.target_node not in nodes:
-            # 🛡️ v24.3.9: Critically filter for nodes that deserve elimination
+            # 🛡️ Survey before finding new mission
+            if self.survey_cycles > 0:
+                self.survey_cycles -= 1
+                self.status = "Surveying Grid Patterns..."
+                return None
+            
             # Target nodes with 0 synapses (Orphans) or 1 synapse (Isolated Fragments)
             candidates = [nid for nid, node in nodes.items() if len(node.edges) <= 1]
             
@@ -261,11 +285,25 @@ class SnakeAgent:
                     if hasattr(self, 'blackboard') and self.blackboard:
                         sig = SynapticSignal("SN-008", AgentRole.RESEARCHER, f"Deleted {self.processed} synaptic orphans", SignalType.SYSTEM_NOTIFICATION)
                         self.blackboard.post(sig)
+                    return {
+                        "agent": "SN-008",
+                        "action": "Orphan Digestion",
+                        "target_id": "Synaptic-Mesh",
+                        "motivation": "Removing high-entropy orphan nodes to clarify local graph topology.",
+                        "savings": "Reduced Graph Density"
+                    }
 
-        # Kinetic Arcade Movement (Random Walk)
-        self.pos["x"] += random.uniform(-15000, 15000)
-        self.pos["y"] += random.uniform(-10000, 10000)
-        self.pos["z"] += random.uniform(-15000, 15000)
+        # Kinetic Arcade Movement (Large Exploratory Walk)
+        step = 40000
+        self.pos["x"] += random.uniform(-step, step)
+        self.pos["y"] += random.uniform(-step, step)
+        self.pos["z"] += random.uniform(-step, step)
+
+        # Space bounds cleanup
+        limit = 1800000
+        for k in ["x", "y", "z"]:
+            if self.pos[k] > limit: self.pos[k] = limit
+            if self.pos[k] < -limit: self.pos[k] = -limit
         return None
 
 class ReaperAgent:
@@ -274,34 +312,81 @@ class ReaperAgent:
         self.vault = vault
         self.identity = {"id": "RP-001", "name": "Dr.-Reaper", "role": "Storage Surgeon", "archetype": "guardian"}
         self.pos = {"x": 500000.0, "y": -200000.0, "z": 500000.0}
-        self.target_pos = {"x": 500000.0, "y": -200000.0, "z": 500000.0}
+        self.target_node = None
         self.status = "Monitoring Storage..."
         self.processed = 0.0
         self.blackboard = None
+        self.patrol_cycles = 0 # 🛰️ Mandatory orbit cycles after surgery
+
+    def get_xyz(self, n):
+        x = getattr(n, 'x', n.metadata.get('x'))
+        y = getattr(n, 'y', n.metadata.get('y'))
+        z = getattr(n, 'z', n.metadata.get('z'))
+        if x is None:
+            import hashlib
+            seed = int(hashlib.md5(str(n.id).encode()).hexdigest()[:8], 16)
+            rng = np.random.RandomState(seed + 99) 
+            p_vec = rng.uniform(-1, 1, 3); p_vec /= (np.linalg.norm(p_vec) + 1e-6)
+            x, y, z = p_vec * 1200000
+        return float(x), float(y), float(z)
 
     def calculate_movement(self, nodes: dict):
+        if not nodes: return None
         now = time.time()
-        # 🧪 v24.3.11: REAL TELEMETRY BRIDGE
-        if hasattr(self.vault, '_tiers') and hasattr(self.vault._tiers, 'episodic'):
-            new_val = round(self.vault._tiers.episodic.reclaimed_mb, 2)
-            if new_val > self.processed and self.blackboard:
-                diff = round(new_val - self.processed, 2)
-                sig = SynapticSignal("RP-001", AgentRole.RESEARCHER, f"Reclaimed {diff} MB from episodic logs", SignalType.SYSTEM_NOTIFICATION)
-                self.blackboard.post(sig)
-            self.processed = new_val
-            
-        # Movement logic (Steady cruise)
-        if random.random() < 0.05:
-            self.target_pos = {
-                "x": (random.random()-0.5) * 1200000,
-                "y": (random.random()-0.5) * 1000000,
-                "z": (random.random()-0.5) * 1200000
-            }
         
-        step = 0.04
-        self.pos['x'] += (self.target_pos['x'] - self.pos['x']) * step
-        self.pos['y'] += (self.target_pos['y'] - self.pos['y']) * step
-        self.pos['z'] += (self.target_pos['z'] - self.pos['z']) * step
+        # 🧪 Surgical Logic: Find Tombstones (Isolated nodes)
+        if not hasattr(self, 'target_node') or not self.target_node or self.target_node not in nodes:
+            # 🛰️ Enforce Patrol Cycles if just finished surgery
+            if self.patrol_cycles > 0:
+                self.patrol_cycles -= 1
+                self.target_node = None
+                self.status = "Patrolling High-Orbit..."
+            else:
+                candidates = [nid for nid, node in nodes.items() if len(node.edges) == 0]
+                if not candidates: candidates = [nid for nid, node in nodes.items() if len(node.edges) <= 1]
+                if candidates:
+                    self.target_node = random.choice(candidates)
+                    self.status = f"Heading to Tombstone {self.target_node[:8]}"
+                else:
+                    self.target_node = None
+                    self.status = "Patrolling High-Orbit"
+        
+        if self.target_node:
+            tx, ty, tz = self.get_xyz(nodes[self.target_node])
+            step = 0.08
+            self.pos['x'] += (tx - self.pos['x']) * step
+            self.pos['y'] += (ty - self.pos['y']) * step
+            self.pos['z'] += (tz - self.pos['z']) * step
+            
+            dist = ((self.pos['x']-tx)**2 + (self.pos['y']-ty)**2 + (self.pos['z']-tz)**2)**0.5
+            if dist < 50000:
+                # Arrived! Trigger Healing
+                self.status = f"Sanitizing {self.target_node[:8]}"
+                res = {
+                    "agent": "RP-001",
+                    "action": "Storage Surgery",
+                    "target_id": self.target_node,
+                    "motivation": f"Sanitized orphan node {self.target_node[:8]} to optimize graph traversal.",
+                    "savings": "+0.05 MB (Index Cleanup)"
+                }
+                self.processed += 0.05
+                self.target_node = None # Search for new tombstone
+                self.patrol_cycles = 40 # ⚡ Rest phase
+                return res
+        else:
+            # 🛸 3D PATROL LOGIC
+            # 🛸 3D PATROL LOGIC
+            # Random walk in 3D space
+            step = 30000
+            self.pos['x'] += random.uniform(-step, step)
+            self.pos['y'] += random.uniform(-step, step)
+            self.pos['z'] += random.uniform(-step, step)
+    
+            # Keep within bounds (approx. 2.5M units)
+            limit = 1800000
+            for k in ['x', 'y', 'z']:
+                if self.pos[k] > limit: self.pos[k] = limit
+                if self.pos[k] < -limit: self.pos[k] = -limit
         return None
 
 class SynthAgent:
@@ -402,6 +487,7 @@ class NeuralLabOrchestrator:
         self.engine = engine; self.vault = engine
         self.blackboard = NeuralBlackboard(engine)
         self.wisdom = CollectiveIntelligence(engine.data_dir)
+        self.archiver = SovereignHistoryArchiver(engine.data_dir)
         self.mission_history = []
         self.settings = SwarmSettingsManager(engine.data_dir) # Ripristinato v24.3 Fix
         from retrieval.bridge import LatentBridge
@@ -442,7 +528,10 @@ class NeuralLabOrchestrator:
                     if res_q: self._process_agent_action(res_q)
                     res_sent = self.sentinel.calculate_movement(nodes)
                     if res_sent: self._process_agent_action(res_sent)
-                    self.reaper.calculate_movement(nodes)
+                    res_r = self.reaper.calculate_movement(nodes)
+                    if res_r: self._process_agent_action(res_r)
+                    res_s = self.snake.calculate_movement(nodes)
+                    if res_s: self._process_agent_action(res_s)
                     
                     # 🔗 [Super-Synapse] Bridge Discovery (Ogni 30 secondi)
                     if time.time() - self.last_bridge_time > 30:
@@ -558,6 +647,9 @@ class NeuralLabOrchestrator:
         # 📂 [v16.1] Finalize registration in mission history with all dynamic reasons/savings
         self.mission_history.insert(0, audit_entry)
         if len(self.mission_history) > 100: self.mission_history.pop()
+        
+        if hasattr(self, 'archiver'):
+            self.archiver.record(audit_entry)
 
     def get_orchestra_report(self) -> Dict:
         return {
@@ -620,3 +712,4 @@ class NeuralLabOrchestrator:
 
     def get_status(self) -> Dict: return self.get_orchestra_report()
     def get_audit_ledger(self) -> List[Dict]: return self.mission_history
+
