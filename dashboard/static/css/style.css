@@ -1,5 +1,6 @@
 /* 🏺 AURA NEXUS | Gold Split Architecture (65/35) */
 .hidden { display: none !important; }
+.force-hide-modal { opacity: 0 !important; pointer-events: none !important; transition: opacity 0.5s ease; }
 
 :root {
     --bg-dark: #020617;
@@ -19,6 +20,11 @@ body {
     overflow: hidden; height: 100vh;
     display: grid;
     grid-template-rows: 65vh 35vh; /* THE GOLDEN SPLIT */
+    transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.full-height-mode {
+    grid-template-rows: 100vh 0vh;
 }
 
 /* 🏮 TOP SECTION (65%) */
@@ -32,6 +38,7 @@ body {
     background: rgba(2, 6, 23, 0.95); backdrop-filter: blur(20px);
     border-right: 1px solid rgba(255,255,255,0.05); padding: 1.5rem;
     display: flex; flex-direction: column;
+    transition: height 0.4s ease;
 }
 
 
@@ -75,7 +82,7 @@ body {
 
 .lab-workspace {
     display: grid;
-    grid-template-columns: 1fr 340px;
+    grid-template-columns: 1fr 420px;
     gap: 1.5rem;
     height: 100%;
     overflow: hidden;
@@ -151,6 +158,40 @@ body {
     letter-spacing: 1px;
 }
 
+.settings-tab {
+    background: transparent;
+    border: none;
+    color: #8b949e;
+    padding: 0.8rem 1.5rem;
+    font-size: 0.65rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    text-transform: uppercase;
+}
+
+.settings-tab:hover {
+    color: #fff;
+}
+
+.settings-tab.active {
+    color: #a855f7 !important;
+    background: rgba(168, 85, 247, 0.05);
+}
+
+.settings-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: #a855f7;
+    box-shadow: 0 0 15px #a855f7;
+}
+
 .agent-status-badge {
     font-size: 0.5rem;
     padding: 2px 8px;
@@ -201,6 +242,7 @@ body {
     gap: 0;
     position: relative; /* Anchor for absolute children like Node Inspector */
     min-height: 0;
+    height: 100%;
 }
 
 .view-container {
@@ -210,13 +252,14 @@ body {
     flex-direction: column;
     min-height: 0;
     position: relative;
-    overflow: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
 }
 
 #overview-view {
-    max-width: 1400px;
-    margin: 0 auto;
-    width: 98%; /* Center with small side gutters */
+    width: 100%;
+    height: 100%;
+    flex: 1;
 }
 
 #memory-graph-container {
@@ -452,31 +495,60 @@ body {
 }
 
 .agent-mission-item {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
-    padding: 8px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 12px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    transition: 0.3s;
+    gap: 15px;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 12px; /* Spaziatura tra i rettangoli */
 }
 
 .agent-mission-item:hover {
-    background: rgba(168, 85, 247, 0.1);
-    border-color: #a855f7;
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(168, 85, 247, 0.4);
+    transform: translateX(-5px);
 }
 
-.inactive-agent { opacity: 0.6; filter: grayscale(0.5); }
+.inactive-agent { 
+    opacity: 0.45; 
+    filter: grayscale(0.8) blur(0.5px); 
+    transform: scale(0.98);
+}
 
 .followed-agent {
     background: rgba(168, 85, 247, 0.2) !important;
-    border: 1px solid #a855f7 !important;
-    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
-    animation: agentPulse 2s infinite ease-in-out;
+    border: 2px solid #a855f7 !important;
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.5) !important;
+    animation: agentPulseGlow 2s infinite ease-in-out !important;
     opacity: 1 !important;
     filter: none !important;
+    transform: scale(1.02) !important;
+}
+
+/* 🎨 Colorazione Icone Attive */
+.followed-agent .space-invader-hud, 
+.followed-agent .pacman-hud, 
+.followed-agent .reaper-mario-hud, 
+.followed-agent .snake-hud, 
+.followed-agent .quantum-hud, 
+.followed-agent .sentinel-hud, 
+.followed-agent .synth-spark-hud, 
+.followed-agent .bridger-hud {
+    filter: drop-shadow(0 0 5px #a855f7) brightness(1.5) !important;
+    background-color: #a855f7 !important; /* Per icone basate su background-color */
+    border-color: #a855f7 !important;
+}
+
+@keyframes agentPulseGlow {
+    0% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.3); }
+    50% { box-shadow: 0 0 30px rgba(168, 85, 247, 0.6); }
+    100% { box-shadow: 0 0 10px rgba(168, 85, 247, 0.3); }
 }
 
 .layer-item {
@@ -505,4 +577,84 @@ body {
     0% { transform: scale(1); box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); }
     50% { transform: scale(1.02); box-shadow: 0 0 20px rgba(168, 85, 247, 0.5); }
     100% { transform: scale(1); box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); }
+}
+/* 📊 ANALYTICS & STAT CARDS (v2.8) */
+.glass-card {
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(168, 85, 247, 0.3);
+    transform: translateY(-2px);
+}
+
+.stat-card {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 1.5rem;
+    position: relative;
+    overflow: visible;
+}
+
+.stat-card h3 {
+    font-size: 0.7rem;
+    color: var(--accent-purple);
+    font-weight: 800;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stat-card canvas {
+    max-height: 250px;
+    width: 100% !important;
+}
+
+/* 🧬 Swarm Mission HUD Tweaks */
+.agent-mission-item.followed-agent {
+    border-left: 4px solid var(--accent-purple);
+    background: rgba(168, 85, 247, 0.15);
+}
+
+/* 🤖 AGENT INTELLIGENCE BUTTON (?) */
+.agent-info-btn {
+    width: 20px !important;
+    height: 20px !important;
+    background: rgba(168, 85, 247, 0.1) !important;
+    border: 1px solid rgba(168, 85, 247, 0.3) !important;
+    color: #a855f7 !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    font-size: 0.65rem !important;
+    position: relative;
+    z-index: 10;
+}
+
+.agent-info-btn:hover {
+    background: #a855f7 !important;
+    color: white !important;
+    transform: scale(1.2) rotate(15deg) !important;
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.6) !important;
+}
+
+/* 🧬 ACTIVE STATE FORCED OVERRIDE */
+.followed-agent {
+    background: rgba(168, 85, 247, 0.2) !important;
+    border: 2px solid #a855f7 !important;
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.5) !important;
+    animation: agentPulseGlow 2s infinite ease-in-out !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: scale(1.02) !important;
 }

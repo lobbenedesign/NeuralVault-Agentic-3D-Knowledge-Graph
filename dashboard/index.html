@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="NeuralVault: Sovereign Cognitive Fabric & 3D Knowledge Graph powered by local LLMs and Apple Silicon.">
+    <meta name="keywords" content="NeuralVault, Agentic AI, Knowledge Graph, 3D Nebula, Local LLM, Sovereign Intelligence">
+    <meta name="author" content="NeuralVault Core">
     <title>Aura Nexus | NeuralVault Sovereign v2.7.7</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css?v=2.7.7">
@@ -12,153 +15,75 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.21.1/cytoscape.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        #mc-wrapper {
+        /* 🎭 SYMMETRIC HUD ORCHESTRATION (v10.5) */
+        #mc-wrapper, #nav-guide-tab {
             position: absolute !important;
-            right: 0px !important;
-            bottom: -150px !important;
-            z-index: 5500;
+            bottom: 30px !important; /* Symmteric alignment with Cycloscope UI */
+            z-index: 30000;
             display: flex;
             flex-direction: row;
             align-items: flex-end; 
-            gap: 0px !important;
             transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-            transform: translateX(calc(100% - 35px)); 
-        }
-
-        #nav-guide-tab {
-            position: absolute !important;
-            left: 0px !important;
-            bottom: 50px !important;
-            z-index: 5500;
-            display: flex;
-            flex-direction: row;
-            align-items: flex-end;
-            transition: all 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-            transform: translateX(0);
-        }
-
-        #nav-guide-tab.collapsed {
-            transform: translateX(calc(-100% + 35px));
-        }
-
-        #nav-guide-toggle {
-            width: 35px;
-            height: 80px;
-            background: #a855f7;
-            border: 1px solid rgba(168, 85, 247, 0.5);
-            border-left: none;
-            border-radius: 0 12px 12px 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: white;
-            z-index: 9999;
-            transition: 0.3s;
-            margin-bottom: 180px; /* SYNCED with right toggle height after parent lift */
-            box-shadow: 5px 0 15px rgba(168, 85, 247, 0.3);
-        }
-
-        #mc-wrapper.active {
-            bottom: -150px !important; /* Stay submerged */
-            transform: translateX(0) !important;
-        }
-
-        #mission-control-toggle {
-            width: 35px;
-            height: 80px;
-            background: #a855f7 !important;
-            border: 1px solid rgba(168, 85, 247, 0.5);
-            border-right: none;
-            border-radius: 12px 0 0 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: white;
-            z-index: 9999 !important;
-            transition: 0.3s;
-            margin-right: -1px;
-            margin-bottom: 380px; /* INCREASED: Keeps the toggle at the same visual height as before */
-            box-shadow: -5px 0 15px rgba(168, 85, 247, 0.3);
-        }
-
-        #node-sidebar {
-            position: absolute !important;
-            right: 2rem !important;
-            top: 10rem !important;
-            z-index: 9999 !important; /* Always on top */
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
-        }
-
-        #node-sidebar.hidden {
-            transform: translateX(450px);
-            opacity: 0;
             pointer-events: none;
         }
 
-        #mission-control-toggle:hover {
-            background: #a855f7;
-            padding-right: 5px;
+        #nav-guide-tab { left: 0px !important; transform: translateX(calc(-100% + 32px)); pointer-events: none !important; }
+        #nav-guide-tab.active { transform: translateX(0) !important; pointer-events: all !important; }
+
+        #mc-wrapper { right: 0px !important; transform: translateX(calc(100% - 32px)); pointer-events: none !important; }
+        #mc-wrapper.active { transform: translateX(0) !important; pointer-events: all !important; }
+
+        #nav-guide-toggle, #mission-control-toggle {
+            pointer-events: all !important;
         }
 
-        #mc-wrapper.collapsed #mission-control-toggle {
-            left: -42px;
-            background: rgba(15, 23, 42, 0.9);
-            border-color: #a855f7;
+        .symmetric-bar {
+            width: 340px;
+            height: 420px;
+            background: rgba(13, 17, 23, 0.98);
+            backdrop-filter: blur(35px);
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 0 0 60px rgba(0,0,0,0.9);
+            pointer-events: all;
+            border-radius: 15px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(168, 85, 247, 0.5) transparent;
         }
 
-        .mission-control-bar.mission-collapsed .mission-header,
-        .mission-control-bar.mission-collapsed .agent-missions-list,
-        .mission-control-bar.mission-collapsed .mission-log-box {
-            opacity: 0;
-            pointer-events: none;
+        #cycloscope-hud {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            width: fit-content;
+            max-width: 90%;
+            z-index: 25000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            pointer-events: all;
+            transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
         }
 
-        @keyframes pulse-red {
-            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-        }
-        @keyframes agentPulse {
-            0% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); }
-            50% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
-            100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); }
-        }
-        .agent-card:hover {
-               box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
-            transform: translateY(-5px);
-        }
-        /* iOS Switch Toggle (v3.0) */
-        .ios-switch { position: relative; display: inline-block; width: 34px; height: 18px; }
-        .ios-switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); transition: .4s; border-radius: 34px; border: 1px solid rgba(255,255,255,0.05); }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 2px; bottom: 1px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        input:checked + .slider { background-color: #a855f7; }
-        input:checked + .slider:before { transform: translateX(16px); }
-
-        /* 🛸 DISTILLER HUD ANIMATION (v2.6) */
-        @keyframes alienBlink {
-            0% { opacity: 0.3; filter: drop-shadow(0 0 0px #a855f7); }
-            50% { opacity: 1; filter: drop-shadow(0 0 10px #a855f7); }
-            100% { opacity: 0.3; filter: drop-shadow(0 0 0px #a855f7); }
-        }
-        .distiller-active {
-            animation: alienBlink 0.8s infinite;
-            color: #a855f7 !important;
-        }
-        /* 🟡 PAC-MAN HUD ICON (v3.0) */
-        .janitor-active {
-            filter: drop-shadow(0 0 8px #facc15);
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            #cycloscope-hud { scale: 0.8; bottom: 15px; }
+            .symmetric-bar { width: 300px; height: 350px; }
         }
 
-        /* 👾 AGENT HUD ICONS (v9.0: Pixel Art & State Logic) */
+        /* 👾 AGENT HUD ICONS (v11.0: Sovereign Sprites) */
         .pacman-hud {
             width: 22px; height: 22px;
             background: #facc15;
             border-radius: 50%;
             position: relative;
-            /* Bocca aperta fissa (v9.0) */
             clip-path: polygon(100% 0%, 100% 25%, 50% 50%, 100% 75%, 100% 100%, 0% 100%, 0% 0%);
             transition: 0.3s;
         }
@@ -167,14 +92,10 @@
             width: 24px; height: 18px;
             background: #a855f7;
             position: relative;
-            /* Alieno 8-bit (v9.0) */
-            clip-path: polygon(
-                15% 0%, 25% 0%, 25% 15%, 75% 15%, 75% 0%, 85% 0%, 85% 30%, 100% 30%, 100% 60%, 85% 60%, 85% 100%, 70% 100%, 70% 75%, 30% 75%, 30% 100%, 15% 100%, 15% 60%, 0% 60%, 0% 30%, 15% 30%
-            );
+            clip-path: polygon(15% 0%, 25% 0%, 25% 15%, 75% 15%, 75% 0%, 85% 0%, 85% 30%, 100% 30%, 100% 60%, 85% 60%, 85% 100%, 70% 100%, 70% 75%, 30% 75%, 30% 100%, 15% 100%, 15% 60%, 0% 60%, 0% 30%, 15% 30%);
             transition: 0.3s;
         }
 
-        /* Dr. Reaper HUD Icon & Animation */
         .reaper-mario-hud {
             width: 24px; height: 26px;
             background: #1e293b;
@@ -190,7 +111,7 @@
 
         .medical-cross-hud {
             width: 14px; height: 14px;
-            background: #ef4444; /* Rosso Base */
+            background: #ef4444;
             position: relative;
             clip-path: polygon(33% 0%, 66% 0%, 66% 33%, 100% 33%, 100% 66%, 66% 66%, 66% 100%, 33% 100%, 33% 66%, 0% 66%, 0% 33%, 33% 33%);
         }
@@ -203,159 +124,202 @@
             box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
         }
 
-        .reaper-flash {
-            animation: pulse-reaper 0.6s ease-out;
+        .quantum-hud {
+            width: 22px; height: 22px;
+            background: #3b82f6;
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%, 20% 50%, 50% 20%, 80% 50%, 50% 80%, 20% 50%);
+            animation: pulse-quantum 2s infinite ease-in-out;
         }
 
-        @keyframes pulse-reaper {
-            0% { background: #fff; transform: scale(1.1); box-shadow: 0 0 20px #fff; }
-            50% { background: #ef4444; }
-            100% { background: #1e293b; transform: scale(1); }
+        .sentinel-hud {
+            width: 20px; height: 24px;
+            background: #ef4444;
+            clip-path: polygon(0% 0%, 100% 0%, 100% 70%, 50% 100%, 0% 70%);
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
-        .agent-mission-item.inactive-agent div.pacman-hud,
-        .agent-mission-item.inactive-agent div.space-invader-hud,
-        .agent-mission-item.inactive-agent div.reaper-mario-hud,
-        .agent-mission-item.inactive-agent i {
-            background: #4b5563 !important; /* Grigio scuro */
+        .synth-spark-hud {
+            width: 22px; height: 22px;
+            background: #a855f7;
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            animation: spark-rotation 4s infinite linear;
+        }
+
+        .bridger-hud {
+            width: 24px; height: 26px;
+            background: #3b82f6;
+            position: relative;
+            /* Standing Bridge / Arch Structure */
+            clip-path: polygon(10% 100%, 10% 20%, 30% 0%, 70% 0%, 90% 20%, 90% 100%, 75% 100%, 75% 40%, 25% 40%, 25% 100%);
+            transition: 0.3s;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        }
+
+        @keyframes error-shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+        .error-shake { animation: error-shake 0.4s ease-in-out; border-bottom: 2px solid #ef4444 !important; }
+        .force-hide-modal { display: none !important; opacity: 0 !important; pointer-events: none !important; }
+
+        @keyframes pulse-quantum {
+            0% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.7; }
+        }
+
+        @keyframes spark-rotation {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .agent-mission-item.inactive-agent div[class$="-hud"] {
+            background: #4b5563 !important;
             filter: grayscale(1) opacity(0.5);
             box-shadow: none !important;
         }
 
-        .agent-mission-item.active-agent {
-            border: 1px solid #10b981 !important;
-            background: rgba(16, 185, 129, 0.08) !important;
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
-            transform: scale(1.02);
-            transition: all 0.3s ease;
+        /* ⚙️ SETTINGS TABS (v3.0 Premium) */
+        .settings-tabs {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(0, 0, 0, 0.4) !important;
+            padding: 0.4rem !important;
+            border-radius: 14px !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            backdrop-filter: blur(10px);
         }
 
-        /* 🧩 SETTINGS TABS (v3.5) */
         .settings-tab {
-            padding: 0.5rem 1rem;
-            border: none;
             background: transparent;
-            color: #8b949e;
-            font-size: 0.6rem;
+            border: none;
+            color: #94a3b8;
+            padding: 0.6rem 1.2rem;
+            border-radius: 10px;
+            font-size: 0.65rem;
             font-weight: 800;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.2s;
             letter-spacing: 1px;
-        }
-        .settings-tab:hover { color: #fff; background: rgba(255,255,255,0.05); }
-        .settings-tab.active {
-            color: #fff;
-            background: rgba(168, 85, 247, 0.2);
-            border: 1px solid rgba(168, 85, 247, 0.3);
-        }
-        .settings-content { display: none; margin-top: 1rem; }
-        .settings-content.active { display: block; animation: fadeInSlide 0.4s ease-out; }
-
-        .aura-table th { font-family: 'JetBrains Mono'; background: rgba(0,0,0,0.2); }
-        .aura-table td { padding: 1rem; font-size: 0.7rem; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.03); }
-        .aura-table tr:hover { background: rgba(168, 85, 247, 0.02); }
-        
-        .synergy-badge {
-            background: linear-gradient(90deg, #a855f7, #3b82f6);
-            color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.5rem;
-            font-weight: 900;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        }
-
-        .btn-mini-tab {
-            padding: 4px 12px;
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: #8b949e;
-            border-radius: 6px;
-            font-size: 10px;
-            font-weight: 800;
             cursor: pointer;
-            transition: 0.3s;
-        }
-        .btn-mini-tab.active {
-            background: rgba(59, 130, 246, 0.2);
-            border-color: #3b82f6;
-            color: white;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
-        }
-
-        /* [Legacy Cleanup] mc-toggle removed in favor of #mission-control-toggle */
-
-        /* 🆕 RIGHT MISSION CONTROL BAR (v8.2: Scrollable & High Z-Index) */
-        #right-mission-control {
-            position: absolute;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 220px;
-            max-height: calc(100vh - 260px); /* Leave room for bottom bar */
-            overflow-y: auto;
-            background: rgba(13, 17, 23, 0.95);
-            backdrop-filter: blur(25px);
-            border: 1px solid rgba(168, 85, 247, 0.4);
-            border-radius: 20px;
-            padding: 18px;
-            z-index: 4500; /* Above bottom-section (z-3000) */
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.9);
-            scrollbar-width: none; /* Firefox */
-        }
-        #right-mission-control::-webkit-scrollbar { display: none; } /* Chrome/Safari */
-        .mission-log-box {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.6rem;
-            color: #8b949e;
-        }
-        .mission-log-title {
-            color: #fff;
-            font-weight: 800;
-            font-size: 0.55rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
         }
-        .agent-mission-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid transparent;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        .agent-mission-item:hover {
-            background: rgba(255,255,255,0.05);
-            border-color: rgba(255,255,255,0.1);
-        }
-        .agent-mission-item.following-active {
-            background: rgba(74, 222, 128, 0.1) !important;
-            border-color: #4ade80 !important;
-        }
-        .stat-badge {
-            font-size: 0.5rem;
-            padding: 2px 4px;
-            border-radius: 4px;
-            background: rgba(255,255,255,0.05);
+
+        .settings-tab:hover {
             color: #fff;
-            margin-top: 4px;
-            display: inline-block;
+            background: rgba(255, 255, 255, 0.05);
         }
-        .following-active {
-            border-bottom: 2px solid #4ade80 !important;
-            background: rgba(74, 222, 128, 0.1) !important;
+
+        .settings-tab.active {
+            background: linear-gradient(135deg, #a855f7, #3b82f6) !important;
+            color: #fff !important;
+            box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+            transform: translateY(-1px);
         }
+
+        /* 🌓 LIGHT THEME OVERRIDES */
+        body.light-theme {
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
+        }
+        body.light-theme .view-container,
+        body.light-theme .sidebar, 
+        body.light-theme .main-content-top,
+        body.light-theme .bottom-section,
+        body.light-theme .card,
+        body.light-theme .glass-card,
+        body.light-theme .symmetric-bar,
+        body.light-theme #floating-command-bar,
+        body.light-theme .super-metrics-hud,
+        body.light-theme #oracle-response-hud,
+        body.light-theme #quality-selector-bar,
+        body.light-theme #time-machine-bar,
+        body.light-theme #node-sidebar,
+        body.light-theme .inspector-header,
+        body.light-theme .node-content-scroll,
+        body.light-theme #agent-modal,
+        body.light-theme #benchmark-modal .glass-card,
+        body.light-theme #audit-ledger-modal .glass-card {
+            background: rgba(255, 255, 255, 0.95) !important;
+            color: #0f172a !important;
+            border-color: rgba(0, 0, 0, 0.1) !important;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.05) !important;
+        }
+        body.light-theme #node-text,
+        body.light-theme #aura-console,
+        body.light-theme #knowledge-inventory-list,
+        body.light-theme #proposal-container,
+        body.light-theme #quality-selector-bar,
+        body.light-theme #time-machine-bar,
+        body.light-theme #scene-controls-bar,
+        body.light-theme #visibility-menu,
+        body.light-theme .node-text-display,
+        body.light-theme .agent-mission-item,
+        body.light-theme input,
+        body.light-theme select,
+        body.light-theme textarea {
+            background: rgba(0, 0, 0, 0.03) !important;
+            color: #0f172a !important;
+            border-color: rgba(0, 0, 0, 0.1) !important;
+        }
+        body.light-theme #quality-selector-bar button,
+        body.light-theme #scene-controls-bar button,
+        body.light-theme .layer-item {
+            color: #1e293b !important;
+        }
+        body.light-theme #quality-selector-bar,
+        body.light-theme #time-machine-bar,
+        body.light-theme #scene-controls-bar,
+        body.light-theme #visibility-menu {
+            background: rgba(255, 255, 255, 0.98) !important;
+        }
+        body.light-theme .nav-item { color: #64748b !important; }
+        body.light-theme .nav-item:hover, body.light-theme .nav-item.active { 
+            background: rgba(59, 130, 246, 0.1) !important;
+            color: #3b82f6 !important; 
+        }
+        body.light-theme .metric-title,
+        body.light-theme .mission-log-title,
+        body.light-theme .inspector-title,
+        body.light-theme h1, body.light-theme h2, body.light-theme h3 {
+            color: #1e293b !important;
+        }
+        body.light-theme i, body.light-theme .fas, body.light-theme .fab, body.light-theme .metric-title i {
+            color: #0f172a !important;
+        }
+        body.light-theme #aura-console div {
+            color: #0f172a !important;
+        }
+        body.light-theme .stat-badge, body.light-theme .stat-badge-small, body.light-theme .agent-mission-item .stat-badge {
+            background: rgba(0, 0, 0, 0.05) !important;
+            color: #0f172a !important;
+            border-color: rgba(0, 0, 0, 0.1) !important;
+        }
+        body.light-theme #knowledge-inventory-list div, body.light-theme #knowledge-inventory-list span {
+            color: #0f172a !important;
+        }
+        body.light-theme .val-neon { color: #000 !important; text-shadow: none !important; }
+        body.light-theme .pulse-dot { border-color: rgba(0,0,0,0.2) !important; }
+        body.light-theme .settings-tab { color: #64748b; }
+        body.light-theme .settings-tab:hover { color: #0f172a; background: rgba(0,0,0,0.05); }
+        body.light-theme [style*="color: #fff"], 
+        body.light-theme [style*="color: white"], 
+        body.light-theme [style*="color:#fff"],
+        body.light-theme [style*="color:rgb(255, 255, 255)"],
+        body.light-theme [style*="color: rgb(255, 255, 255)"] {
+            color: #0f172a !important;
+        }
+        body.light-theme .reaper-mario-hud { background: #e2e8f0; border-color: #cbd5e1; }
+        body.light-theme #stat-distance, body.light-theme #metrics-data {
+            color: #000 !important;
+        }
+        body.light-theme #tip-blueprint {
+            background: rgba(0,0,0,0.05) !important;
+            color: #10b981 !important;
+        }
+
     </style>
 </head>
 <body>
@@ -379,12 +343,16 @@
                 <div class="nav-item" onclick="showSection('lab')" id="nav-lab">
                     <i class="fas fa-microscope" style="margin-right: 10px;"></i> LABORATORIO NEURALE
                 </div>
-                <div class="nav-item" onclick="showSection('nets')" id="nav-nets">
-                    <i class="fas fa-project-diagram" style="margin-right: 10px;"></i> RETI NEURALI
+                <!-- Chat is now part of Lab -->
+                <div class="nav-item" onclick="showSection('analytics')" id="nav-analytics">
+                    <i class="fas fa-chart-line" style="margin-right: 10px;"></i> ANALISI AVANZATA
                 </div>
-                <div class="nav-item" onclick="showSection('chat')" id="nav-chat">CHAT NEURALE</div>
-                <div class="nav-item" onclick="showSection('analytics')" id="nav-analytics">ANALISI AVANZATA</div>
-                <div class="nav-item" onclick="showSection('settings')" id="nav-settings">⚙️ CONFIGURAZIONE</div>
+                <div class="nav-item" onclick="showSection('benchmark')" id="nav-benchmark">
+                    <i class="fas fa-tachometer-alt" style="margin-right: 10px;"></i> BENCHMARK HUB
+                </div>
+                <div class="nav-item" onclick="showSection('settings')" id="nav-settings">
+                    <i class="fas fa-cog" style="margin-right: 10px;"></i> CONFIGURAZIONE
+                </div>
             </nav>
 
 
@@ -410,12 +378,19 @@
                                 <input type="file" id="media-upload-input" style="display: none;" onchange="uploadMediaSynapse(this.files[0])" accept="video/*,audio/*,image/*">
                                 <button onclick="document.getElementById('media-upload-input').click()" style="background: rgba(255,255,255,0.05); border: none; color: #8b949e; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;"><i class="fas fa-paperclip"></i></button>
                                 <button id="main-action-btn" onclick="forageWebFloating()" style="background: #3b82f6; border: none; color: white; padding: 0.3rem 1.2rem; border-radius: 20px; font-size: 0.65rem; font-weight: 800; cursor: pointer;">SINAPSI</button>
-                                <button id="evolve-btn" onclick="triggerEvolution()" style="background: #a855f7; border: none; color: white; padding: 0.3rem 1.2rem; border-radius: 20px; font-size: 0.65rem; font-weight: 800; cursor: pointer;">EVOLVI</button>
-                                <button id="bench-btn" onclick="toggleBenchmarkHub()" style="background: #10b981; border: none; color: white; width: 60px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer;" title="AI Benchmark Hub"><i class="fas fa-chart-line"></i></button>
+                                <div style="display: flex; align-items: center; gap: 8px; background: rgba(168, 85, 247, 0.1); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(168, 85, 247, 0.3);">
+                                    <span style="font-size: 0.55rem; color: #a855f7; font-weight: 900; letter-spacing: 1px;">AUTO-EVOLVE</span>
+                                    <label class="ios-switch"><input type="checkbox" id="auto-evolve-toggle" onchange="toggleAutoEvolution(this.checked)"><span class="slider round"></span></label>
+                                </div>
+                                <button id="bench-btn" onclick="window.showSection('benchmark')" style="background: #10b981; border: none; color: white; width: 60px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer;" title="Analisi Avanzata"><i class="fas fa-chart-line"></i></button>
                             </div>
                             <div id="forage-telemetry-hud" style="width: 100%; display: none; flex-direction: column; gap: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255,255,255,0.05);">
                                 <div id="forage-telemetry-stats" style="font-family: 'JetBrains Mono'; font-size: 0.55rem; color: white; display: flex; justify-content: space-between; width: 100%;"></div>
                                 <div style="width: 100%; height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden;"><div id="forage-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #a855f7, #3b82f6, #4ade80); transition: width 0.3s;"></div></div>
+                            </div>
+                            <div id="evolution-telemetry-hud" style="width: 100%; display: none; flex-direction: column; gap: 0.4rem; padding-top: 0.4rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                                <div id="evolution-status-text" style="font-family: 'JetBrains Mono'; font-size: 0.55rem; color: #a855f7; font-weight: 800; text-transform: uppercase;">Realignment in progress...</div>
+                                <div style="width: 100%; height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden;"><div id="evolution-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #4ade80, #3b82f6, #a855f7); transition: width 0.5s;"></div></div>
                             </div>
                         </div>
 
@@ -424,6 +399,7 @@
                             <div style="display: flex; gap: 1.5rem; color: #fff; font-family: 'JetBrains Mono'; font-size: 0.55rem;">
                                 <div>NODES: <span class="val-neon" id="stat-nodes">...</span></div>
                                 <div>EDGES: <span id="stat-synapses" style="color: #3b82f6;">...</span></div>
+                                <div>CLUSTERS: <span id="stat-clusters" style="color: #a855f7;">...</span></div>
                                 <div>VAULT: <span class="val-neon" id="stat-storage">...</span></div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 0.8rem; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 1rem;">
@@ -443,69 +419,126 @@
 
                     <!-- 🗺️ NAV GUIDE (Left Side Overlay) -->
                     <div id="nav-guide-tab">
-                        <div style="pointer-events: all; background: rgba(13, 17, 23, 0.98); border: 1px solid rgba(168, 85, 247, 0.4); border-left: none; border-radius: 0 20px 20px 0; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: 10px 0 40px rgba(0,0,0,0.8); height: 380px; width: 340px; overflow-y: auto; scrollbar-width: none;">
-                            
-                            <div class="mission-log-box" style="margin-bottom: 4px;">
-                                <div class="mission-log-title" onclick="toggleNavGuide()" style="color:#a855f7; font-weight:900; letter-spacing:1px; font-size:0.6rem; cursor: pointer;">
-                                    <i class="fas fa-hand-pointer"></i> NAV_GUIDE
+                        <div id="nav-legend-v2" class="symmetric-bar">
+                            <div class="mission-header" onclick="toggleNavGuide()">
+                                <div class="mission-log-title" style="color:#a855f7; font-weight:900; letter-spacing:2px; font-size:0.75rem;"><i class="fas fa-compass"></i> <span id="nav-title">NAV-GUIDE: STATUS</span></div>
+                                <div style="display:flex; gap: 5px;">
+                                    <button onclick="event.stopPropagation(); toggleSymmetry()" style="background:rgba(59,130,246,0.3); border:1px solid #3b82f6; color:white; width:35px; height:35px; border-radius:8px; cursor:pointer; display: flex; align-items: center; justify-content: center;" title="Toggle UI Symmetry"><i class="fas fa-th-large"></i></button>
                                 </div>
                             </div>
-
-                            <div id="nav-legend-v2" style="display: flex; flex-direction: column; gap: 0.5rem;">
-                                <div style="font-size: 0.55rem; color: #a855f7; font-weight: 900; letter-spacing: 1px; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;">KINETIC_GUIDE</div>
-                                <div class="guide-item" style="font-size: 0.6rem; color: #fff; margin-bottom: 0.4rem; display: flex; justify-content: space-between;"><span>ROTATE</span> <span style="color: #3b82f6;">Left Click + Drag</span></div>
-                                <div class="guide-item" style="font-size: 0.6rem; color: #fff; margin-bottom: 0.4rem; display: flex; justify-content: space-between;"><span>PAN</span> <span style="color: #3b82f6;">Right Click + Drag</span></div>
-                                <div class="guide-item" style="font-size: 0.6rem; color: #fff; margin-bottom: 0.4rem; display: flex; justify-content: space-between;"><span>ZOOM</span> <span style="color: #3b82f6;">Scroll / Pinch</span></div>
-                                <div class="guide-item" style="font-size: 0.6rem; color: #fff; margin-bottom: 0.4rem; display: flex; justify-content: space-between;"><span>PROBE</span> <span style="color: #3b82f6;">Toggle + Click Node</span></div>
-                                <div style="font-size: 0.45rem; color: #8b949e; line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">Use Ctrl + Click for rapid target focus.</div>
-                            </div>
+                            <div style="font-size: 0.55rem; color: #a855f7; font-weight: 900; letter-spacing: 1px; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;">KINETIC_GUIDE</div>
+                            <div class="guide-item" style="font-size: 0.6rem; color: #fff; margin-bottom: 0.4rem; display: flex; justify-content: space-between;"><span>ROTATE</span> <span style="color: #3b82f6;">Left Click + Drag</span></div>
+                            <div class="guide-item" style="font-size: 0.6rem; color: #fff; margin-bottom: 0.4rem; display: flex; justify-content: space-between;"><span>PAN</span> <span style="color: #3b82f6;">Right Click + Drag</span></div>
+                            <div class="guide-item" style="font-size: 0.6rem; color: #fff; margin-bottom: 0.4rem; display: flex; justify-content: space-between;"><span>ZOOM</span> <span style="color: #3b82f6;">Scroll / Pinch</span></div>
+                            <div class="guide-item" style="font-size: 0.6rem; color: #fff; margin-bottom: 0.4rem; display: flex; justify-content: space-between;"><span>PROBE</span> <span style="color: #3b82f6;">Toggle + Click Node</span></div>
+                            <div style="font-size: 0.45rem; color: #8b949e; line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px;">Use Ctrl + Click for rapid target focus.</div>
                         </div>
-                        <div id="nav-guide-toggle" onclick="toggleNavGuide()" style="pointer-events: all;">
-                            <i class="fas fa-chevron-left" id="nav-toggle-icon" style="transform: rotate(180deg);"></i>
+                        <div id="nav-guide-toggle" onclick="toggleNavGuide()" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: rgba(168, 85, 247, 0.9); border-radius: 0 12px 12px 0; width: 32px; min-height: 120px; border: 1px solid rgba(255, 255, 255, 0.2); border-left: none; cursor: pointer;">
+                            <i class="fas fa-chevron-right" id="nav-toggle-icon"></i>
+                            <span style="writing-mode: vertical-rl; font-size: 0.55rem; font-weight: 900; letter-spacing: 2px; color: white;">NAV_GUIDE</span>
                         </div>
                     </div>
 
-                    <!-- 🚀 AGENT CONTROL BAR (Re-Integrated for Fullscreen Visibility) -->
-                    <div id="mc-wrapper" style="z-index: 5500; pointer-events: none; position: absolute; right: 0; top: 0;">
-                        <div id="mission-control-toggle" onclick="toggleMissionControl()" style="z-index: 5600; pointer-events: all;">
+                    <!-- 🤖 AGENT BOX (Right Side Overlay) -->
+                    <div id="mc-wrapper">
+                        <div id="mission-control-toggle" onclick="toggleMissionControl()" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: rgba(168, 85, 247, 0.9); border-radius: 12px 0 0 12px; width: 32px; min-height: 120px; border: 1px solid rgba(255, 255, 255, 0.2); border-right: none; cursor: pointer;">
                             <i class="fas fa-chevron-left" id="mc-toggle-icon"></i>
+                            <span style="writing-mode: vertical-rl; font-size: 0.55rem; font-weight: 900; letter-spacing: 2px; color: white; transform: rotate(180deg);">AGENT BAR</span>
                         </div>
-                        <div id="right-mission-control" style="pointer-events: all; position: relative; right: 0; top: 0; margin: 0; height: 380px; width: 340px; overflow-y: auto; scrollbar-width: none; background: rgba(13, 17, 23, 0.98); border: 1px solid rgba(168, 85, 247, 0.4); border-right: none; border-radius: 20px 0 0 20px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: -10px 0 40px rgba(0,0,0,0.8);">
-                            <div class="mission-log-box">
-                                    <div class="mission-log-title" style="color:#a855f7; font-weight:900; letter-spacing:1px; font-size:0.6rem;"><i class="fas fa-robot"></i> <span id="audit-title">AGENT CONTROL BAR</span></div>
-                                    <div style="display:flex; gap: 5px;">
-                                        <button onclick="event.stopPropagation(); openAuditLedger(true)" style="background:rgba(59,130,246,0.3); border:1px solid #3b82f6; color:white; width:35px; height:35px; border-radius:8px; cursor:pointer; display: flex; align-items: center; justify-content: center;" title="Full History Audit"><i class="fas fa-archive"></i></button>
-                                        <button onclick="event.stopPropagation(); openAuditLedger()" style="background:rgba(168,85,247,0.3); border:1px solid #a855f7; color:white; width:35px; height:35px; border-radius:8px; cursor:pointer; display: flex; align-items: center; justify-content: center; z-index: 7000; position: relative;" title="Session Log Actions"><i class="fas fa-file-invoice" style="font-size: 1rem;"></i></button>
-                                    </div>
+                        <div id="right-mission-control" class="symmetric-bar">
+                            <div class="mission-header" onclick="toggleMissionControl()">
+                                <div class="mission-log-title" style="color:#a855f7; font-weight:900; letter-spacing:2px; font-size:0.75rem;"><i class="fas fa-robot"></i> <span id="audit-title">AGENT BAR</span></div>
+                                <div style="display:flex; gap: 8px; margin-top: 5px;">
+                                    <button onclick="event.stopPropagation(); openAuditLedger(true)" style="background:rgba(59,130,246,0.2); border:1px solid rgba(59,130,246,0.4); color:white; width:32px; height:32px; border-radius:8px; cursor:pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s;" title="Full History Audit"><i class="fas fa-archive" style="font-size: 0.8rem;"></i></button>
+                                    <button onclick="event.stopPropagation(); openAuditLedger()" style="background:rgba(168,85,247,0.2); border:1px solid rgba(168,85,247,0.4); color:white; width:32px; height:32px; border-radius:8px; cursor:pointer; display: flex; align-items: center; justify-content: center; z-index: 7000; position: relative; transition: 0.3s;" title="Session Log Actions"><i class="fas fa-file-invoice" style="font-size: 0.9rem;"></i></button>
+                                </div>
+                            </div>
+                            <!-- Separatore rigo vuoto -->
+                            <div style="height: 10px; flex-shrink: 0;"></div>
                                 
                                 <div id="agent-hud-stack">
                                     <div class="agent-mission-item mt-2 inactive-agent" id="distiller-hud-icon" onclick="toggleFollow('DI-007')">
                                         <div class="space-invader-hud"></div>
-                                        <div><div style="color:#fff; font-weight:800; font-size:0.55rem;">DI-007 DISTILLER</div><div id="distiller-mission-stat" class="stat-badge">Arcs Pruned: 0</div></div>
+                                        <div style="flex:1;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="color:#fff; font-weight:800; font-size:0.55rem;">DI-007 DISTILLER</div><i class="fas fa-question-circle agent-info-btn" onclick="event.stopPropagation(); showAgentHelp('DI-007')"></i></div><div id="distiller-mission-stat" class="stat-badge">Arcs Pruned: <span id="val-distiller-pruned">0</span></div></div>
                                     </div>
                                     <div class="agent-mission-item mt-2 inactive-agent" id="janitron-hud-icon" onclick="toggleFollow('JA-001')">
                                         <div class="pacman-hud"></div>
-                                        <div><div style="color:#fff; font-weight:800; font-size:0.55rem;">JA-001 JANITRON</div><div id="janitron-mission-stat" class="stat-badge">Nodes Eaten: 0</div></div>
+                                        <div style="flex:1;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="color:#fff; font-weight:800; font-size:0.55rem;">JA-001 JANITRON</div><i class="fas fa-question-circle agent-info-btn" onclick="event.stopPropagation(); showAgentHelp('JA-001')"></i></div><div id="janitron-mission-stat" class="stat-badge">Nodes Eaten: <span id="val-janitron-purged">0</span></div></div>
                                     </div>
                                     <div class="agent-mission-item mt-2 inactive-agent" id="reaper-hud-icon" onclick="toggleFollow('RP-001')">
                                         <div class="reaper-mario-hud"><div class="medical-cross-hud"></div></div>
-                                        <div><div style="color:#fff; font-weight:800; font-size:0.55rem;">RP-001 DR. REAPER</div><div id="reaper-mission-stat" class="stat-badge">Self-Heal: 0</div></div>
+                                        <div style="flex:1;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="color:#fff; font-weight:800; font-size:0.55rem;">RP-001 DR. REAPER</div><i class="fas fa-question-circle agent-info-btn" onclick="event.stopPropagation(); showAgentHelp('RP-001')"></i></div><div id="reaper-mission-stat" class="stat-badge">Self-Heal: <span id="val-reaper-healed">0</span></div></div>
                                     </div>
                                     <div class="agent-mission-item mt-2 inactive-agent" id="snake-hud-icon" onclick="toggleFollow('SN-008')">
                                         <div class="snake-hud"></div>
                                         <div style="flex: 1;">
-                                            <div style="color:#fff; font-weight:800; font-size:0.55rem;">SN-008 SNAKE</div>
+                                            <div style="display:flex; justify-content:space-between; align-items:center;"><div style="color:#fff; font-weight:800; font-size:0.55rem;">SN-008 SNAKE</div><i class="fas fa-question-circle agent-info-btn" onclick="event.stopPropagation(); showAgentHelp('SN-008')"></i></div>
                                             <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px;">
-                                                <div id="snake-mission-found" class="stat-badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">Nodes Found: 0</div>
-                                                <div id="snake-mission-stat" class="stat-badge" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">Nodes Crafted: 0</div>
-                                                <div id="snake-mission-processed" class="stat-badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">Nodes Deleted: 0</div>
+                                                <div id="snake-mission-found" class="stat-badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">Nodes Found: <span id="val-snake-found">0</span></div>
+                                                <div id="snake-mission-stat" class="stat-badge" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;">Nodes Crafted: <span id="val-snake-crafted">0</span></div>
+                                                <div id="snake-mission-processed" class="stat-badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">Nodes Deleted: <span id="val-snake-deleted">0</span></div>
                                             </div>
                                         </div>
+                                    </div>
+                                    <div class="agent-mission-item mt-2 inactive-agent" id="quantum-hud-icon" onclick="toggleFollow('QA-101')">
+                                        <div class="quantum-hud"></div>
+                                        <div style="flex:1;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="color:#fff; font-weight:800; font-size:0.55rem;">QA-101 QUANTUM</div><i class="fas fa-question-circle agent-info-btn" onclick="event.stopPropagation(); showAgentHelp('QA-101')"></i></div><div id="quantum-mission-stat" class="stat-badge">Clusters Fused: <span id="val-quantum-fused">0</span></div></div>
+                                    </div>
+                                    <div class="agent-mission-item mt-2 inactive-agent" id="sentinel-hud-icon" onclick="toggleFollow('SE-007')">
+                                        <div class="sentinel-hud"></div>
+                                        <div style="flex:1;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center;"><div style="color:#fff; font-weight:800; font-size:0.55rem;">SE-007 SENTINEL</div><i class="fas fa-question-circle agent-info-btn" onclick="event.stopPropagation(); showAgentHelp('SE-007')"></i></div>
+                                            <div style="display:flex; gap:5px; margin-top:2px;">
+                                                <div id="sentinel-mission-stat" class="stat-badge">Validated: <span id="val-sentinel-validated">0</span></div>
+                                                <div id="sentinel-super-stat" class="stat-badge" style="background:linear-gradient(90deg, #ff0000, #00ff00, #0000ff); color: white; border:none; text-shadow: 0 0 5px black;">RGB Arcs: <span id="val-sentinel-synapses">0</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="agent-mission-item mt-2 inactive-agent" id="synth-hud-icon" onclick="toggleFollow('SY-009')">
+                                        <div class="synth-spark-hud"></div>
+                                        <div style="flex:1;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                                <div style="color:#fff; font-weight:800; font-size:0.55rem;">SY-009 SYNTH</div>
+                                                <div style="display:flex; gap: 8px; align-items:center;">
+                                                    <i class="fas fa-question-circle agent-info-btn" onclick="event.stopPropagation(); showAgentHelp('SY-009')"></i>
+                                                    <!-- Team Live Indicator -->
+                                                    <div id="synth-team-status" style="width:8px; height:8px; border-radius:50%; background:#4b5563; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: 0.3s;" title="Synthesis Team Status"></div>
+                                                </div>
+                                            </div>
+                                            <div id="synth-mission-stat" class="stat-badge" style="margin-top:2px;">Sparks: <span id="val-synth-sparks">0</span></div>
+                                            <!-- Sub-Agents Real-time Stats -->
+                                            <div id="synth-subagents-hud" style="display:none; gap:5px; margin-top:4px;">
+                                                <div id="sub-drafting-stat" class="stat-badge" style="background:rgba(34,211,238,0.1); color:#22d3ee; border:1px solid rgba(34,211,238,0.3); font-size: 0.45rem;">DR: 0</div>
+                                                <div id="sub-critique-stat" class="stat-badge" style="background:rgba(232,121,249,0.1); color:#e879f9; border:1px solid rgba(232,121,249,0.3); font-size: 0.45rem;">CR: 0</div>
+                                                <div id="sub-polishing-stat" class="stat-badge" style="background:rgba(74,222,128,0.1); color:#4ade80; border:1px solid rgba(74,222,128,0.3); font-size: 0.45rem;">PO: 0</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="agent-mission-item mt-2 inactive-agent" id="bridger-hud-icon" onclick="toggleFollow('CB-003')">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="agent-avatar-mini" style="background:#3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);"><i class="fas fa-project-diagram"></i></div>
+                                            <div class="flex-grow-1">
+                                                <div class="agent-name-mini">CB-003 BRIDGER</div>
+                                                <div id="bridger-mission-stat" class="stat-badge" style="background:rgba(59, 130, 246, 0.1); color: #3b82f6;">Super-Bridges: <span id="val-bridger-bridges">0</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- FS-77 FILE-SKY-WALKER (Starfighter Core) -->
+                                    <div class="agent-mission-item mt-2 inactive-agent" id="skywalker-hud-icon" onclick="toggleFollow('FS-77')">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="agent-avatar-mini" style="background:#ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);"><i class="fas fa-fighter-jet"></i></div>
+                                            <div class="flex-grow-1">
+                                                <div class="agent-name-mini">FS-77 SKY-WALKER</div>
+                                                <div id="skywalker-mission-stat" class="stat-badge" style="background:rgba(239, 68, 68, 0.1); color: #ef4444;">Web-Hits: <span id="val-skywalker-hits">0</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                      </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
                     <!-- 🕵️‍♂️ NODE INSPECTOR MODAL (Re-Integrated for Fullscreen Visibility) -->
                     <div id="node-sidebar" class="hidden">
@@ -516,18 +549,39 @@
                         <div class="node-content-scroll">
                             <div id="node-text" class="node-text-display mb-4" style="font-size: 0.9rem; line-height: 1.6; color: #f8fafc; margin-bottom: 1rem; background: rgba(0,0,0,0.4); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">Seleziona un punto...</div>
                             <div id="media-preview-container" class="hidden mb-4" style="background:rgba(0,0,0,0.4); padding:0.5rem; border-radius:8px;"><img id="media-preview-img" src="" style="width:100%; border-radius:4px;"></div>
-                            <div id="node-meta" style="font-family: 'JetBrains Mono'; font-size: 0.65rem; color: #4ade80; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px;">{}</div>
+                            <div id="node-meta" style="font-family: 'JetBrains Mono'; font-size: 0.65rem; color: #4ade80; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; white-space: pre-wrap; overflow-wrap: break-word;">{}</div>
                         </div> <!-- node-content-scroll -->
+                        <div style="padding: 1rem; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.5rem; color: #8b949e; text-transform: uppercase; letter-spacing: 1px;">
+                            <i class="fas fa-link" style="margin-right: 5px;"></i> Synaptic Link Integrity Check: Verified
+                        </div>
                     </div> <!-- node-sidebar -->
 
                     <!-- 🛸 SOVEREIGN UNIFIED HUD (Persistent Immersion Deck) -->
-                    <div id="cycloscope-hud" style="position: absolute; bottom: 2.5rem; left: 50%; transform: translateX(-50%); z-index: 15000; display: flex; align-items: center; gap: 1.5rem; pointer-events: all;" onmousedown="event.stopPropagation()">
-                        <div style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(25px); padding: 0.6rem; border-radius: 100px; border: 1px solid rgba(168, 85, 247, 0.4); display: flex; align-items: center; gap: 0.8rem; box-shadow: 0 15px 50px rgba(0,0,0,0.9);">
+                    <div id="cycloscope-hud" style="transform: translateX(30px);">
+                        <!-- 💎 [LEFT] QUALITY SELECTOR -->
+                        <div id="quality-selector-bar" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(35px); padding: 0.5rem; border-radius: 100px; border: 1px solid rgba(59, 130, 246, 0.4); display: flex; align-items: center; gap: 0.4rem; box-shadow: 0 15px 50px rgba(0,0,0,0.9);">
+                             <button id="q-btn-lq" onclick="setNebulaQuality('LQ')" style="background: rgba(245, 158, 11, 0.1); border: none; color: #f59e0b; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; transition: 0.3s;" title="Low Quality (Performance)">LQ</button>
+                             <button id="q-btn-hd" onclick="setNebulaQuality('HD')" style="background: rgba(16, 185, 129, 0.3); border: 2px solid #10b981; color: #10b981; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; transition: 0.3s;" title="High Definition (Balanced)">HD</button>
+                             <button id="q-btn-4k" onclick="setNebulaQuality('4K')" style="background: rgba(239, 68, 68, 0.1); border: none; color: #ef4444; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; transition: 0.3s;" title="4K Ultra (Fidelity)">4K</button>
+                        </div>
+
+                        <!-- ⏳ [CENTER] NEURAL TIME DRIVE -->
+                        <div id="time-machine-bar" style="width: 380px; background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(35px); border: 1px solid rgba(59, 130, 246, 0.4); padding: 0.6rem 1.8rem; border-radius: 50px; display: flex; flex-direction: column; gap: 0.3rem; cursor: pointer; box-shadow: 0 15px 60px rgba(0,0,0,0.9); border-left: 5px solid #3b82f6;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                <div id="time-label" style="font-size: 0.55rem; color: #3b82f6; font-weight: 900; letter-spacing: 2px;">NEURAL_TIME_DRIVE</div>
+                                <div id="current-period" style="font-size: 0.65rem; font-weight: 800; color: #fff; font-family: 'JetBrains Mono';">PRESENT</div>
+                            </div>
+                            <input type="range" id="time-slider" min="0" max="100" value="100" style="width: 100%; height: 4px; background: rgba(59, 130, 246, 0.1); border-radius: 2px; cursor: pointer; accent-color: #3b82f6;" oninput="onTimeTravel(this.value)">
+                        </div>
+
+                        <!-- 🛠️ [RIGHT] SCENE CONTROLS -->
+                        <div id="scene-controls-bar" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(35px); padding: 0.5rem; border-radius: 100px; border: 1px solid rgba(168, 85, 247, 0.4); display: flex; align-items: center; gap: 0.6rem; box-shadow: 0 15px 50px rgba(0,0,0,0.9);">
                              <div style="position: relative;">
-                                <button onclick="toggleVisibilityMenu()" style="background: rgba(168, 85, 247, 0.1); border: none; color: #a855f7; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Scene Layers"><i class="fas fa-layer-group"></i></button>
+                                <button onclick="toggleVisibilityMenu()" style="background: rgba(168, 85, 247, 0.1); border: none; color: #a855f7; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Scene Layers"><i class="fas fa-layer-group"></i></button>
                                 <div id="visibility-menu" class="hidden" style="position: absolute; bottom: 65px; left: 0; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; width: 220px; padding: 1rem; flex-direction: column; gap: 0.5rem; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); z-index: 16000;">
                                     <div style="font-size: 0.6rem; color: #a855f7; font-weight: 900; margin-bottom: 0.5rem; letter-spacing: 1px;">LAYERS_FILTER</div>
                                     <label class="layer-item"><input type="checkbox" checked onchange="toggleLayer('agents')"> Sprite Agenti</label>
+                                    <label class="layer-item"><input type="checkbox" id="cluster-focus-toggle" checked onchange="toggleClusterFocus(this.checked)"> Enfasi Cluster</label>
                                     <label class="layer-item"><input type="checkbox" checked onchange="toggleLayer('orphans')"> Nodi Orfani</label>
                                     <label class="layer-item"><input type="checkbox" checked onchange="toggleLayer('nodes')"> Nodi (Tutti)</label>
                                     <label class="layer-item"><input type="checkbox" checked onchange="toggleLayer('linked_nodes')"> Nodi con Archi</label>
@@ -535,22 +589,14 @@
                                     <label class="layer-item"><input type="checkbox" checked onchange="toggleLayer('sparks')"> Archi Super Sinaptici</label>
                                     <label class="layer-item"><input type="checkbox" checked onchange="toggleLayer('cube')"> Cubo 3D</label>
                                     <label class="layer-item"><input type="checkbox" checked onchange="toggleLayer('grid')"> Piano Griglia</label>
-                                    <label class="layer-item"><input type="checkbox" checked onchange="toggleLayer('nav_guide')"> Legenda Navigazione</label>
                                 </div>
                              </div>
-                             <button id="rotation-toggle-btn" onclick="toggleRotation()" style="background: rgba(16, 185, 129, 0.1); border: none; color: #10b981; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Pause/Play Rotation"><i class="fas fa-pause"></i></button>
-                             <button onclick="toggleCycloscopeFullscreen()" style="background: rgba(34, 211, 238, 0.1); border: none; color: #22d3ee; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Total Immersion"><i class="fas fa-expand"></i></button>
-                        </div>
-                        <div id="time-machine-bar" style="width: 320px; background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(25px); border: 1px solid rgba(59, 130, 246, 0.4); padding: 0.8rem 1.5rem; border-radius: 50px; display: flex; flex-direction: column; gap: 0.4rem; cursor: pointer; box-shadow: 0 10px 60px rgba(0,0,0,0.8); border-left: 5px solid #3b82f6;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                                <div id="time-label" style="font-size: 0.5rem; color: #3b82f6; font-weight: 900; letter-spacing: 2px;">NEURAL_TIME_DRIVE</div>
-                                <div id="current-period" style="font-size: 0.6rem; font-weight: 800; color: #fff;">PRESENT</div>
-                            </div>
-                            <input type="range" id="time-slider" min="0" max="100" value="100" style="width: 100%; height: 5px; background: rgba(59, 130, 246, 0.1); border-radius: 2px; cursor: pointer; accent-color: #3b82f6;" oninput="onTimeTravel(this.value)">
+                             <button id="rotation-toggle-btn" onclick="toggleRotation()" style="background: rgba(16, 185, 129, 0.1); border: none; color: #10b981; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Pause/Play Rotation"><i class="fas fa-pause"></i></button>
+                             <button onclick="toggleCycloscopeFullscreen()" style="background: rgba(34, 211, 238, 0.1); border: none; color: #22d3ee; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Total Immersion"><i class="fas fa-expand"></i></button>
                         </div>
                     </div>
-                </div> <!-- Final Close memory-graph-container -->
-            </div> <!-- Close overview-view -->
+                </div> <!-- End memory-graph-container -->
+            </div> <!-- End overview-view -->
 
             <!-- 📌 NEURAL LAB SECTION -->
             <div id="lab-view" class="view-container" style="display: none; padding: 1.5rem; background: rgba(2, 6, 23, 0.95);">
@@ -560,206 +606,320 @@
                         <div id="lab-global-status" style="font-size: 0.7rem; color: #4ade80;">[SYSTEM_ACTIVE]</div>
                     </div>
                 </div>
-                <div class="lab-workspace" style="flex: 1; display: grid; grid-template-columns: 1fr 360px; gap: 1.5rem; min-height: 0;">
-                    <!-- Virtual Nebula / Observatory 3D -->
-                    <div class="glass-card observatory-3d" style="position: relative; overflow: hidden; background: #000; border-radius: 20px; border: 1px solid rgba(168, 85, 247, 0.2);">
-                        <div class="card-header" style="background: rgba(255,255,255,0.03); padding: 0.8rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 0.7rem; color: #a855f7; font-weight: 800;"><i class="fas fa-microscope" style="margin-right: 8px;"></i> SWARM OBSERVATORY</span>
-                            <div style="font-size: 0.55rem; color: #4ade80; font-family: 'JetBrains Mono';">SYNERGY: <span id="lab-synergy-val">94%</span></div>
+                <div class="lab-workspace" style="flex: 1; display: grid; grid-template-columns: 0.4fr 0.6fr 450px; gap: 1.5rem; min-height: 0;">
+                    <!-- Virtual Nebula / Observatory 3D (Occupies 40% of standard space, i.e., reduced by 60%) -->
+                    <div class="glass-card observatory-3d" style="position: relative; overflow: hidden; background: #000; border-radius: 20px; border: 1px solid rgba(168, 85, 247, 0.2); display: flex; flex-direction: column;">
+                        <div class="card-header" style="background: rgba(255,255,255,0.03); padding: 0.8rem 1.5rem; border-bottom: 1px solid rgba(168, 85, 247, 0.2); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                            <span style="font-size: 0.7rem; color: #a855f7; font-weight: 800;"><i class="fas fa-terminal" style="margin-right: 8px;"></i> SWARM_COMMAND_CONSOLE</span>
+                            <div style="font-size: 0.55rem; color: #4ade80; font-family: 'JetBrains Mono';">UPLINK_STABILITY: <span id="lab-synergy-val">99.9%</span></div>
                         </div>
-                        <div id="lab-three-container" style="width: 100%; height: 100%; position: relative;">
-                            <div class="nebula-placeholder" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: rgba(168, 85, 247, 0.4); font-size: 0.7rem; letter-spacing: 2px;">SYNCHRONIZING SWARM TELEMETRY...</div>
+                        
+                        <div style="flex: 1; padding: 1.2rem; display: flex; flex-direction: column; min-height: 0; background: linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(10,10,20,1) 100%);">
+                            <div style="font-size: 0.45rem; color: #3b82f6; font-weight: 900; margin-bottom: 10px; letter-spacing: 2px; opacity: 0.8;">LIVE_DECODING_DATASTREAM</div>
+                            <div id="swarm-telemetry-log" style="flex: 1; overflow-y: auto; font-family: 'JetBrains Mono'; font-size: 0.6rem; color: #4ade80; line-height: 1.4; padding-right: 0.5rem; scrollbar-width: thin; scrollbar-color: rgba(168,85,247,0.3) transparent;">
+                                > Initializing Neural Uplink...
+                                > Kernel Synchronized.
+                                > Swarm Heartbeat detected.
+                            </div>
+                            
+                            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(168, 85, 247, 0.2); display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
+                                <span style="font-size: 0.6rem; color: #a855f7; font-weight: 900; font-family: 'JetBrains Mono';">PROTOCOL_INJECTION ></span>
+                                <input type="text" id="swarm-direct-command" placeholder="Enter command..." onkeydown="if(event.key==='Enter') sendDirectCommand(this.value)" style="background: transparent; border: none; color: #fff; font-family: 'JetBrains Mono'; font-size: 0.65rem; flex: 1; outline: none; caret-color: #a855f7;">
+                            </div>
                         </div>
-                        <!-- Swarm Action HUD (New: Bottom Center of 3D) -->
-                        <div style="position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); display: flex; gap: 0.5rem; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 0.5rem; border-radius: 50px; border: 1px solid rgba(168, 85, 247, 0.3); z-index: 100;">
-                            <button onclick="broadcastCommand('PAUSE')" style="background: rgba(239, 68, 68, 0.2); border: none; color: #ef4444; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;" title="Pause All Agents"><i class="fas fa-pause"></i></button>
-                            <button onclick="broadcastCommand('RESUME')" style="background: rgba(74, 222, 128, 0.2); border: none; color: #4ade80; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;" title="Resume Swarm"><i class="fas fa-play"></i></button>
-                            <div style="width: 1px; background: rgba(255,255,255,0.1); margin: 0 4px;"></div>
-                            <button onclick="broadcastCommand('SCAN')" style="background: rgba(59, 130, 246, 0.2); border: none; color: #3b82f6; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;" title="Intense Scan Mode"><i class="fas fa-search-plus"></i></button>
+
+                        <!-- Mini Control Strip -->
+                        <div style="background: rgba(255,255,255,0.02); padding: 0.5rem 1.2rem; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: flex-end; gap: 1rem; flex-shrink: 0;">
+                             <button onclick="broadcastCommand('SCAN')" style="background:none; border:none; color:#3b82f6; font-size:0.5rem; font-weight:800; cursor:pointer; letter-spacing:1px;"><i class="fas fa-sync"></i> SYNC_MESH</button>
+                             <button onclick="broadcastCommand('PURGE')" style="background:none; border:none; color:#ef4444; font-size:0.5rem; font-weight:800; cursor:pointer; letter-spacing:1px;"><i class="fas fa-trash-alt"></i> PURGE_BUFFER</button>
                         </div>
                     </div>
 
-                    <!-- Right Column: Lab Forge & Controls (Multi-Tab) -->
-                    <div class="lab-side-controls" style="display: flex; flex-direction: column; gap: 1rem; min-width: 360px;">
-                        
+                    <!-- Middle Column: 🏛️ LABORATORIO NEURALE v2.0 -->
+                    <div class="lab-main-forge" style="display: flex; flex-direction: column; gap: 1rem; height: 100%; min-width: 0;">
+                        <div class="glass-card" style="padding: 1.2rem; border-bottom: 2px solid #a855f7; background: rgba(15, 23, 42, 0.9); border-radius: 12px; flex-shrink: 0;">
+                             <h3 style="margin:0; font-size: 1.1rem; color: #a855f7; text-transform: uppercase; font-weight: 900;">🏛️ LABORATORIO NEURALE <span class="v-tag" style="font-size: 0.6rem; vertical-align: middle;">v2.0</span></h3>
+                        </div>
+
                         <!-- TAB SWITCHER -->
-                        <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                        <div style="display: flex; gap: 4px; background: rgba(0,0,0,0.3); padding: 4px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;">
                             <button onclick="switchLabTab('active')" class="lab-tab-btn active-tab" id="tab-lab-active">ACTIVE SWARM</button>
                             <button onclick="switchLabTab('forge')" class="lab-tab-btn" id="tab-lab-forge">AGENT FORGE</button>
                         </div>
 
-                        <!-- CONTENT: ACTIVE SWARM -->
-                        <div id="lab-tab-content-active" class="glass-card" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; background: rgba(15, 23, 42, 0.6); border-radius: 20px; border: 1px solid rgba(255,255,255,0.05);">
-                            <div id="agent-grid" class="agent-grid-v2" style="flex: 1; overflow-y: auto; padding: 1rem;">
-                                <!-- Agents Rendered by JS -->
-                            </div>
-                            <!-- Swarm Command Console -->
-                            <div style="padding: 1rem; background: rgba(0,0,0,0.4); border-top: 1px solid rgba(255,255,255,0.05);">
-                                <div style="font-size: 0.5rem; color: #3b82f6; font-weight: 900; margin-bottom: 8px; letter-spacing: 2px;">SWARM_COMMAND_CONSOLE</div>
-                                <div id="swarm-telemetry-log" style="height: 100px; overflow-y: auto; font-family: 'JetBrains Mono'; font-size: 0.5rem; color: #4ade80; line-height: 1.4; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 8px;">
-                                    > Waiting for swarm thoughts...
+                        <!-- CONTENT: ACTIVE SWARM / FORGE (Flexible Top) -->
+                        <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                            <div id="lab-tab-content-active" class="glass-card" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; background: rgba(15, 23, 42, 0.6); border-radius: 20px; border: 1px solid rgba(255,255,255,0.05);">
+                                <div id="agent-grid" class="agent-grid-v2" style="flex: 1; overflow-y: auto; padding: 1.2rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                                    <!-- Agents Rendered by JS: Cards with detailed status -->
+                                    <div style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.2); padding: 5rem;">
+                                        <i class="fas fa-satellite-dish fa-spin" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                                        POLLING NEURAL BLACKBOARD...
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- CONTENT: AGENT FORGE (Creation Interface) -->
-                        <div id="lab-tab-content-forge" class="glass-card" style="flex: 1; display: none; flex-direction: column; padding: 1.5rem; background: rgba(15, 23, 42, 0.8); border-radius: 20px; border: 1px solid #a855f7; overflow-y: auto;">
-                            <div style="font-size: 0.8rem; color: #a855f7; font-weight: 800; margin-bottom: 1.5rem;"><i class="fas fa-hammer"></i> AGENT FORGE</div>
-                            
-                            <div style="display: flex; flex-direction: column; gap: 1.2rem;">
-                                <div>
-                                    <label style="display:block; margin-bottom: 0.5rem; color: #8b949e; font-size: 0.6rem; text-transform: uppercase;">Nome Identificativo</label>
-                                    <input type="text" id="af-agent-name" placeholder="es. SY-009 SYNTH" style="width: 100%; background: #000; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.8rem; border-radius: 8px; font-size: 0.75rem; outline: none;">
-                                </div>
+                            <div id="lab-tab-content-forge" class="glass-card" style="flex: 1; display: none; flex-direction: column; padding: 1.5rem; background: rgba(15, 23, 42, 0.8); border-radius: 20px; border: 1px solid #a855f7; overflow-y: auto;">
+                                <div style="font-size: 0.8rem; color: #a855f7; font-weight: 800; margin-bottom: 1.5rem;"><i class="fas fa-hammer"></i> AGENT FORGE</div>
                                 
-                                <div>
-                                    <label style="display:block; margin-bottom: 0.5rem; color: #8b949e; font-size: 0.6rem; text-transform: uppercase;">Ruolo Neurale</label>
-                                    <select id="af-agent-role" style="width: 100%; background: #000; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.8rem; border-radius: 8px; font-size: 0.75rem; outline: none;">
-                                        <option value="archivist">Archivista (Ingestione)</option>
-                                        <option value="analyst">Analista (Sintesi)</option>
-                                        <option value="guardian">Guardiano (Sicurezza)</option>
-                                        <option value="distiller">Distillatore (Pruning)</option>
-                                    </select>
-                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 1.2rem;">
+                                    <div>
+                                        <label style="display:block; margin-bottom: 0.5rem; color: #8b949e; font-size: 0.6rem; text-transform: uppercase;">Nome Identificativo</label>
+                                        <input type="text" id="lab-forge-name" placeholder="es. SY-009 SYNTH" style="width: 100%; background: #000; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.8rem; border-radius: 8px; font-size: 0.75rem; outline: none;">
+                                    </div>
+                                    
+                                    <div>
+                                        <label style="display:block; margin-bottom: 0.5rem; color: #8b949e; font-size: 0.6rem; text-transform: uppercase;">Ruolo Neurale</label>
+                                        <select id="lab-forge-role" style="width: 100%; background: #000; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.8rem; border-radius: 8px; font-size: 0.75rem; outline: none;">
+                                            <option value="archivist">Archivista (Ingestione)</option>
+                                            <option value="analyst">Analista (Sintesi)</option>
+                                            <option value="guardian">Guardiano (Sicurezza)</option>
+                                            <option value="distiller">Distillatore (Pruning)</option>
+                                        </select>
+                                    </div>
 
-                                <div>
-                                    <label style="display:block; margin-bottom: 0.5rem; color: #8b949e; font-size: 0.6rem; text-transform: uppercase;">Core Model (LLM)</label>
-                                    <select id="af-agent-model" style="width: 100%; background: #000; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.8rem; border-radius: 8px; font-size: 0.75rem; outline: none;">
-                                        <option value="gemma2:9b">Gemma 2 (Fast)</option>
-                                        <option value="deepseek-r1:1.5b">DeepSeek R1 (Logical)</option>
-                                        <option value="llama3:8b">Llama 3 (Creative)</option>
-                                    </select>
-                                </div>
+                                    <div>
+                                        <label style="display:block; margin-bottom: 0.5rem; color: #8b949e; font-size: 0.6rem; text-transform: uppercase;">Mission Directive (Prompt)</label>
+                                        <textarea id="lab-forge-prompt" placeholder="Definisci la missione specifica..." style="width: 100%; height: 60px; background: #000; border: 1px solid rgba(168, 85, 247, 0.3); color: white; padding: 0.8rem; border-radius: 8px; font-size: 0.7rem; outline: none; resize: none;"></textarea>
+                                    </div>
 
-                                <div>
-                                    <label style="display:block; margin-bottom: 0.5rem; color: #8b949e; font-size: 0.6rem; text-transform: uppercase;">Mission Directive (Prompt)</label>
-                                    <textarea id="af-agent-prompt" placeholder="Definisci la missione specifica..." style="width: 100%; height: 80px; background: #000; border: 1px solid rgba(168, 85, 247, 0.3); color: white; padding: 0.8rem; border-radius: 8px; font-size: 0.7rem; outline: none; resize: none;"></textarea>
+                                    <button onclick="forgeCustomAgent()" style="width: 100%; padding: 0.8rem; background: linear-gradient(135deg, #a855f7, #3b82f6); border: none; border-radius: 12px; color: #fff; font-weight: 800; cursor: pointer; font-size: 0.7rem; box-shadow: 0 10px 30px rgba(168, 85, 247, 0.1);">FORGE AGENT</button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
 
-                                <button onclick="forgeCustomAgent()" style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #a855f7, #3b82f6); border: none; border-radius: 12px; color: #fff; font-weight: 800; cursor: pointer; font-size: 0.75rem; box-shadow: 0 10px 30px rgba(168, 85, 247, 0.2);">FORGE AGENT</button>
+                    <!-- Right Column: 💬 INTEGRATED NEURAL CHAT -->
+                    <div class="lab-side-controls" style="display: flex; flex-direction: column; gap: 1rem; width: 450px; height: 100%; flex-shrink: 0;">
+                        <!-- 📌 INTEGRATED NEURAL CHAT (Bottom Flexible) -->
+                        <div class="chat-wrapper" style="flex: 1; display: flex; flex-direction: column; background: rgba(15, 23, 42, 0.4); border-radius: 20px; padding: 1.2rem; border: 1px solid rgba(236, 72, 153, 0.2); min-height: 0;">
+                            <div style="font-size: 0.6rem; color: #ec4899; font-weight: 900; margin-bottom: 8px; letter-spacing: 2px; text-transform: uppercase;">💬 INTEGRATED_NEURAL_CHAT</div>
+                            <div id="chat-box" style="flex: 1; overflow-y: auto; padding: 0.8rem; background: rgba(0,0,0,0.3); border-radius: 12px; margin-bottom: 0.8rem; scrollbar-width: thin; scrollbar-color: rgba(236, 72, 153, 0.3) transparent;"></div>
+                            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <div id="consensus-btn" onclick="toggleConsensusUI()" style="flex: 1; background: rgba(168,85,247,0.05); border: 1px solid rgba(168,85,247,0.2); padding: 0.4rem; border-radius: 10px; font-size: 0.5rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #8b949e; transition: 0.3s;">
+                                        CONSENSUS: <span id="consensus-status" style="margin-left: 5px;">OFF</span>
+                                    </div>
+                                    <div id="voice-trigger" onclick="toggleVoice()" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(168,85,247,0.1); border: 1px solid #a855f7; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                                        <span id="mic-icon" style="color: #a855f7; font-size: 0.8rem;">🎤</span>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <input type="text" id="chat-input" placeholder="Probe the Vault..." style="flex: 1; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); color: white; padding: 0.6rem 1rem; border-radius: 10px; outline: none; font-size: 0.75rem;" onkeydown="if(event.key==='Enter') sendNeuralProbe()">
+                                    <button onclick="sendNeuralProbe()" style="background: #a855f7; border: none; color: white; width: 40px; border-radius: 10px; cursor: pointer;"><i class="fas fa-paper-plane"></i></button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 📌 NEURAL NETS SECTION -->
-            <div id="nets-view" class="view-container" style="display: none; padding: 2rem; background: rgba(2, 6, 23, 0.98); z-index: 100;">
-                <h1 style="color: #3b82f6; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; font-weight: 900;">🕸️ RETI NEURALI</h1>
-                <div id="cy" style="width: 100%; height: 600px; background: rgba(0,0,0,0.5); border-radius: 20px; border: 1px solid rgba(59, 130, 246, 0.3);"></div>
-            </div>
 
-            <!-- 📌 NEURAL CHAT SECTION -->
-            <div id="chat-view" class="view-container" style="display: none; padding: 2rem; background: rgba(2, 6, 23, 0.98); z-index: 100;">
-                <h1 style="color: #ec4899; border-bottom: 2px solid #ec4899; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; font-weight: 900;">💬 CHAT NEURALE</h1>
-                <div class="chat-wrapper" style="height: calc(100vh - 300px); display: flex; flex-direction: column; background: rgba(0,0,0,0.2); border-radius: 20px; padding: 1.5rem; border: 1px solid rgba(236, 72, 153, 0.2);">
-                <div id="chat-box" style="flex: 1; overflow-y: auto; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 12px; margin-bottom: 1rem;"></div>
-                <div style="display: flex; gap: 1rem; align-items: center;">
-                    <div id="consensus-btn" onclick="toggleConsensusUI()" style="background: rgba(168,85,247,0.05); border: 1px solid rgba(168,85,247,0.2); padding: 0 1rem; border-radius: 12px; font-size: 0.6rem; font-weight: 800; cursor: pointer; height: 45px; display: flex; align-items: center; color: #8b949e; transition: 0.3s;">
-                        CONSENSUS: <span id="consensus-status" style="margin-left: 5px;">OFF</span>
-                    </div>
-                    <div id="voice-trigger" onclick="toggleVoice()" style="width: 45px; height: 45px; border-radius: 50%; background: rgba(168,85,247,0.1); border: 1px solid #a855f7; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s;">
-                        <span id="mic-icon" style="color: #a855f7; font-size: 1.2rem;">🎤</span>
-                    </div>
-                    <input type="text" id="chat-input" placeholder="Probe the Neural Vault..." style="flex: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 1rem; border-radius: 12px; outline: none;">
-                    <button onclick="sendNeuralProbe()" style="background: #a855f7; border: none; color: white; padding: 0 1.5rem; border-radius: 12px; font-weight: 800; cursor: pointer; height: 45px;">SEND</button>
-                </div>
-                </div>
-            </div>
 
             <!-- 📌 ADVANCED ANALYTICS SECTION -->
-            <div id="analytics-view" class="view-container" style="display: none; padding: 2rem; background: rgba(2, 6, 23, 0.98); z-index: 100; overflow-y: auto;">
-                <h1 style="color: #10b981; border-bottom: 2px solid #10b981; padding-bottom: 10px; margin-bottom: 20px; text-transform: uppercase; font-weight: 900;">📊 ANALISI AVANZATA</h1>
+            <div id="analytics-view" class="view-container" style="display: none; padding: 2rem; background: rgba(2, 6, 23, 0.98); z-index: 100; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(16, 185, 129, 0.3) transparent;">
+                <div style="margin-bottom: 2.5rem; border-bottom: 2px solid #10b981; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-end;">
+                    <div>
+                        <h1 style="color: #10b981; margin: 0; text-transform: uppercase; font-weight: 900; letter-spacing: 2px;">📊 ANALISI AVANZATA</h1>
+                        <p style="font-size: 0.65rem; color: #8b949e; margin-top: 5px;">Monitoraggio telemetrico delle risorse hardware e del framework cognitivo neurale.</p>
+                    </div>
+                    <div style="font-family: 'JetBrains Mono'; font-size: 0.55rem; color: #10b981; opacity: 0.7;">SESSION_UPTIME: <span id="session-uptime">00:00:00</span></div>
+                </div>
+
                 <div id="analytics-data-container" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
                     <!-- Populated by JS refreshAnalytics() -->
                 </div>
 
                 <!-- Row 1: Cognitive Charts -->
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem;">
-                    <div class="stat-card">
-                        <h3 style="color: #a855f7;">Cognitive Density</h3>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-bottom: 2rem;">
+                    <div class="stat-card" style="min-height: 300px;">
+                        <h3 style="color: #a855f7;"><i class="fas fa-brain"></i> COGNITIVE DENSITY</h3>
                         <p style="font-size: 0.7rem; color: gray;">Relazioni per nodo (avg)</p>
                         <canvas id="density-chart"></canvas>
                     </div>
-                    <div class="stat-card">
-                        <h3 style="color: #3b82f6;">Knowledge Growth</h3>
+                    <div class="stat-card" style="min-height: 300px;">
+                        <h3 style="color: #3b82f6;"><i class="fas fa-chart-line"></i> KNOWLEDGE GROWTH</h3>
                         <p style="font-size: 0.7rem; color: gray;">Nodi indicizzati nel tempo</p>
                         <canvas id="growth-chart"></canvas>
                     </div>
                 </div>
 
-                <!-- Row 2: 🛰️ HARDWARE OBSERVATORY (v2.2) -->
-                <div class="stat-card" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(59, 130, 246, 0.3);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                        <h3 style="color: #3b82f6; margin: 0;">🛰️ HARDWARE OBSERVATORY</h3>
-                        <div id="active-compute-mode" style="background: #3b82f6; color: black; font-weight: 800; padding: 0.2rem 1rem; border-radius: 4px; font-size: 0.7rem;">MODE: HYBRID</div>
-                    </div>
-                    
-                    <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.2); padding: 0.6rem 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.6rem; color: #a855f7; font-weight: 800; letter-spacing: 1px;">HARDWARE DNA TRACE:</span>
-                        <span id="hardware-dna-trace" style="font-family: 'JetBrains Mono'; font-size: 0.75rem; color: white;">PROBING...</span>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
-                        <!-- CPU CORE GRID -->
+                <!-- Row 2: 🛰️ HARDWARE OBSERVATORY (Expansive Audit) -->
+                <div style="background: rgba(15, 23, 42, 0.4); border-radius: 24px; border: 1px solid rgba(59, 130, 246, 0.2); padding: 2.5rem; margin-bottom: 3rem; background-image: radial-gradient(circle at top right, rgba(59, 130, 246, 0.05), transparent);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3rem;">
                         <div>
-                            <div style="font-size: 0.6rem; color: var(--text-dim); margin-bottom: 1rem; letter-spacing: 1px;">CPU PER-CORE USAGE</div>
-                            <div id="cpu-core-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.5rem;">
-                                <!-- Cores generated by JS -->
+                            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 10px;">
+                                <div style="width: 12px; height: 12px; background: #3b82f6; border-radius: 2px; box-shadow: 0 0 10px #3b82f6;"></div>
+                                <h2 style="color: #fff; margin: 0; font-size: 1.4rem; text-transform: uppercase; font-weight: 950; letter-spacing: 3px;">🛰️ HARDWARE OBSERVATORY</h2>
                             </div>
+                            <p style="font-size: 0.75rem; color: #8b949e; letter-spacing: 0.5px;">Monitoraggio fisico delle risorse di calcolo locale accelerato via Metal/MPS.</p>
                         </div>
-
-                        <!-- MEMORY HUD -->
-                        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                            <!-- RAM HUD -->
-                            <div>
-                                <div style="font-size: 0.6rem; color: var(--text-dim); margin-bottom: 0.5rem; letter-spacing: 1px;">SYSTEM RAM</div>
-                                <div style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden;">
-                                    <div id="ram-usage-fill" style="width: 0%; height: 100%; background: #3b82f6; transition: width 0.3s;"></div>
+                        <div id="active-compute-mode" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; font-weight: 900; padding: 0.6rem 2rem; border-radius: 50px; font-size: 0.75rem; letter-spacing: 2px; box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);">MODE: HYBRID</div>
+                    </div>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 3rem;">
+                        <!-- Primary Telemetry Row -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem;">
+                            <div style="background: rgba(168, 85, 247, 0.03); border: 1px solid rgba(168, 85, 247, 0.2); padding: 1.5rem; border-radius: 20px; border-top: 5px solid #a855f7;">
+                                <div style="font-size: 0.6rem; color: #a855f7; font-weight: 950; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px;">HARDWARE DNA TRACE</div>
+                                <div id="hardware-dna-trace" style="font-family: 'JetBrains Mono'; font-size: 1.2rem; color: #fff; font-weight: 800;">APPLE-arm64</div>
+                            </div>
+                            
+                            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); padding: 1.5rem; border-radius: 20px; border-top: 5px solid #3b82f6;">
+                                <div style="font-size: 0.6rem; color: #3b82f6; font-weight: 950; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px;">SYSTEM RAM AVAILABILITY</div>
+                                <div style="height: 14px; background: rgba(0,0,0,0.5); border-radius: 7px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px;">
+                                    <div id="ram-usage-fill" style="width: 79.7%; height: 100%; background: linear-gradient(90deg, #3b82f6, #60a5fa); transition: width 0.5s;"></div>
                                 </div>
-                                <div id="ram-usage-text" style="font-size: 0.7rem; color: white; margin-top: 0.4rem; font-family: 'JetBrains Mono';">0% / -- GB</div>
+                                <div id="ram-usage-text" style="font-size: 1rem; color: #fff; font-family: 'JetBrains Mono'; font-weight: 800;">79.7% / 16.0 GB</div>
                             </div>
 
-                            <!-- 🧠 BGE-M3 STATUS -->
-                            <div>
-                                <div style="font-size: 0.6rem; color: var(--text-dim); margin-bottom: 0.5rem; letter-spacing: 1px;">EMBEDDING ENGINE</div>
-                                <div id="embedding-status" style="font-size: 0.75rem; color: #a855f7; font-weight: 800; background: rgba(168, 85, 247, 0.1); padding: 0.4rem; border-radius: 4px; border-left: 3px solid #a855f7;">BGE-M3 (LOCAL-FIRST)</div>
+                            <div style="background: rgba(59, 130, 246, 0.03); border: 1px solid rgba(59, 130, 246, 0.1); padding: 1.5rem; border-radius: 20px; border-top: 5px solid #10b981;">
+                                <div style="font-size: 0.6rem; color: #10b981; font-weight: 950; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px;">EMBEDDING ENGINE</div>
+                                <div id="embedding-status" style="font-size: 1.1rem; color: #fff; font-weight: 900;"><i class="fas fa-brain" style="margin-right: 10px; color: #10b981;"></i> BGE-M3</div>
+                                <div style="font-size: 0.55rem; color: #10b981; margin-top: 5px; font-weight: 800;">STATUS: LOCAL-FIRST OPTIMIZED</div>
+                            </div>
+                        </div>
+
+                        <!-- Secondary: CPU Grid -->
+                        <div style="background: rgba(0,0,0,0.4); padding: 2.5rem; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 0 40px rgba(0,0,0,0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                                <div style="font-size: 0.7rem; color: #f8fafc; letter-spacing: 2px; font-weight: 950; text-transform: uppercase;">CPU_MESH (PER-CORE USAGE)</div>
+                                <div style="font-size: 0.55rem; color: #3b82f6; font-family: 'JetBrains Mono'; background: rgba(59,130,246,0.1); padding: 4px 12px; border-radius: 50px;">METAL_ACCELERATED: ON</div>
+                            </div>
+                            <div id="cpu-core-grid" style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 1rem; min-height: 80px;">
+                                <!-- Cores generated by JS with more breathing room -->
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 🧠 NEURAL INTELLIGENCE HUD (New v2.6) -->
-                <div class="stat-card" style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 0 30px rgba(168, 85, 247, 0.1); margin-top: 2rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                        <h3 style="color: #a855f7; margin: 0;">🧠 INTELLIGENZA NEURALE</h3>
-                        <div id="ai-learning-status" style="background: #a855f7; color: white; font-weight: 800; padding: 0.2rem 1rem; border-radius: 4px; font-size: 0.6rem; letter-spacing: 1px;">MODALITÀ: OSSERVAZIONE</div>
+                <!-- 🧠 NEURAL INTELLIGENCE HUD (Expansive Module) -->
+                <div style="background: rgba(13, 17, 23, 0.6); border-radius: 24px; border: 1px solid rgba(168, 85, 247, 0.3); padding: 2.5rem; margin-bottom: 4rem; position: relative; overflow: visible; background-image: radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.05), transparent);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem; border-bottom: 1px solid rgba(168, 85, 247, 0.1); padding-bottom: 1.5rem;">
+                        <div style="display: flex; align-items: center; gap: 1.2rem;">
+                            <div style="width: 12px; height: 12px; background: #a855f7; border-radius: 50%; box-shadow: 0 0 15px #a855f7; animation: pulse 2s infinite;"></div>
+                            <h2 style="color: #fff; margin: 0; font-size: 1.4rem; text-transform: uppercase; font-weight: 950; letter-spacing: 3px;">🧠 INTELLIGENZA NEURALE</h2>
+                        </div>
+                        <div id="ai-learning-status" style="background: rgba(168, 85, 247, 0.9); color: #fff; font-weight: 950; padding: 0.7rem 2.5rem; border-radius: 50px; font-size: 0.75rem; letter-spacing: 2px; box-shadow: 0 10px 30px rgba(168, 85, 247, 0.3);">MODALITÀ: OSSERVAZIONE</div>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
-                        <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
-                            <div style="font-size: 0.55rem; color: #8b949e; text-transform: uppercase; margin-bottom: 0.5rem;">Modello Attivo</div>
-                            <div id="ai-model-name" style="font-weight: 800; color: #fff; font-size: 0.85rem;">PROBING...</div>
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; margin-bottom: 2.5rem;">
+                        <div style="background: rgba(255,255,255,0.02); padding: 2rem; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 1rem;">
+                            <div style="font-size: 0.6rem; color: #94a3b8; text-transform: uppercase; font-weight: 950; letter-spacing: 2px;">MODELLO_ATTIVO</div>
+                            <div id="ai-model-name" style="font-weight: 950; color: #fff; font-size: 1.2rem; font-family: 'JetBrains Mono'; letter-spacing: -0.5px;">SCANNING HUB...</div>
                         </div>
-                        <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
-                            <div style="font-size: 0.55rem; color: #8b949e; text-transform: uppercase; margin-bottom: 0.5rem;">Quantizzazione</div>
-                            <div id="ai-model-quant" style="font-weight: 800; color: #4ade80; font-size: 0.85rem;">-- bit</div>
+                        <div style="background: rgba(255,255,255,0.02); padding: 2rem; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 1rem;">
+                            <div style="font-size: 0.6rem; color: #94a3b8; text-transform: uppercase; font-weight: 950; letter-spacing: 2px;">QUANTIZZAZIONE</div>
+                            <div id="ai-model-quant" style="font-weight: 950; color: #4ade80; font-size: 1.3rem; font-family: 'JetBrains Mono';">-- bit</div>
                         </div>
-                        <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
-                            <div style="font-size: 0.55rem; color: #8b949e; text-transform: uppercase; margin-bottom: 0.5rem;">Velocità Inferenza</div>
-                            <div id="ai-inference-speed" style="font-weight: 800; color: #3b82f6; font-size: 0.85rem;">-- tok/s</div>
+                        <div style="background: rgba(255,255,255,0.02); padding: 2rem; border-radius: 24px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 1rem;">
+                            <div style="font-size: 0.6rem; color: #94a3b8; text-transform: uppercase; font-weight: 950; letter-spacing: 2px;">PERFORMANCE_MEDIA (ALL-TIME)</div>
+                            <div id="ai-inference-speed" style="font-weight: 950; color: #3b82f6; font-size: 1.3rem; font-family: 'JetBrains Mono';">-- tok/s</div>
                         </div>
                     </div>
                     
-                    <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(168, 85, 247, 0.05); border-radius: 8px; border: 1px dashed rgba(168, 85, 247, 0.3);">
-                        <div style="font-size: 0.55rem; color: #a855f7; font-weight: 800; text-transform: uppercase; margin-bottom: 0.3rem;">Stato Apprendimento (Synaptic Reinforcement)</div>
-                        <div id="ai-learning-msg" style="font-size: 0.7rem; color: #d1d5db; font-style: italic;">Calibratura sinapisi in corso...</div>
+                    <div style="background: rgba(168, 85, 247, 0.05); padding: 1.8rem; border-radius: 20px; border: 1px solid rgba(168, 85, 247, 0.3); display: flex; align-items: flex-start; gap: 1.5rem;">
+                        <i class="fas fa-microchip" style="color: #a855f7; font-size: 2rem; margin-top: 5px;"></i>
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.7rem; color: #a855f7; font-weight: 950; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">SOVEREIGN ENGINE: HISTORICAL ANALYSIS</div>
+                            <div id="ai-learning-msg" style="font-size: 0.85rem; color: #f8fafc; line-height: 1.6; font-style: italic;">
+                                Analisi comparativa delle prestazioni basata sull'intero ciclo di attività del Vault... 
+                                <span style="color: #a855f7; font-family: 'JetBrains Mono'; font-weight: 800; font-style: normal; margin-left: 10px;">[SYNC_ACTIVE]</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+
+                <!-- Padding spacer for scroll (Increased headroom) -->
+                <div style="height: 150px; padding-bottom: 20rem;"></div>
+            </div> <!-- End analytics-view -->
+
+            <!-- 📊 BENCHMARK HUB: Sovereign Recommendation Engine (v1.0) -->
+            <div id="benchmark-view" class="view-container" style="display: none; padding: 2.5rem; background: rgba(2, 6, 23, 0.98); overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; border-bottom: 2px solid #3b82f6; padding-bottom: 1.5rem;">
+                    <div>
+                        <h1 style="color: #fff; margin:0; text-transform: uppercase; font-weight: 950; letter-spacing: 4px; font-size: 1.8rem;">📊 LLM BENCHMARK HUB</h1>
+                        <p style="color: #3b82f6; font-size: 0.7rem; font-weight: 800; letter-spacing: 1px; margin-top: 5px;">CLASSIFICA STORICA E ANALISI COMPARATIVA DELLE PRESTAZIONI</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.55rem; color: #8b949e; letter-spacing: 1px;">AGGREGATORE MEDIE STORICHE</div>
+                        <div id="benchmark-sync-status" style="color: #10b981; font-weight: 950; font-size: 0.75rem; font-family: 'JetBrains Mono';">SYNC: ACTIVE</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 2.5rem; margin-bottom: 3rem;">
+                    <!-- Left: Sovereign Leaderboard -->
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 20px; padding: 2rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                            <h3 style="color: #fff; font-size: 0.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px;">🏆 LEADERBOARD SEMANTICA (MEDIA)</h3>
+                            <span style="font-size: 0.55rem; color: #3b82f6; background: rgba(59,130,246,0.1); padding: 4px 12px; border-radius: 50px;">SESSION DATA: ALL-TIME</span>
+                        </div>
+                        <div class="benchmark-table-wrapper" style="width: 100%;">
+                            <table style="width: 100%; border-collapse: separate; border-spacing: 0 10px; color: #fff; font-size: 0.75rem;">
+                                <thead>
+                                    <tr style="text-align: left; color: #8b949e; font-size: 0.6rem; text-transform: uppercase;">
+                                        <th style="padding: 10px;">RANK</th>
+                                        <th style="padding: 10px;">MODELLO</th>
+                                        <th style="padding: 10px;">TOK/S (AVG)</th>
+                                        <th style="padding: 10px;">RAM (AVG)</th>
+                                        <th style="padding: 10px;">STABILITY</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="benchmark-leaderboard-body">
+                                    <!-- Populated by JS -->
+                                    <tr style="background: rgba(255,255,255,0.02); border-radius: 10px;">
+                                        <td colspan="5" style="padding: 20px; text-align: center; color: #8b949e; font-style: italic;">In attesa di dati telemetrici... Avvia una missione per iniziare il benchmark.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Right: Task-Specific Recommendations -->
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                        <div style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(59, 130, 246, 0.1)); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 20px; padding: 2rem;">
+                            <h3 style="color: #a855f7; font-size: 0.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 1.5rem;">🤖 ELITE CHOICE BY TASK</h3>
+                            <div id="mission-recommendation" style="display: flex; flex-direction: column; gap: 1rem;">
+                                <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 12px; border-left: 4px solid #a855f7;">
+                                    <div style="font-size: 0.6rem; color: #a855f7; font-weight: 900; margin-bottom: 5px;">TASK: DEEP_FORAGING</div>
+                                    <div style="font-size: 0.8rem; font-weight: 700; color: #8b949e;">ANALISI IN CORSO...</div>
+                                    <div style="font-size: 0.6rem; color: #4b5563; margin-top: 5px;">In attesa della prima sessione di estrazione per calibrare le prestazioni.</div>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 12px; border-left: 4px solid #3b82f6;">
+                                    <div style="font-size: 0.6rem; color: #3b82f6; font-weight: 900; margin-bottom: 5px;">TASK: CROSS_REF_SYNTHESIS</div>
+                                    <div style="font-size: 0.8rem; font-weight: 700; color: #8b949e;">ANALISI IN CORSO...</div>
+                                    <div style="font-size: 0.6rem; color: #4b5563; margin-top: 5px;">In attesa della prima sessione di sintesi per misurare il ragionamento logico.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ⚙️ INTEGRATED HARDWARE STRATEGY ADVISOR -->
+                <div id="strategy-advisor-root" style="margin-top: 2.5rem; background: rgba(15, 23, 42, 0.4); border-radius: 24px; border: 1px solid rgba(168, 85, 247, 0.2); padding: 2rem; background-image: radial-gradient(circle at top right, rgba(168, 85, 247, 0.05), transparent);">
+                    <div id="strategy-advisor-content">
+                        <div style="font-size: 0.7rem; color: #8b949e; text-align: center; padding: 2rem;">
+                            ANALISI HARDWARE IN CORSO...
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Bottom: System Impact Timeline -->
+                <div style="background: rgba(15, 23, 42, 0.4); border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); padding: 2rem; margin-bottom: 5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h3 style="color: #fff; font-size: 0.8rem; font-weight: 900; text-transform: uppercase; letter-spacing: 2px;">⚡ IMPACT_TRACE: RESOURCE VS SPEED</h3>
+                    </div>
+                    <div style="height: 300px;">
+                        <canvas id="benchmark-impact-chart"></canvas>
+                    </div>
+                </div>
+
+                <div style="height: 200px; padding-bottom: 10rem;"></div>
+            </div> <!-- End benchmark-view -->
 
             <!-- 🛰️ SOVEREIGN INSTALL MODAL -->
-            <div id="install-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(40px); z-index: 6000; display: none; align-items: center; justify-content: center; padding: 2rem;">
+            <div id="install-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(40px); z-index: 30000; display: none; align-items: center; justify-content: center; padding: 2rem;">
                 <!-- ... esistente ... -->
                 <div style="background: #0f172a; border: 1px solid rgba(168, 85, 247, 0.4); padding: 2.5rem; border-radius: 20px; max-width: 450px; width: 100%; text-align: center; box-shadow: 0 0 50px rgba(168, 85, 247, 0.1);">
                     <div style="font-size: 3rem; color: #a855f7; margin-bottom: 1.5rem;"><i class="fas fa-microchip"></i></div>
@@ -776,10 +936,11 @@
                         </div>
                     </div>
                 </div>
+                </div>
             </div>
 
             <!-- 🌐 KNOWLEDGE EXPANSION MODAL (v4.0) -->
-            <div id="expansion-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(25px); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 1rem;">
+            <div id="expansion-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(25px); z-index: 30000; display: none; align-items: center; justify-content: center; padding: 1rem;">
                 <div style="background: #0f172a; border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 24px; max-width: 500px; width: 100%; padding: 2rem; box-shadow: 0 0 60px rgba(59, 130, 246, 0.15); border-top: 4px solid #3b82f6;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                         <h2 style="font-size: 1.1rem; color: #fff; margin: 0; font-weight: 800; letter-spacing: 0.5px;">🌐 ESPANSIONE CONOSCENZA</h2>
@@ -802,33 +963,48 @@
             <div id="settings-view" class="view-container" style="display: none; padding: 2rem; background: rgba(2, 6, 23, 0.98); z-index: 1000; overflow-y: auto;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 2rem; border-bottom: 2px solid #a855f7; padding-bottom: 15px;">
                     <h1 style="color: #a855f7; margin:0; text-transform: uppercase; font-weight: 900;">⚙️ CONFIGURAZIONE SISTEMA</h1>
-                    <div class="settings-tabs" style="display:flex; gap: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.3rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                        <button class="settings-tab active" onclick="switchSettingsTab('swarm')">SWARM CONTROL</button>
-                        <button class="settings-tab" onclick="switchSettingsTab('hub')">NEURAL HUB</button>
-                        <button class="settings-tab" onclick="switchSettingsTab('guide')">STRATEGY GUIDE</button>
+                    <div class="settings-tabs">
+                        <button id="tab-swarm" class="settings-tab active" onclick="switchSettingsTab('swarm')">SWARM CONTROL</button>
+                        <button id="tab-hub" class="settings-tab" onclick="switchSettingsTab('hub')">NEURAL HUB</button>
+                        <button id="tab-danger" class="settings-tab" onclick="switchSettingsTab('danger')" style="color: #3b82f6;">IMPOSTAZIONI</button>
                     </div>
                 </div>
 
                 <!-- [TAB 1] SWARM CONTROL -->
+                <!-- 📌 SWARM CONTROL (v17.0 Integrated Documentation) -->
                 <div id="config-panel-swarm" class="settings-content" style="display:block; min-height: 60vh;">
                     <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); max-width: 800px;">
-                        <label style="display:block; margin-bottom: 1.5rem; color: #a855f7; font-weight: 800; font-size: 0.8rem; letter-spacing: 2px;">🧠 SWARM MODEL HUB</label>
+                        <label style="display:block; margin-bottom: 0.5rem; color: #a855f7; font-weight: 800; font-size: 0.8rem; letter-spacing: 2px;">🧠 SWARM MODEL HUB</label>
+                        <p style="font-size: 0.55rem; color: #8b949e; margin-bottom: 2rem; line-height: 1.4;">Assegna compiti specifici ai modelli locali. I modelli più potenti (es. DeepSeek-R1) sono consigliati per AUDIT e SINTESI, mentre quelli rapidi (es. Qwen 2.5) eccellono nell'ESTRAZIONE.</p>
+                        
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
                             <div>
-                                <label style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">AUDIT (007)</label>
+                                <label class="cursor-help" data-tooltip="Modello core per la validazione finale e il ragionamento logico complesso." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">AUDIT (007) <i class="fas fa-info-circle"></i></label>
                                 <select id="route-audit" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
                             </div>
                             <div>
-                                <label style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">ESTRAZIONE</label>
+                                <label class="cursor-help" data-tooltip="Modello rapido ottimizzato per il parsing di entità da file grezzi (PDF, Code, Web)." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">ESTRAZIONE <i class="fas fa-info-circle"></i></label>
                                 <select id="route-extraction" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
                             </div>
                             <div>
-                                <label style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">CROSSREF (Sentinel)</label>
+                                <label class="cursor-help" data-tooltip="Il Sentinel valida i legami tra web e locale, controllando la veridicità delle fonti." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">CROSSREF (Sentinel) <i class="fas fa-info-circle"></i></label>
                                 <select id="route-crossref" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
                             </div>
                             <div>
-                                <label style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">SINTESI (Synth)</label>
+                                <label class="cursor-help" data-tooltip="Il Muse genera intuizioni creative (Creative Sparks) collegando nodi distanti nel grafo." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">SINTESI (Synth) <i class="fas fa-info-circle"></i></label>
                                 <select id="route-synthesis" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                            </div>
+                            <div>
+                                <label class="cursor-help" data-tooltip="Modello dedicato alla chat diretta con l'utente. Garantisce risposte rapide e discorsive." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">CHAT MEDIATOR <i class="fas fa-info-circle"></i></label>
+                                <select id="route-chat-mediator" class="swarm-select" style="width:100%; background:#000; border:1px solid #3b82f6; color:white; padding: 0.8rem; border-radius: 6px; font-size: 0.75rem;"></select>
+                            </div>
+                            <div>
+                                <label class="cursor-help" data-tooltip="ORACLE EVOLUTION: Il modello incaricato di far evolvere la nebula autonomamente, utilizzando ricerche web su fonti accreditate." style="font-size: 0.6rem; color: #facc15; display: block; margin-bottom: 5px;">ORACLE EVOLUTION (Deep Research) <i class="fas fa-search-dollar"></i></label>
+                                <select id="route-evolution" class="swarm-select" style="width:100%; background:#000; border:1px solid #facc15; color:white; padding: 0.8rem; border-radius: 6px; font-size: 0.75rem;"></select>
+                            </div>
+                            <div style="grid-column: span 2; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem;">
+                                <label class="cursor-help" data-tooltip="Modello per Visione & Multimodalità. Gestisce analisi immagini, video, OCR e sintesi visiva." style="font-size: 0.6rem; color: #4ade80; display: block; margin-bottom: 5px;">MULTIMODAL & VISION INTELLIGENCE <i class="fas fa-eye"></i></label>
+                                <select id="route-multimodal" class="swarm-select" style="width:100%; background:#000; border:1px solid #4ade80; color:white; padding: 0.8rem; border-radius: 6px; font-size: 0.75rem;"></select>
                             </div>
                         </div>
                         <button onclick="saveSwarmRouting()" class="btn-glow" style="width:100%; padding: 1rem; border-radius: 12px; margin-bottom: 2rem;">SALVA CONFIGURAZIONE SWARM</button>
@@ -836,18 +1012,18 @@
                         <label style="display:block; margin-bottom: 1rem; color: #4ade80; font-weight: 800; font-size: 0.7rem; letter-spacing: 1px;">⚙️ PROTOCOLLO SOVRANO</label>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
                             <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                                <label style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">CONSENSO LLM</label>
-                                <input type="range" id="consensus-threshold" min="1" max="5" value="2" style="width:100%;">
+                                <label class="cursor-help" data-tooltip="Numero di modelli che devono concordare prima di una fusione semantica. Più è alto, minore è il rischio di allucinazioni." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 8px;">CONSENSO LLM <i class="fas fa-info-circle"></i></label>
+                                <input type="number" id="consensus-threshold" min="1" max="5" value="2" style="width:100%; background:#000; border:1px solid rgba(168,85,247,0.3); color:#a855f7; padding:10px; border-radius:8px; font-family:'JetBrains Mono'; font-size:0.8rem; outline:none; text-align:center;">
                             </div>
                             <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                                <label style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">SENSIBILITÀ WEAVER</label>
-                                <input type="range" id="weaver-sensitivity" min="0.5" max="0.95" step="0.01" value="0.82" style="width:100%;">
+                                <label class="cursor-help" data-tooltip="Soglia di confidenza per i legami automatici. [Basso = Creativo, Alto = Rigoroso]" style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 8px;">SENSIBILITÀ WEAVER <i class="fas fa-info-circle"></i></label>
+                                <input type="number" id="weaver-sensitivity" min="0.5" max="0.95" step="0.01" value="0.82" style="width:100%; background:#000; border:1px solid rgba(59,130,246,0.3); color:#3b82f6; padding:10px; border-radius:8px; font-family:'JetBrains Mono'; font-size:0.8rem; outline:none; text-align:center;">
                             </div>
                         </div>
-                        <textarea id="trusted-sources-pool" placeholder="Trusted Domains..." style="width: 100%; height: 60px; background: #000; border: 1px solid rgba(255,255,255,0.1); color: #4ade80; padding: 10px; border-radius: 8px; font-size: 0.7rem; margin-bottom: 1rem;"></textarea>
+                        <textarea id="trusted-sources-pool" onchange="updateSwarmConfig('trusted_sources', this.value.split(','))" placeholder="Trusted Domains (es. github.com, docs.python.org)..." style="width: 100%; height: 60px; background: #000; border: 1px solid rgba(255,255,255,0.1); color: #4ade80; padding: 10px; border-radius: 8px; font-size: 0.7rem; margin-bottom: 1rem;"></textarea>
                         
-                        <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(74, 222, 128, 0.05); padding: 1rem; border-radius: 12px; border: 1px solid rgba(74, 222, 128, 0.2);">
-                            <div style="color: #fff; font-size: 0.7rem; font-weight: 800;">Auto-Pilot Supervision</div>
+                        <div class="cursor-help" data-tooltip="Se attivo, lo swarm agisce in autonomia. Se spento, ogni azione richiede approvazione nel Mission Control." style="display: flex; align-items: center; justify-content: space-between; background: rgba(74, 222, 128, 0.05); padding: 1rem; border-radius: 12px; border: 1px solid rgba(74, 222, 128, 0.2);">
+                            <div style="color: #fff; font-size: 0.7rem; font-weight: 800;">Auto-Pilot Supervision <i class="fas fa-info-circle"></i></div>
                             <label class="ios-switch"><input type="checkbox" id="autopilot-supervision-toggle" onchange="updateSwarmConfig('auto_mode', !this.checked)" checked><span class="slider round"></span></label>
                         </div>
                     </div>
@@ -863,10 +1039,12 @@
                         <div style="overflow-x:auto;">
                             <table class="aura-table" style="width:100%; border-collapse:collapse;">
                                 <thead>
-                                    <tr style="text-align:left; color:#a855f7; border-bottom:1px solid rgba(168,85,247,0.2); font-size:0.6rem;">
-                                        <th style="padding:1rem;">MODELLO</th>
+                                    <tr style="text-align:left; color:#a855f7; border-bottom:1px solid rgba(168,247,247,0.2); font-size:0.55rem; text-transform:uppercase; letter-spacing:1px;">
+                                        <th style="padding:1rem;">LLM CORE & REQUISITI</th>
+                                        <th style="padding:1rem;">VERSIONE</th>
                                         <th style="padding:1rem;">STATO</th>
-                                        <th style="padding:1rem;">PESO</th>
+                                        <th style="padding:1rem;" class="cursor-help" title="Capacità operative, compiti consigliati e specializzazioni tecniche del modello.">PUNTI DI FORZA <i class="fas fa-info-circle"></i></th>
+                                        <th style="padding:1rem;" class="cursor-help" title="Modelli che lavorano in simbiosi per aumentare la precisione del ragionamento.">SINERGIE <i class="fas fa-info-circle"></i></th>
                                         <th style="padding:1rem;">AZIONI</th>
                                     </tr>
                                 </thead>
@@ -878,24 +1056,36 @@
                     </div>
                 </div>
 
-                <!-- [TAB 3] STRATEGY GUIDE -->
-                <div id="config-panel-guide" class="settings-content" style="display:none; min-height: 60vh;">
-                    <div class="glass-card" style="border-color: rgba(168,85,247,0.3); padding: 2rem;">
-                        <h2 style="color: #a855f7; font-size: 1rem; margin-bottom: 1.5rem;">📑 STRATEGY GUIDE</h2>
-                        <table style="width: 100%; font-size: 0.7rem; border-collapse: collapse; color: #94a3b8;">
-                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);"><td style="padding: 10px; color: #fff;">DeepSeek R1</td><td>Analisi Profonda & Logica</td></tr>
-                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);"><td style="padding: 10px; color: #fff;">Llama 3.2</td><td>Velocità & General Purpose</td></tr>
-                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);"><td style="padding: 10px; color: #fff;">Qwen 2.5</td><td>Dati Tecnici & Estrazione</td></tr>
-                        </table>
-                        
-                        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 2rem 0;">
-                        <div style="margin-bottom: 2rem;">
-                            <label style="display:block; margin-bottom: 1rem; color: #8b949e; font-size: 0.8rem;">3D VISUAL SCALE</label>
-                            <input type="range" id="visualScale" min="100" max="3000" value="960" style="width: 100%;">
+                <!-- [TAB 3] IMPOSTAZIONI SISTEMA -->
+                <div id="config-panel-settings" class="settings-content" style="display:none; min-height: 60vh;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <!-- Theme Toggle Card -->
+                        <div class="glass-card" style="padding: 2rem;">
+                            <h2 style="color: #3b82f6; font-size: 1rem; margin-bottom: 1rem;"><i class="fas fa-palette"></i> TEMA E INTERFACCIA</h2>
+                            <p style="font-size: 0.7rem; color: #94a3b8; margin-bottom: 2rem;">Personalizza l'aspetto visivo del Nexus Vault. Il tema Light è ottimizzato per la leggibilità diurna.</p>
+                            
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                                <div>
+                                    <div id="theme-toggle-title" style="color: #fff; font-size: 0.8rem; font-weight: 800;">Modalità Light</div>
+                                    <div id="theme-toggle-desc" style="color: #8b949e; font-size: 0.6rem;">Passa a testi neri e sfondo chiaro</div>
+                                </div>
+                                <label class="ios-switch">
+                                    <input type="checkbox" id="theme-checkbox" onchange="window.toggleTheme()">
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
                         </div>
-                        <button onclick="nuclearPurge()" style="background: #ef4444; color: white; border: none; padding: 1rem; border-radius: 8px; width: 100%; font-weight: 800;">☣️ NUCLEAR PURGE ALL MEMORY</button>
+
+                        <!-- Maintenance Card -->
+                        <div class="glass-card" style="border-color: rgba(239, 68, 68, 0.3); padding: 2rem;">
+                            <h2 style="color: #ef4444; font-size: 1rem; margin-bottom: 1.5rem;"><i class="fas fa-exclamation-triangle"></i> AREA PERICOLOSA</h2>
+                            <p style="font-size: 0.7rem; color: #94a3b8; margin-bottom: 2rem;">Utility di manutenzione profonda. Queste azioni sono irreversibili.</p>
+                            <button onclick="nuclearPurge()" style="background: linear-gradient(135deg, #ef4444, #991b1b); color: white; border: none; padding: 1.2rem; border-radius: 12px; width: 100%; font-weight: 800; cursor: pointer; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2);">☣️ NUCLEAR PURGE ALL MEMORY</button>
+                        </div>
                     </div>
                 </div>
+
+
             </div>
 
             <!-- 🏛️ NEURAL MODEL HUB MODAL (v3.0) -->
@@ -913,27 +1103,12 @@
                     </div>
                 </div>
 
-                <!-- 🌀 DYNAMIC INSTALL PROGRESS MODAL (v3.5) -->
-                <div id="install-progress-overlay" style="position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:9999; display:none; align-items:center; justify-content:center; backdrop-filter:blur(15px);">
-                    <div style="width:400px; background:#0f172a; border:2px solid #3b82f6; border-radius:24px; padding:2.5rem; text-align:center; box-shadow: 0 0 80px rgba(59, 130, 246, 0.4);">
-                        <div style="background: rgba(59, 130, 246, 0.1); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
-                            <i class="fas fa-cloud-download-alt" style="color: #3b82f6; font-size: 1.5rem;"></i>
-                        </div>
-                        <h2 id="install-model-name" style="color:#fff; margin-bottom:1.5rem; font-size:1rem; letter-spacing:1px; font-weight: 900;">INIZIALIZZAZIONE DOWNLOAD...</h2>
-                        <div style="width:100%; height:12px; background:rgba(255,255,255,0.05); border-radius:20px; overflow:hidden; margin-bottom:1.2rem; border:1px solid rgba(255,255,255,0.1); padding: 2px;">
-                            <div id="install-progress-bar" style="width:0%; height:100%; background:linear-gradient(90deg, #3b82f6, #a855f7); border-radius: 20px; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 15px #3b82f6;"></div>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span id="install-status-text" style="font-size:0.6rem; color:#8b949e; text-transform:uppercase; font-weight: 800; letter-spacing: 1px;">Sincronizzazione Uplink...</span>
-                            <span id="install-percentage" style="font-size:1.5rem; font-weight:900; color:#3b82f6; font-family: 'JetBrains Mono';">0%</span>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="hub-table-wrapper" style="width: 100%; overflow-x: auto;">
                     <table style="width: 100%; border-collapse: separate; border-spacing: 0 1rem; color: #e2e8f0; font-size: 0.8rem;">
                         <thead>
                             <tr style="text-align: left; color: #a855f7; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px;">
+                                <th style="padding: 1rem; font-weight: 900;">LLM TEST</th>
                                 <th style="padding: 1rem; font-weight: 900;">Modello & Peso</th>
                                 <th style="padding: 1rem; font-weight: 900;">Punti di Forza & Esempi</th>
                                 <th style="padding: 1rem; font-weight: 900;">Sinergie Swarm</th>
@@ -975,6 +1150,11 @@
                         </div>
 
                         <div>
+                            <label style="display:block; margin-bottom: 0.5rem; color: #8b949e; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px;">Cervello LLM Dedicato</label>
+                            <select id="af-agent-model" class="swarm-select" style="width: 100%; background: #000; border: 1px solid rgba(59, 130, 246, 0.4); color: #3b82f6; padding: 1rem; border-radius: 12px; font-family: 'JetBrains Mono'; font-size: 0.8rem; outline: none;"></select>
+                        </div>
+
+                        <div>
                             <label style="display:block; margin-bottom: 0.5rem; color: #8b949e; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px;">Istruzioni Mandato (Prompt)</label>
                             <textarea id="af-agent-prompt" placeholder="Define the agent's core mission and behavioral rules..." style="width: 100%; background: #000; border: 1px solid rgba(168, 85, 247, 0.3); color: white; padding: 1rem; border-radius: 12px; font-family: 'Inter'; font-size: 0.75rem; outline: none; height: 100px; resize: none;"></textarea>
                         </div>
@@ -1013,8 +1193,9 @@
                     </div>
                 </div>
                 <div class="bottom-stats-panel">
-                    <div id="tip-nodes-2" style="color: #94a3b8; font-size: 0.6rem;">● NODES: <span id="stat-nodes-2" class="val-neon" style="color: #a855f7;">...</span></div>
-                    <div id="tip-edges-2" style="color: #94a3b8; font-size: 0.6rem;">● EDGES: <span id="stat-synapses-2" class="val-neon" style="color: #3b82f6;">...</span></div>
+                    <div id="tip-nodes-2" style="color: #94a3b8; font-size: 0.6rem;">● NODES: <span id="stat-nodes-2" class="val-neon stat-nodes" style="color: #a855f7;">...</span></div>
+                    <div id="tip-edges-2" style="color: #94a3b8; font-size: 0.6rem;">● EDGES: <span id="stat-synapses-2" class="val-neon stat-synapses" style="color: #3b82f6;">...</span></div>
+                    <div id="tip-clusters-2" style="color: #94a3b8; font-size: 0.6rem;">● CLUSTERS: <span id="stat-clusters-2" class="val-neon stat-clusters" style="color: #10b981;">...</span></div>
                     <div id="tip-blueprint" class="cursor-help" data-tooltip="Indica che il ciclo di sintesi tra gli agenti è completo. Significa che l'Archivista Prime ha generato un piano d'azione finale basato sulle analisi dell'Analista e del Guardiano." style="font-size: 0.5rem; color: #4ade80; font-weight: 800; letter-spacing: 1px; text-align: center; background: rgba(74, 222, 128, 0.05); padding: 0.4rem; border-radius: 4px; margin-top: auto;">● MISSION BLUEPRINT READY</div>
                 </div>
             </div>
@@ -1049,10 +1230,54 @@
         </div>
     </section>
 
-    <script src="/static/js/dashboard.js?v=2.7.7"></script>
+    <!-- 🌌 AURA PERSISTENT LAYER (Modals & Scripts isolated from Grid) -->
+    <div id="aura-persistent-layer" style="position: relative; z-index: 10000;">
+        <!-- 💾 CONFIG SAVE CONFIRMATION MODAL -->
+        <div id="swarm-save-modal" style="position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10005; display:none; align-items:center; justify-content:center; backdrop-filter:blur(10px);">
+            <div class="glass-card" style="width:360px; padding:2.5rem; text-align:center; border: 2px solid #10b981; box-shadow: 0 0 50px rgba(16, 185, 129, 0.3);">
+                <div style="width:60px; height:60px; background:rgba(16, 185, 129, 0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin: 0 auto 1.5rem;">
+                    <i class="fas fa-check" style="color:#10b981; font-size:1.5rem;"></i>
+                </div>
+                <h3 style="color:#fff; font-size:1.1rem; margin-bottom:0.5rem; font-weight:900;">CONFIGURAZIONE SALVATA</h3>
+                <p style="color:#8b949e; font-size:0.7rem; margin-bottom:2rem; line-height:1.5;">Le preferenze dello Swarm sono state persistite nel nucleo e caricate nell'Orchestratore attivo.</p>
+                <button onclick="document.getElementById('swarm-save-modal').style.display='none'" style="width:100%; padding:0.8rem; background:#10b981; color:white; border:none; border-radius:12px; font-weight:800; cursor:pointer; font-size:0.75rem; transition:0.3s; box-shadow:0 4px 15px rgba(16, 185, 129, 0.4);">RICEVUTO</button>
+            </div>
+        </div>
 
-    <!-- 🌀 DYNAMIC INSTALL PROGRESS MODAL (Locked to Front) -->
-    <div id="install-progress-overlay" style="position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.96); z-index:99999; display:none; align-items:center; justify-content:center; backdrop-filter:blur(20px);">
+        <!-- ⚠️ SOVEREIGN FALLBACK ALERT MODAL -->
+        <div id="fallback-alert-modal" style="position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:10010; display:none; align-items:center; justify-content:center; backdrop-filter:blur(15px);">
+            <div class="glass-card" style="width:400px; padding:2.5rem; text-align:center; border: 2px solid #f59e0b; box-shadow: 0 0 60px rgba(245, 158, 11, 0.2);">
+                <div style="width:70px; height:70px; background:rgba(245, 158, 11, 0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin: 0 auto 1.5rem; border: 1px solid rgba(245, 158, 11, 0.3);">
+                    <i class="fas fa-exclamation-triangle" style="color:#f59e0b; font-size:1.8rem; animation: pulse 1s infinite;"></i>
+                </div>
+                <h3 style="color:#fff; font-size:1.2rem; margin-bottom:0.5rem; font-weight:950; letter-spacing: 1px;">FALLBACK ATTIVATO</h3>
+                <p style="color:#e2e8f0; font-size:0.75rem; margin-bottom:1.5rem; line-height:1.6;">Il modello richiesto <strong><span id="requested-model-id" style="color:#f59e0b;">...</span></strong> non è disponibile nel cluster locale.</p>
+                <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 2rem;">
+                    <div style="font-size: 0.55rem; color: #8b949e; text-transform: uppercase; margin-bottom: 5px;">Rotte Riconfigurate per task: <span id="fallback-task" style="color:#fff;">...</span></div>
+                    <div style="font-size: 0.8rem; color: #4ade80; font-weight: 800;"><i class="fas fa-arrow-right"></i> UTILIZZO: <span id="resolved-model-id">...</span></div>
+                </div>
+                <button onclick="document.getElementById('fallback-alert-modal').style.display='none'" style="width:100%; padding:1rem; background:rgba(245, 158, 11, 0.1); border:1px solid #f59e0b; color:#f59e0b; border-radius:12px; font-weight:800; cursor:pointer; font-size:0.75rem; transition:0.3s;">CONTINUA MISSIONE</button>
+            </div>
+        </div>
+
+        <!-- 🗑️ SOVEREIGN DELETION CONSENT MODAL -->
+        <div id="delete-confirm-modal" style="position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); z-index:20000; display:none; align-items:center; justify-content:center; backdrop-filter:blur(15px);">
+            <div class="glass-card" style="width:420px; padding:2.5rem; text-align:center; border: 2px solid #ef4444; box-shadow: 0 0 60px rgba(239, 68, 68, 0.2);">
+                <div style="width:70px; height:70px; background:rgba(239, 68, 68, 0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin: 0 auto 1.5rem; border: 1px solid rgba(239, 68, 68, 0.3);">
+                    <i class="fas fa-trash-alt" style="color:#ef4444; font-size:1.8rem;"></i>
+                </div>
+                <h3 style="color:#fff; font-size:1.1rem; margin-bottom:0.5rem; font-weight:950; letter-spacing: 1px;">CONSENSO ELIMINAZIONE</h3>
+                <p style="color:#e2e8f0; font-size:0.7rem; margin-bottom:1.5rem; line-height:1.6;">Sei sicuro di voler rimuovere permanentemente <strong id="delete-target-id" style="color:#ef4444;">...</strong>?<br>I file verranno cancellati fisicamente dal disco.</p>
+                <div style="display:flex; gap:1rem;">
+                    <button id="btn-confirm-delete" style="flex:1; padding:0.8rem; background:#ef4444; color:white; border:none; border-radius:12px; font-weight:800; cursor:pointer; font-size:0.7rem;">ELIMINA ORA</button>
+                    <button onclick="document.getElementById('delete-confirm-modal').style.display='none'" style="flex:1; padding:0.8rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.2); color:white; border-radius:12px; font-weight:800; cursor:pointer; font-size:0.7rem;">ANNULLA</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🌀 DYNAMIC INSTALL PROGRESS MODAL (Absolute Top Layer) -->
+    <div id="install-progress-overlay" style="position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.96); z-index:999999; display:none; align-items:center; justify-content:center; backdrop-filter:blur(25px);">
         <div style="width:450px; background:#0f172a; border:2px solid #3b82f6; border-radius:24px; padding:3rem; text-align:center; box-shadow: 0 0 100px rgba(59, 130, 246, 0.5);">
             <div style="background: rgba(59, 130, 246, 0.1); width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem; border: 1px solid rgba(59, 130, 246, 0.3);">
                 <i class="fas fa-microchip fa-spin" style="color: #3b82f6; font-size: 2rem;"></i>
@@ -1119,11 +1344,16 @@
                     </tbody>
                 </table>
             </div>
+            <div style="padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); text-align: center; background: rgba(0,0,0,0.1);">
+                <button onclick="toggleBenchmarkHub()" style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #10b981; padding: 0.8rem 2.5rem; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 0.7rem; letter-spacing: 1px;">
+                    <i class="fas fa-arrow-left"></i> TORNA ALLA DASHBOARD
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- 🧬 CUSTOM AGENT FACTORY MODAL (v1.0) -->
-    <div id="custom-agent-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); backdrop-filter:blur(30px); z-index:10005; align-items:center; justify-content:center;">
+    <div id="custom-agent-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); backdrop-filter:blur(30px); z-index:30000; align-items:center; justify-content:center;">
         <div class="glass-card" style="width: 450px; border: 1px solid #3b82f6;">
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
                 <span>🧬 CUSTOM AGENT FACTORY</span>
@@ -1146,48 +1376,52 @@
             </div>
         </div>
     </div>
-    <!-- 📂 SOVEREIGN AUDIT LEDGER MODAL (v8.0) -->
-    <div id="audit-ledger-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(5,8,15,0.95); backdrop-filter:blur(30px); z-index:10010; align-items:center; justify-content:center; padding:2rem;">
-        <div class="glass-card" style="width: 1000px; max-height: 85%; display: flex; flex-direction: column; border: 1px solid #a855f7; box-shadow: 0 0 100px rgba(168,85,247,0.2); overflow:hidden;">
-            <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; padding: 1.5rem; background: rgba(13, 17, 23, 0.9);">
-                <div style="display:flex; align-items:center; gap: 1rem;">
-                    <i class="fas fa-file-invoice" style="color: #a855f7; font-size: 1.5rem;"></i>
-                    <div style="font-size:1.4rem; font-weight:900; color:#a855f7; letter-spacing:2px;"><i class="fas fa-history"></i> <span id="audit-ledger-title-main">CHRONO-LOG AGENT ACTIONS</span></div>
+    <!-- 📂 SOVEREIGN AUDIT LEDGER MODAL (v8.5) -->
+    <div id="audit-ledger-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(5,8,15,0.96); backdrop-filter:blur(30px); z-index:90000; align-items:center; justify-content:center; padding:2rem;">
+        <div class="glass-card" style="width: 1100px; height: 85vh; display: flex; flex-direction: column; border: 1px solid rgba(168, 85, 247, 0.4); box-shadow: 0 0 100px rgba(0,0,0,1); overflow:hidden; border-radius: 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding: 1.5rem; background: rgba(15, 23, 42, 0.8); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div style="display:flex; align-items:center; gap: 15px;">
+                    <i class="fas fa-history" style="color: #a855f7; font-size: 1.4rem;"></i>
+                    <h2 id="audit-ledger-title-main" style="margin:0; font-size:1.1rem; font-weight:900; color:#fff; letter-spacing:2px; text-transform:uppercase;">CHRONO-LOG: SYSTEM ACTIONS</h2>
                 </div>
-                <button onclick="closeAuditLedger()" style="background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button>
-            </div>
-            
-            <div style="padding: 1.5rem; background: rgba(168,85,247,0.03); border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <div style="font-size: 0.7rem; color: #8b949e; line-height: 1.4;">
-                    Registro immutabile delle attività degli agenti autonomi. Mostra il dettaglio delle azioni di mantenimento, le motivazioni semantiche e l'impatto sull'efficienza del Vault.
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="background:rgba(168,85,247,0.1); padding:4px 12px; border-radius:30px; font-size:0.55rem; color:#a855f7; border:1px solid rgba(168,85,247,0.2); font-weight:800;">SOVEREIGN_AUDIT_MODE</div>
+                    <button class="btn-neon" style="padding:0.5rem 1.2rem; font-size:0.6rem; background:rgba(34,211,238,0.1); color:#22d3ee; border:1px solid #22d3ee; border-radius:8px; cursor:pointer;" onclick="document.getElementById('export-dropdown').classList.toggle('hidden')">
+                        <i class="fas fa-file-export"></i> EXPORT LOGS
+                    </button>
+                    <div id="export-dropdown" class="hidden" style="position:absolute; top:80px; right:150px; background:#0f172a; border:1px solid rgba(255,255,255,0.1); border-radius:12px; width:180px; z-index:1001; box-shadow:0 20px 50px rgba(0,0,0,0.8);">
+                        <div onclick="exportAuditLedger('json')" style="padding:12px; font-size:0.65rem; cursor:pointer; color:#fff; border-bottom:1px solid rgba(255,255,255,0.05);">JSON Format</div>
+                        <div onclick="exportAuditLedger('csv')" style="padding:12px; font-size:0.65rem; cursor:pointer; color:#fff; border-bottom:1px solid rgba(255,255,255,0.05);">CSV (Excel)</div>
+                        <div onclick="exportAuditLedger('db')" style="padding:12px; font-size:0.65rem; cursor:pointer; color:#fff;">Full SQL Archive</div>
+                    </div>
                 </div>
             </div>
 
-            <div style="flex:1; overflow-y:auto; padding: 1.5rem;">
-                <table style="width: 100%; border-collapse: collapse; font-family: 'JetBrains Mono'; font-size: 0.7rem; color: #e2e8f0;">
-                    <thead style="position: sticky; top: 0; background: #0f172a; z-index: 10;">
-                        <tr style="text-align: left; color: #a855f7; border-bottom: 2px solid rgba(168,85,247,0.3);">
-                            <th style="padding: 1rem;">TIMESTAMP</th>
-                            <th style="padding: 1rem;">AGENTE</th>
-                            <th style="padding: 1rem;">AZIONE</th>
-                            <th style="padding: 1rem;">TARGET</th>
-                            <th style="padding: 1rem;">MOTIVAZIONE (IL "PERCHÉ")</th>
-                            <th style="padding: 1rem; text-align: right;">RISPARMIO</th>
+            <div style="flex:1; overflow-y:auto; background: rgba(0,0,0,0.2);">
+                <table style="width:100%; border-collapse:collapse; font-family:'JetBrains Mono', monospace; font-size:0.65rem;">
+                    <thead style="background:rgba(15, 23, 42, 0.9); position:sticky; top:0; z-index:10;">
+                        <tr style="text-align:left; color:#a855f7;">
+                            <th style="padding:1.2rem; border-bottom:1px solid rgba(168,85,247,0.2);">TIMESTAMP</th>
+                            <th style="padding:1.2rem; border-bottom:1px solid rgba(168,85,247,0.2);">AGENTE</th>
+                            <th style="padding:1.2rem; border-bottom:1px solid rgba(168,85,247,0.2);">AZIONE</th>
+                            <th style="padding:1.2rem; border-bottom:1px solid rgba(168,85,247,0.2);">TARGET_ID</th>
+                            <th style="padding:1.2rem; border-bottom:1px solid rgba(168,85,247,0.2);">LOGICA_MOTIVAZIONALE</th>
+                            <th style="padding:1.2rem; border-bottom:1px solid rgba(168,85,247,0.2);">IMPATTO</th>
                         </tr>
                     </thead>
                     <tbody id="audit-ledger-body">
-                        <!-- Populated by JS -->
+                        <!-- Populated dynamic -->
                     </tbody>
                 </table>
             </div>
             
-            <div style="padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); text-align: right; background: rgba(13,17,23,0.9);">
-                <button onclick="closeAuditLedger()" style="background:#a855f7; color:white; border:none; padding:0.8rem 2.5rem; border-radius:10px; font-weight:800; cursor:pointer; font-size:0.7rem;">CHIUDI VERBALE</button>
+            <div style="padding: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: flex-end; background: rgba(15, 23, 42, 0.8);">
+                <button onclick="closeAuditLedger()" style="background: linear-gradient(135deg, #a855f7, #3b82f6); color:white; border:none; padding:1rem 3rem; border-radius:12px; font-weight:800; cursor:pointer; font-size:0.75rem; letter-spacing:1px; box-shadow: 0 4px 15px rgba(168,85,247,0.3);">CHIUDI VERBALE</button>
             </div>
         </div>
     </div>
     <!-- 🏺 MISSION HOLD CRISIS MODAL (v10.6) -->
-    <div id="mission-hold-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); backdrop-filter:blur(25px); z-index:20000; align-items:center; justify-content:center; padding:2rem;">
+    <div id="mission-hold-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); backdrop-filter:blur(25px); z-index:35000; align-items:center; justify-content:center; padding:2rem;">
         <div class="glass-card" style="width: 700px; max-height: 90%; display: flex; flex-direction: column; border: 1px solid #ef4444; border-top: 5px solid #ef4444; box-shadow: 0 0 100px rgba(239, 68, 68, 0.1);">
             <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; padding: 1.5rem;">
                 <div style="display:flex; align-items:center; gap: 1rem;">
@@ -1239,5 +1473,64 @@
         </div>
     </div>
 
+        <!-- 🚀 JS MAIN ENTRY (v4.0) -->
+        <script src="/static/js/dashboard.js?v=4.4.1"></script>
+
+    <!-- 📘 AGENT INTELLIGENCE BRIEFING MODAL -->
+    <!-- 📊 [AI BENCHMARK HUB] Sovereign Inference Leaderboard -->
+    <div id="benchmark-hub-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(2, 6, 23, 0.95); backdrop-filter:blur(40px); z-index:30000; align-items:center; justify-content:center; padding:2rem;">
+        <div style="background: rgba(30, 41, 59, 0.4); width: 1000px; max-height: 80vh; border-radius: 24px; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2.5rem; display: flex; flex-direction: column; gap: 1.5rem; position: relative; box-shadow: 0 0 100px rgba(16, 185, 129, 0.1);">
+             <button onclick="toggleBenchmarkHub()" style="position: absolute; right: 2rem; top: 2rem; background: rgba(255,255,255,0.05); border: none; color: #94a3b8; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;"><i class="fas fa-times"></i></button>
+             
+             <div style="text-align: center;">
+                 <h2 style="color: #10b981; font-weight: 900; letter-spacing: 5px; margin: 0; font-size: 1.8rem; text-transform: uppercase;">🚀 NEURAL_BENCHMARK_HUB</h2>
+                 <p style="color: #64748b; font-size: 0.75rem; margin-top: 0.5rem; letter-spacing: 2px;">REAL-TIME INFERENCE ANALYTICS & COGNITIVE LEADERBOARD</p>
+             </div>
+             
+             <div style="overflow-y: auto; flex: 1; padding-right: 1rem;">
+                 <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+                     <thead>
+                         <tr style="color: #4ade80; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1.5px; text-align: left;">
+                             <th style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Model</th>
+                             <th style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">T/S (Peak)</th>
+                             <th style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Latency</th>
+                             <th style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">CPU Impact</th>
+                             <th style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">VRAM</th>
+                             <th style="padding: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05);">Status</th>
+                         </tr>
+                     </thead>
+                     <tbody id="benchmark-results-body">
+                         <!-- Dynamically populated from dashboard.js -->
+                     </tbody>
+                 </table>
+             </div>
+             
+             <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;">
+                 <div style="font-size: 0.6rem; color: #64748b;"><i class="fas fa-info-circle"></i> Data refreshed every audit cycle based on real inference telemetry.</div>
+                 <button onclick="toggleBenchmarkHub()" style="background: #10b981; border: none; color: white; padding: 0.6rem 2.5rem; border-radius: 12px; font-weight: 800; cursor: pointer; font-size: 0.7rem; box-shadow: 0 5px 20px rgba(16, 185, 129, 0.3);">BACK TO NEBULA</button>
+             </div>
+        </div>
+    </div>
+
+    <div id="agent-help-modal" class="modal-nebula-overlay" style="display: none; align-items: center; justify-content: center; z-index: 90000;">
+        <div class="glass-card" style="width: 500px; max-width: 90vw; background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(40px); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 20px; overflow: hidden; box-shadow: 0 40px 100px rgba(0,0,0,1);">
+            <div style="background: rgba(168, 85, 247, 0.1); padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="help-agent-title" style="margin:0; font-size: 1rem; color: #a855f7; letter-spacing: 2px;">AGENT_INTEL</h3>
+                <button onclick="document.getElementById('agent-help-modal').style.display='none'" class="close-btn-nebula">✕</button>
+            </div>
+            <div style="padding: 2rem; color: white;">
+                <div id="help-agent-role" style="font-size: 0.6rem; color: #3b82f6; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 0.5rem;">MISSION_PROFILE</div>
+                <div id="help-agent-desc" style="font-size: 0.85rem; line-height: 1.6; color: #cbd5e1; margin-bottom: 1.5rem;">Loading briefing...</div>
+                
+                <div style="background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                    <div style="font-size: 0.55rem; color: #4ade80; font-weight: 900; margin-bottom: 8px;">CASO D'USO / ESEMPIO:</div>
+                    <div id="help-agent-example" style="font-size: 0.75rem; color: #f8fafc; font-style: italic;">...</div>
+                </div>
+            </div>
+            <div style="padding: 1rem; background: rgba(0,0,0,0.2); text-align: right;">
+                <button onclick="document.getElementById('agent-help-modal').style.display='none'" style="background: #a855f7; border: none; color: white; padding: 0.5rem 2rem; border-radius: 10px; font-size: 0.7rem; font-weight: 800; cursor: pointer;">COMPRESO</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

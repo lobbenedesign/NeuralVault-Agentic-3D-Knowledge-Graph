@@ -5,6 +5,10 @@ import numpy as np
 from typing import List, Dict, Optional, Any
 from pathlib import Path
 import duckdb
+import os
+import re
+import httpx
+import asyncio
 
 class Agent007Intelligence:
     """
@@ -15,7 +19,6 @@ class Agent007Intelligence:
     def __init__(self, db_path: Optional[str] = None, engine=None):
         self.engine = engine
         if db_path:
-            import os
             try:
                 self.con = duckdb.connect(db_path)
             except Exception as e:
@@ -66,10 +69,6 @@ class Agent007Intelligence:
         """
         Protocollo Agent007-NER v2.5.0: Estrazione Reale via Ollama con Fallback Euristico.
         """
-        import re
-        import httpx
-        import asyncio
-        
         entities = []
         relations = []
         
@@ -174,7 +173,9 @@ class Agent007Intelligence:
                     VALUES (?, ?, ?, ?, ?)
                 """, (ent['name'], ent['name'], ent['type'], json.dumps(ent.get('attributes', {})), source_node_id))
             except Exception as e:
-                print(f"⚠️ Error adding entity: {e}")
+                # Se la connessione è chiusa, logghiamo in modo silenzioso o tentiamo il ripristino se necessario
+                if "closed" in str(e).lower(): pass
+                else: print(f"⚠️ Error adding entity: {e}")
 
         for rel in relations:
             try:
@@ -190,7 +191,8 @@ class Agent007Intelligence:
                     VALUES (?, ?, ?, ?, ?)
                 """, (r_source, r_target, r_type, r_fact, source_node_id))
             except Exception as e:
-                print(f"⚠️ Error adding relation: {e}")
+                if "closed" in str(e).lower(): pass
+                else: print(f"⚠️ Error adding relation: {e}")
 
     def get_entity_context(self, entity_name: str) -> Dict[str, Any]:
         """Recupera il contesto 'Hard' di un'entità (Relazioni dirette)."""

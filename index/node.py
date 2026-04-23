@@ -28,7 +28,10 @@ class RelationType(str, Enum):
     SAME_ENTITY  = "same_entity"
     SEQUENTIAL   = "sequential"
     SYNAPSE      = "synapse"
-    CENTROID_OF  = "centroid_of"
+    SIMILARITY   = "similarity"
+    EQUIVALENT   = "equivalent"
+    PARENT       = "parent"
+    CHILD        = "child"
     QUANTUM_LINK = "quantum_link"
 
 
@@ -42,6 +45,7 @@ class SemanticEdge:
     bidirectional:    bool  = False
     created_at:       float = field(default_factory=time.time)
     source:           str   = "manual"
+    reason:           Optional[str] = None # [Phase 3]: Perché questi nodi sono collegati?
 
     def __post_init__(self):
         if not 0.0 <= self.weight <= 1.0:

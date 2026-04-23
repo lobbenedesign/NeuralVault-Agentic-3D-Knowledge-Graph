@@ -124,16 +124,28 @@ class MultimodalSynapseProcessor:
 
     def _get_ib_model(self):
         if self._ib_model is None:
-            logger.info("📡 [ImageBind] Loading HuGE 1024D model to Unified Memory...")
+            import gc
+            gc.collect() # Libera RAM prima di caricare il gigante
+            if self.device == "mps":
+                torch.mps.empty_cache()
+                
+            logger.info("📡 [ImageBind] ALERT: Loading HuGE 1024D model to Unified Memory (Demand-Driven)...")
+            from imagebind.models import imagebind_model
             self._ib_model = imagebind_model.imagebind_huge(pretrained=True)
             self._ib_model.eval()
             self._ib_model.to(self.device)
         return self._ib_model
 
+    def _cleanup_memory(self):
+        """Libera la VRAM/RAM dopo task multimodali pesanti."""
+        if self.device == "mps":
+            torch.mps.empty_cache()
+        import gc
+        gc.collect()
+
     def _get_whisper_model(self):
         if self._whisper_model is None:
-            logger.info("🎙️ [Whisper] Initializing Faster-Whisper (INT8 optimized)...")
-            # Usiamo il modello 'base' per un ottimo rapporto velocità/precisione su M1
+            logger.info("🎙️ [Whisper] Initializing Faster-Whisper (On Demand)...")
             self._whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
         return self._whisper_model
 
@@ -236,7 +248,7 @@ class MultimodalSynapseProcessor:
             # --- 2.1 BIOMETRIC ACOUSTIC ANALYSIS ---
             # Get the embedding for this specific audio segment
             inputs = {
-                ModalityType.TEXT: ib_data.load_and_transform_text_data([text], device=self.device)
+                ModalityType.TEXT: ib_data.load_and_transform_text([text], device=self.device)
             }
             # v11.3: Audio embedding logic (Forensics Core)
             # Nota: In un sistema perfetto qui estraiamo l'audio fisicamente.
@@ -286,6 +298,7 @@ class MultimodalSynapseProcessor:
             nodes.append(node_id)
             
         cap.release()
+        self._cleanup_memory()
         return nodes
 
     def _call_vision_llm(self, image_path: Path) -> str:
@@ -346,6 +359,7 @@ class MultimodalSynapseProcessor:
             "metadata": json.dumps({"duration_sec": info.duration, "engine": "Acoustic-HuGE-MPS"})
         }
         self._store_synapse(synapse)
+        self._cleanup_memory()
         return [node_id]
 
     def _process_image(self, path: Path, uri: str, h: str) -> List[str]:
@@ -374,6 +388,7 @@ class MultimodalSynapseProcessor:
             "metadata": json.dumps({"format": path.suffix, "engine": "Vision-HuGE-MPS"})
         }
         self._store_synapse(synapse)
+        self._cleanup_memory()
         return [node_id]
 
     def _store_synapse(self, data: Dict[str, Any]):
@@ -395,7 +410,7 @@ class MultimodalSynapseProcessor:
         
         ib_model = self._get_ib_model()
         inputs = {
-            ModalityType.TEXT: ib_data.load_and_transform_text_data([text], device=self.device)
+            ModalityType.TEXT: ib_data.load_and_transform_text([text], device=self.device)
         }
         with torch.no_grad():
             embeddings = ib_model(inputs)

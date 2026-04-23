@@ -104,9 +104,11 @@ class FusionRanker:
                     res.final_score = (res.final_score * 0.4) + (sig_ce * 0.6)
             else:
                 # Fallback Jaccard
-                q_tokens = set(query_text.lower().split())
+                q_text = (query_text or "").lower()
+                q_tokens = set(q_text.split())
                 for res in top_pool:
-                    n_tokens = set(res.node.text.lower().split())
+                    n_text = (res.node.text or "").lower()
+                    n_tokens = set(n_text.split())
                     intersection = len(q_tokens & n_tokens)
                     union = len(q_tokens | n_tokens)
                     jaccard = (intersection / union) if union > 0 else 0.0

@@ -39,6 +39,10 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE" # Per librerie Intel/OpenMP
 import logging
 logging.getLogger("transformers.modeling_utils").setLevel(logging.ERROR)
 
+# v21.2: Suppress OBJC Duplicate warnings for cleaner log
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+
 import uvicorn
 import torch
 from fastapi import FastAPI, UploadFile, File, Request, Depends, HTTPException, BackgroundTasks, Header
@@ -46,8 +50,10 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from neural_lab import SynapticSignal, AgentRole, SignalType
 import httpx
+
+# Centralized Agentic Fabric Imports
+from neural_lab import SynapticSignal, AgentRole, SignalType, NeuralLabOrchestrator
 
 class QueryRequest(BaseModel):
     query: str
@@ -99,6 +105,11 @@ engine = None
 engine_lock = asyncio.Lock()
 VAULT_KEY = "vault_secret_aura_2026"
 
+# v21.0: Idle Tracking & Background Consolidation
+app.state.last_activity = time.time()
+app.state.auto_evolve_active = False
+app.state.is_dreaming = False # Flag for background evolution
+
 # --- AGENT FACTORY ENDPOINT (v12.0) ---
 class AgentSpawnRequest(BaseModel):
     name: str
@@ -138,9 +149,121 @@ app.state.forage_proposals = {}  # job_id -> [topics]
 # Progress Tracking (Modelli)
 install_progress = {} # { "model_name": { "percentage": 0, "status": "idle" } }
 
+# settings tracking
+@app.get("/api/swarm/config")
+async def get_swarm_config_alias():
+    """Alias di compatibilità per il vecchio endpoint config."""
+    return await get_system_settings()
+
+@app.get("/api/system/settings")
+async def get_system_settings():
+    storage_dir = Path(os.getenv("NEURALVAULT_DATA_DIR", "./vault_data"))
+    settings_file = storage_dir / "system_settings.json"
+    if settings_file.exists():
+        try:
+            with open(settings_file, "r") as f:
+                return json.load(f)
+        except: pass
+    return {"theme": "dark"}
+
+@app.post("/api/system/settings")
+async def update_system_settings(req: Dict[str, Any]):
+    # We use a simple auth check without Depends if needed, but here we'll just check the vault key
+    if req.get("api_key") != VAULT_KEY:
+         raise HTTPException(status_code=403, detail="Invalid Vault Key")
+    
+    storage_dir = Path(os.getenv("NEURALVAULT_DATA_DIR", "./vault_data"))
+    if not storage_dir.exists(): storage_dir.mkdir(parents=True, exist_ok=True)
+    
+    settings_file = storage_dir / "system_settings.json"
+    current = {}
+    if settings_file.exists():
+        try:
+            with open(settings_file, "r") as f:
+                current = json.load(f)
+        except: pass
+    
+    # Remove api_key from stored settings
+    data = {k:v for k,v in req.items() if k != "api_key"}
+    current.update(data)
+    
+    with open(settings_file, "w") as f:
+        json.dump(current, f)
+    
+    # Sync with live state
+    if "auto_evolve_active" in req:
+        app.state.auto_evolve_active = req["auto_evolve_active"]
+        print(f"🧬 [Sovereign State] Auto-Evolve: {app.state.auto_evolve_active}")
+    
+    return {"status": "success", "settings": current}
+
+async def neural_dreaming_loop():
+    """Consolida la conoscenza in background quando l'utente è inattivo."""
+    await asyncio.sleep(15) 
+    batch_size = 200 
+    offset = 0
+    
+    while True:
+        try:
+            now = time.time()
+            idle_time = now - app.state.last_activity
+            
+            # Idle Threshold: 120 secondi
+            if app.state.auto_evolve_active and idle_time > 120 and not app.state.is_dreaming:
+                app.state.is_dreaming = True
+                print(f"🌙 [Neural Dreaming] Inizio batch consolidamento (Offset: {offset})...")
+                
+                # Signal activity to blackboard (USING GLOBAL IMPORTS)
+                try:
+                    sig = SynapticSignal("SYSTEM", AgentRole.ARCHITECT, "🌙 Connessione neurale di sottofondo attiva...", SignalType.SYSTEM_NOTIFICATION)
+                    app.state.lab.blackboard.post(sig)
+                except Exception as e: 
+                    print(f"⚠️ [Dreaming Signal Fail] {e}")
+                
+                # Eseguiamo il batch
+                await _run_hybrid_evolution(limit=batch_size, offset=offset)
+                
+                offset += batch_size
+                
+                # Check for FULL CYCLE COMPLETION (Autonomous Expansion Phase 1)
+                total_nodes = len(engine._nodes)
+                if offset >= total_nodes:
+                    offset = 0
+                    print("🌌 [Neural Dreaming] Ciclo consolidamento completo. Analisi vuoti per FS-77...")
+                    
+                    # Identifichiamo un cluster "poco denso"
+                    try:
+                        sparse_topic = "Agentic Workflows" # Fallback
+                        # Recupriamo una lista di sorgenti meno connesse
+                        counts = {}
+                        for n in engine._nodes.values():
+                            src = n.metadata.get("source", "unknown")
+                            counts[src] = counts.get(src, 0) + 1
+                        
+                        if counts:
+                            sparse_topic = min(counts, key=counts.get)
+                        
+                        # Lanciamo l'X-Wing!
+                        asyncio.create_task(app.state.lab.dispatch_skywalker_mission(sparse_topic))
+                    except Exception as e:
+                        print(f"⚠️ [Expansion Fail] {e}")
+
+                app.state.is_dreaming = False
+                print(f"✨ [Neural Dreaming] Consolidation Batch Complete.")
+            
+            await asyncio.sleep(60)
+            
+        except Exception as e:
+            print(f"⚠️ [Dreaming Loop Error] {e}")
+            app.state.is_dreaming = False
+            await asyncio.sleep(30)
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    print(f"🌐 [API] Request: {request.method} {request.url.path}")
+    # Update last activity for all API calls (excluding health checks or static)
+    if request.url.path.startswith("/api/"):
+        app.state.last_activity = time.time()
+    
     response = await call_next(request)
     return response
 
@@ -163,7 +286,6 @@ async def startup_event():
     engine = NeuralVaultEngine(data_dir=storage_dir)
     
     # Inizializza Neural Lab una sola volta
-    from neural_lab import NeuralLabOrchestrator
     app.state.lab = NeuralLabOrchestrator(engine)
     
     # Gestione tabelle Agent007: delegata alla classe Agent007Intelligence in engine.agent007
@@ -175,9 +297,16 @@ async def startup_event():
         engine.agent007.con.execute("ALTER TABLE agent007_entities ADD COLUMN relevance FLOAT")
     except: pass
     
-    app.state.forager = SovereignWebForager(app.state.lab)
     app.state.mm_processor = MultimodalSynapseProcessor()
     
+    # Pre-load settings
+    settings = await get_system_settings()
+    app.state.auto_evolve_active = settings.get("auto_evolve_active", False)
+    
+    # Start the Neural Dreaming background loop
+    asyncio.create_task(neural_dreaming_loop())
+
+
 @app.on_event("shutdown")
 async def shutdown_event():
     global engine
@@ -273,7 +402,11 @@ async def get_node_details(node_id: str):
             # Relazioni dirette nel nodo (GNN Sync)
             edges = getattr(node, 'edges', [])
             for e in edges:
-                connessioni.append({"node": str(e.target_id), "relation": str(e.relation)})
+                connessioni.append({
+                    "node": str(e.target_id), 
+                    "relation": str(e.relation), 
+                    "reason": getattr(e, 'reason', None)
+                })
 
             # Fallback: usiamo le relazioni Agent007 se presenti
             res = engine.agent007.con.execute("""
@@ -438,7 +571,7 @@ async def install_model(request: Request, background_tasks: BackgroundTasks, api
     import shutil
     
     data = await request.json()
-    model_name = data.get("model", "").strip()
+    model_name = (data.get("name") or data.get("model") or "").strip()
     
     # 🧬 HARDWARE DNA CHECK
     os_name = platform.system()
@@ -575,25 +708,29 @@ MODEL_CATALOG = {
         "name": "Llama 3.2 (1B)", "size": "1.3GB", "category": "Nano", 
         "pros": "Velocità estrema, zero lag", "cons": "Cognizione base", 
         "caveau": "L'Ombra Silenziosa per il background.", "forza": "Perfetto per task costanti senza pesare sulla RAM.",
-        "synergy": ["phi3:latest"], "task": "Silent Assistant"
+        "synergy": ["phi3:latest"], "task": "Silent Assistant",
+        "ram": "2GB RAM", "cpu": "Apple Silicon / 2 Cores", "vram": "1GB VRAM"
     },
     "qwen2.5:1.5b": {
         "name": "Qwen 2.5 (1.5B)", "size": "986MB", "category": "Nano-Reasoning", 
         "pros": "Matematica e logica densa", "cons": "Vocabolario compatto", 
         "caveau": "Il Re dei piccoli per logica pura.", "forza": "Ragionamento superiore a molti 3B.",
-        "synergy": ["phi4:latest"], "task": "Technical Data"
+        "synergy": ["phi4:latest"], "task": "Technical Data",
+        "ram": "2GB RAM", "cpu": "Any CPU / 2 Cores"
     },
     "smollm2:1.7b": {
         "name": "SmolLM2 1.7B", "size": "1.0GB", "category": "Nano-Speed", 
         "pros": "Addestrato su dati purissimi", "cons": "Poca conoscenza enciclopedica", 
         "caveau": "Il velocista di Hugging Face.", "forza": "Ideale come agente di smistamento rapido.",
-        "synergy": ["mistral:latest"], "task": "Fast Routing"
+        "synergy": ["mistral:latest"], "task": "Fast Routing",
+        "ram": "2GB RAM", "cpu": "Any CPU / 2 Cores"
     },
     "gemma2:2b": {
         "name": "Gemma 2 (2B)", "size": "1.6GB", "category": "Nano-Elite", 
         "pros": "Tecnologia Google DeepMind", "cons": "Richiede prompt precisi", 
         "caveau": "Qualità Google nel palmo della mano.", "forza": "Incredibilmente eloquente per la taglia.",
-        "synergy": ["deepseek-r1:7b"], "task": "Premium Chat"
+        "synergy": ["deepseek-r1:7b"], "task": "Premium Chat",
+        "ram": "4GB RAM", "cpu": "Apple Silicon / 4 Cores"
     },
     
     # ── THE ULTIMATE SOVEREIGN (v4.0 Next-Gen) ─────────────────────────
@@ -602,7 +739,8 @@ MODEL_CATALOG = {
         "pros": "Capacità di ragionamento multi-agente nativa", "cons": "Richiede 32GB+ RAM", 
         "caveau": "L'Orchestratore Supremo della Conoscenza.", "forza": "Capacità di coordinare interi swarm di IA minori.",
         "synergy": ["deepseek-r1:14b", "llama3.2:1b"], "task": "Global Orchestration",
-        "url": "https://huggingface.co/google/gemma-4-26B-A4B"
+        "url": "https://huggingface.co/google/gemma-4-26B-A4B",
+        "ram": "32GB RAM", "cpu": "Apple Studio/Ultra / 12 Cores", "vram": "16GB VRAM"
     },
     
     # ── DEEPSEEK REASONING (The New Standard) ─────────────────────────
@@ -610,19 +748,22 @@ MODEL_CATALOG = {
         "name": "DeepSeek R1 (1.5B)", "size": "1.1GB", "category": "Reasoning-UPLINK", 
         "pros": "Chain of Thought su mini-scala", "cons": "Pochi step di riflessione", 
         "caveau": "Primo assaggio di CoT (Chain of Thought).", "forza": "Risposta istantanea con logica visibile.",
-        "synergy": ["qwen2.5:1.5b"], "task": "Instant Logic"
+        "synergy": ["qwen2.5:1.5b"], "task": "Instant Logic",
+        "ram": "4GB RAM", "cpu": "Apple Silicon / 4 Cores"
     },
     "deepseek-r1:7b": {
         "name": "DeepSeek R1 (7B)", "size": "4.7GB", "category": "Reasoning-Master", 
         "pros": "Logica di livello o1-preview", "cons": "Più lento dei modelli standard", 
         "caveau": "L'ottimale per M1 16GB.", "forza": "Capacità analitica d'élite sotto i 5GB.",
-        "synergy": ["mistral:latest"], "task": "Deep Analysis"
+        "synergy": ["mistral:latest"], "task": "Deep Analysis",
+        "ram": "8GB RAM", "cpu": "Apple Silicon / 8 Cores", "vram": "6GB VRAM"
     },
     "deepseek-r1:14b": {
         "name": "DeepSeek R1 (14B)", "size": "9.0GB", "category": "Reasoning-Peak", 
         "pros": "Potenza di ragionamento bruta", "cons": "Occupa molta RAM (10GB+)", 
         "caveau": "Il massimo raggiungibile fluidamente.", "forza": "Il 'Claude-Killer' locale per eccellenza.",
-        "synergy": ["phi4:latest"], "task": "Scientific Research"
+        "synergy": ["phi4:latest"], "task": "Scientific Research",
+        "ram": "16GB RAM", "cpu": "Apple M1 Pro/Max / 10 Cores"
     },
 
     # ── NVIDIA NEMOTRON SERIES (Hardware Optimized) ─────────────────────
@@ -650,7 +791,8 @@ MODEL_CATALOG = {
         "name": "Gemma 2 (27B)", "size": "16GB", "category": "Gemma-Peak", 
         "pros": "Intelligenza di livello 70B in 27B", "cons": "Pesante per Mac con 16GB RAM", 
         "caveau": "Il 'Sweet Spot' per Mac con 32GB RAM.", "forza": "Il miglior rapporto intelligenza/parametri sul mercato.",
-        "synergy": ["phi4:latest"], "task": "Advanced Knowledge"
+        "synergy": ["phi4:latest"], "task": "Advanced Knowledge",
+        "ram": "32GB RAM", "cpu": "Apple Ultra / 12 Cores", "vram": "16GB VRAM"
     },
     
     # ── BALANCED & SPECIALISTS ──────────────────────────────────────────
@@ -665,6 +807,12 @@ MODEL_CATALOG = {
         "pros": "Precisione Scientifica Microsoft", "cons": "Molto esigente", 
         "caveau": "L'analista di dati pesanti.", "forza": "Logica cristallina su problemi complessi.",
         "synergy": ["qwen2.5:1.5b"], "task": "Scientific Mode"
+    },
+    "qwen3.6:35b-a3b": {
+        "name": "Qwen 3.6 (35B-A3B)", "size": "4.2GB", "category": "Efficient-MoE",
+        "pros": "Mixture-of-Experts (3B attivi), Prestazioni d'élite", "cons": "VRAM spikes occasionali",
+        "caveau": "Il Cavallo di Troia semantico: piccolo fuori, gigante dentro.", "forza": "Rapporto intelligenza/RAM senza precedenti.",
+        "synergy": ["llama3.2:1b", "deepseek-r1:7b"], "task": "Advanced Synthesis"
     },
     "ministral:latest": {
         "name": "Ministral 3B", "size": "2.1GB", "category": "Balanced-Elite", 
@@ -739,65 +887,50 @@ async def get_model_catalog(api_key: str = Depends(get_api_key)):
 
 @app.get("/api/models/status")
 async def get_models_status(api_key: str = Depends(get_api_key)):
-    """Sync con Ollama e Scansione Autonoma: restituisce tutti i modelli present sul dispositivo."""
+    """Sincronizzazione Unificata: Modelli Installati + Catalogo Disponibile."""
     import httpx
-    installed = []
+    full_list = []
     seen_in_api = set()
 
-    # 1. Check via API (Ollama) - Metodo primario (Stabilized v2.9.1)
-    # Tenta sia 127.0.0.1 che localhost per massimizzare la compatibilità su Mac
+    # 1. Recupero Modelli INSTALLATI (Ollama)
     ollama_urls = [os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434"), "http://localhost:11434"]
-    
     for url in ollama_urls:
-        if seen_in_api: break # Se abbiamo già popolato via il primo URL, non procedere
+        if seen_in_api: break
         try:
-            # Aumentiamo il timeout per gestire i cold-start dei modelli su Apple Silicon
-            async with httpx.AsyncClient(timeout=45.0) as client:
+            async with httpx.AsyncClient(timeout=10.0) as client:
                 r = await client.get(f"{url.rstrip('/')}/api/tags")
                 if r.status_code == 200:
                     data = r.json()
                     for m in data.get("models", []):
                         name = m.get("name")
-                        size_gb = round(m.get("size", 0) / (1024**3), 2)
+                        cat_info = MODEL_CATALOG.get(name) or MODEL_CATALOG.get(name.split(":")[0] + ":latest") or {}
                         
-                        # Arricchimento dal catalogo sovrano
-                        cat_info = MODEL_CATALOG.get(name)
-                        if not cat_info and ":" in name:
-                            cat_info = MODEL_CATALOG.get(name.split(":")[0] + ":latest")
-                        
-                        if not cat_info:
-                            cat_info = {"pros": "Modello Utente", "cons": "N/D", "synergy": [], "category": "Custom"}
-                        
-                        installed.append({
+                        full_list.append({
                             "name": name,
-                            "size": m.get("size", 0), # Raw bytes for frontend calculation
-                            "status": "installed",
-                            "metadata": cat_info,
-                            "source": f"Ollama API ({url})"
+                            "status": "INSTALLED",
+                            "size": f"{round(m.get('size', 0) / (1024**3), 2)}GB",
+                            "pros": cat_info.get("pros", "Custom Node"),
+                            "synergy": cat_info.get("synergy", ["None"]),
+                            "task": cat_info.get("task", "General Reasoning"),
+                            "strengths": cat_info.get("forza", "Hardware-Attached Analysis")
                         })
                         seen_in_api.add(name)
-                    print(f"✅ [Ollama] Sincronizzato con successo via {url}")
-        except Exception as e:
-            if url == ollama_urls[-1] and not seen_in_api:
-                print(f"⚠️ [Ollama API] Offline su {url} ({type(e).__name__}: {e})")
+        except: continue
 
-    # 2. Scansione Autonoma (Verifica se ci sono modelli non visti dall'API o API offline)
-    local_discoveries = await _autonomous_model_scan()
-    for d in local_discoveries:
-        # Evita duplicati se sono già stati rilevati via API
-        if d["name"] not in seen_in_api:
-            # Tenta di normalizzare i nomi dei modelli Ollama trovati su disco per il matching con il catalogo
-            if ":" in d["name"]:
-                cat_info = MODEL_CATALOG.get(d["name"])
-                if not cat_info:
-                    base_name = d["name"].split(":")[0]
-                    cat_info = MODEL_CATALOG.get(f"{base_name}:latest")
-                if cat_info:
-                    d["metadata"] = cat_info
-            
-            installed.append(d)
+    # 2. Recupero Modelli DISPONIBILI (Dal Catalogo, non ancora installati)
+    for model_id, info in MODEL_CATALOG.items():
+        if model_id not in seen_in_api:
+            full_list.append({
+                "name": model_id,
+                "status": "AVAILABLE",
+                "size": info.get("size", "N/D"),
+                "pros": info.get("pros", "N/D"),
+                "synergy": info.get("synergy", ["None"]),
+                "task": info.get("task", "General Reasoning"),
+                "strengths": info.get("forza", "Elite Training")
+            })
 
-    return {"installed": installed, "total_detected": len(installed)}
+    return {"installed": full_list, "total_detected": len(full_list)}
 
 @app.delete("/api/models/delete/{model_name:path}")
 async def delete_model(model_name: str, api_key: str = Depends(get_api_key)):
@@ -1014,7 +1147,6 @@ Risponde subito con job_id; il progresso è tracciato nel Blackboard.
                 
                 # Segnale al Blackboard (visibile nel Neural Lab)
                 try:
-                    from neural_lab import SynapticSignal, AgentRole, SignalType
                     sig = SynapticSignal(
                         sender_id=f"forager_{job_id[:8]}",
                         role=AgentRole.RESEARCHER,
@@ -1079,7 +1211,7 @@ async def agent_task(agent_id: str, request: Request, api_key: str = Depends(get
     response = app.state.lab._call_ollama_for_agent(agent.identity["name"], prompt)
     
     # Log sulla blackboard
-    from neural_lab import SynapticSignal, SignalType
+    # Inoltriamo il task completato al blackboard
     sig = SynapticSignal(agent.identity["name"], agent.identity["role"], f"🎯 TASK COMPLETATO: {task_text[:30]}...", SignalType.SYSTEM_NOTIFICATION)
     app.state.lab.blackboard.post(sig)
     
@@ -1196,46 +1328,81 @@ async def approve_forage(job_id: str, background_tasks: BackgroundTasks):
     background_tasks.add_task(_deep_research)
     return {"status": "approved", "mission_count": len(proposals)}
 
+async def _run_hybrid_evolution(limit=500, offset=0):
+    """Esecuzione effettiva dell'evoluzione (Iterativa e Non-Bloccante)."""
+    async with engine_lock:
+        if not engine: return
+        total_nodes = len(engine._nodes)
+        batch_size = 500
+        current_offset = offset
+        total_new_links = 0
+        
+        # Determine how many batches to process
+        max_iterations = max(1, limit // batch_size)
+        
+        # Get settings
+        try:
+            storage_dir = Path(os.getenv("NEURALVAULT_DATA_DIR", "./vault_data"))
+            settings_file = storage_dir / "system_settings.json"
+            settings = {}
+            if settings_file.exists():
+                with open(settings_file, "r") as f: settings = json.load(f)
+            evol_model = settings.get("evolution_model", "llama3.2")
+        except: evol_model = "llama3.2"
+
+        print(f"🧬 [Evolution] Batch active: {limit} nodes from {offset} using {evol_model}")
+
+        for i in range(max_iterations):
+            res = engine.evolve_graph(dry_run=True, limit=batch_size, offset=current_offset)
+            candidates = res["candidates"]
+            current_offset = res["next_offset"]
+            
+            if not candidates: break
+
+            sig_audit = SynapticSignal("QA-101", AgentRole.ARCHITECT, f"🛡️ EVOLUZIONE [BATCH {i+1}]: Analisi {len(candidates)} sinapsi...", SignalType.MISSION_UPDATE)
+            app.state.lab.blackboard.post(sig_audit)
+            
+            approved = app.state.lab.quantum.audit_synapses(candidates, model=evol_model)
+            batch_top = sorted(approved, key=lambda x: x[2], reverse=True)[:2]
+            
+            synapses_data = []
+            for src_id, dst_id, weight in approved:
+                reason = None
+                if (src_id, dst_id, weight) in batch_top:
+                    n1 = engine._nodes.get(src_id)
+                    n2 = engine._nodes.get(dst_id)
+                    if n1 and n2:
+                        app.state.lab.blackboard.post(SynapticSignal("SY-009", AgentRole.SYNTH, f"✨ SYNTHETIC INSIGHT: Legame {src_id[:8]} <-> {dst_id[:8]}", SignalType.MISSION_UPDATE))
+                        ctx = f"A: {n1.text[:400]}\n\nB: {n2.text[:400]}"
+                        q = "Spiega in 10 parole perché questi due concetti sono collegati."
+                        reason = await app.state.lab.get_consensus_response(q, ctx, model=evol_model)
+                synapses_data.append((src_id, dst_id, weight, reason))
+
+            for src_id, dst_id, weight, reason in synapses_data:
+                src_node = engine._nodes.get(src_id)
+                dst_node = engine._nodes.get(dst_id)
+                if src_node and dst_node:
+                    from index.node import RelationType, SemanticEdge
+                    src_node.edges.append(SemanticEdge(dst_id, RelationType.SYNAPSE, weight=weight, reason=reason, source="evolution_oracle"))
+                    dst_node.edges.append(SemanticEdge(src_id, RelationType.SYNAPSE, weight=weight, reason=reason, source="evolution_oracle"))
+                    total_new_links += 1
+            await asyncio.sleep(0.3)
+
+        app.state.lab.blackboard.post(SynapticSignal("SYSTEM", AgentRole.MISSION_ARCHITECT, f"✨ EVOLUZIONE COMPLETATA: {total_new_links} sinapsi.", SignalType.SYSTEM_NOTIFICATION))
+        app.state.lab.quantum.is_fusing = False
+        app.state.lab.synth.mode = "Navigating"
+
 @app.post("/api/evolve")
-async def evolve_mesh(api_key: str = Depends(get_api_key)):
-    """
-    Protocollo di Evoluzione Cognitiva (REALE v2.8.0):
-    1. Fact Mining: Scopre nuove sinapsi semantiche latenti.
-    2. Pruning: Elimina archi deboli tramite il Self-Healing Manager.
-    3. Realignment: Consolida la struttura del grafo.
-    """
+async def evolve_mesh(background_tasks: BackgroundTasks, api_key: str = Depends(get_api_key)):
+    """Trigger manuale per un'evoluzione massiva."""
     try:
-        nodes_affected = len(engine._nodes)
-        
-        async with engine_lock:
-            # 1. EVOLUZIONE REALE: Fact Mining tramite HNSW
-            new_synapses = engine.evolve_graph()
-            
-            # 2. PRUNING REALE: Sfrutta il Self-Healing Manager del Lab
-            edges_pruned = 0
-            if hasattr(engine, 'lab') and hasattr(engine.lab, 'healer'):
-                # Identifica archi da potare (threshold 0.05)
-                prunable = engine.lab.healer.get_prunable_edges(threshold=0.08)
-                edges_pruned = len(prunable)
-                # In questa fase demo eseguiamo un pruning soft degli archi in eccesso
-                for node in engine._nodes.values():
-                    if len(node.edges) > 15: # Soft cap per densità
-                        node.edges = node.edges[:12]
-                        edges_pruned += 1
-            
-        sig = SynapticSignal(
-            sender_id="neural_evolution_daemon",
-            role=AgentRole.ARCHITECT,
-            msg=f"🧠 Evoluzione completata: Realizzate {new_synapses} nuove sinapsi, potati {edges_pruned} archi deboli. Ottimizzati {nodes_affected} nodi.",
-        )
-        app.state.lab.blackboard.post(sig)
-        
+        if not hasattr(app.state, 'lab'):
+            raise HTTPException(status_code=500, detail="Lab not ready.")
+        app.state.lab.dispatch_evolution_mission()
+        background_tasks.add_task(_run_hybrid_evolution, limit=2000)
         return {
-            "status": "evolved",
-            "nodes_optimized": nodes_affected,
-            "edges_pruned": edges_pruned,
-            "new_synapses": new_synapses,
-            "report": "Nebula Re-aligned. Synaptic health stabilized."
+            "status": "mission_dispatched",
+            "message": "Protocollo di Evoluzione Cognitiva avviato."
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1317,8 +1484,19 @@ async def neural_chat(request: QueryRequest, x_api_key: str = Header(None)):
     """Oracolo Neurale: RAG Multimodale v7.5."""
     check_api_key(x_api_key)
     
-    # 1. Ricerca Semantica Testuale (HNSW)
-    results = engine.query(request.query, k=5)
+    timings = {}
+    total_start = time.time()
+    
+    # 1. Ricerca Semantica Intelligente (Quantum Expansion v1.0)
+    exp_start = time.time()
+    search_query = await app.state.lab.expand_query(request.query)
+    timings['expansion'] = (time.time() - exp_start) * 1000
+    
+    print(f"🔍 [Quantum Search] Query espansa: {search_query}")
+    
+    ret_start = time.time()
+    results = engine.query(search_query, k=5)
+    timings['retrieval'] = (time.time() - ret_start) * 1000
     
     # 2. Ricerca Sensoriale (Multimodal DuckDB)
     mm_results = []
@@ -1339,36 +1517,42 @@ async def neural_chat(request: QueryRequest, x_api_key: str = Header(None)):
         source_nodes.append(mr['id'])
 
     # 3. Generazione Risposta (Ollama integration)
-    
-    # Costruzione contesto per Ollama
     full_context = context_text if context_text else "Nessun contesto trovato nel Vault."
     
-    # PROTOCOLLO CONSENSUS (v3.0)
-    if request.consensus:
-        print(f"🏛️ [Consensus Mode] Attivazione Swarm per: {request.query}")
-        answer = app.state.lab.get_consensus_response(request.query, full_context)
-    else:
-        # Risposta standard a modello singolo
-        try:
-            # Recupero modello attivo (priorità Mistral o il primo disponibile)
-            res = await asyncio.to_thread(os.popen("ollama list").read)
-            installed = [line.split()[0] for line in res.splitlines()[1:] if line.strip()]
-            model = "mistral:latest" if "mistral:latest" in installed else (installed[0] if installed else "mistral")
-            
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                r = await client.post("http://localhost:11434/api/generate", json={
-                    "model": model,
-                    "prompt": f"Contesto del Vault:\n{full_context}\n\nDomanda: {request.query}",
-                    "stream": False
-                })
-                answer = r.json().get("response", "Nessuna risposta generata.")
-        except Exception as e:
-            answer = f"Errore nel collegamento neurale: {str(e)}"
+    # [SOVEREIGN FOCUS] Sospendiamo gli agenti background per dare massimo respiro a Ollama
+    app.state.lab.pause_agents = True
+    
+    gen_start = time.time()
+    try:
+        # PROTOCOLLO CONSENSUS (v3.0)
+        if request.consensus:
+            print(f"🏛️ [Consensus Mode] Attivazione Swarm per: {request.query}")
+            answer = await app.state.lab.get_consensus_response(request.query, full_context)
+        else:
+            # Risposta standard a modello singolo
+            try:
+                res = await asyncio.to_thread(os.popen("ollama list").read)
+                installed = [line.split()[0] for line in res.splitlines()[1:] if line.strip()]
+                model = "mistral:latest" if "mistral:latest" in installed else (installed[0] if installed else "mistral")
+                async with httpx.AsyncClient(timeout=45.0) as client:
+                    r = await client.post("http://127.0.0.1:11434/api/generate", json={
+                        "model": model, "prompt": f"Contesto:\n{full_context}\n\nQ: {request.query}", "stream": False
+                    })
+                    answer = r.json().get("response", "No-Response")
+            except Exception as e:
+                answer = f"Link Error: {e}"
+    finally:
+        # Ripristiniamo il background work
+        app.state.lab.pause_agents = False
+    
+    timings['generation'] = (time.time() - gen_start) * 1000
+    timings['total'] = (time.time() - total_start) * 1000
 
     return {
         "answer": answer,
         "context_nodes": source_nodes,
-        "mode": "CONSENSUS" if request.consensus else "SINGLE_AGENT"
+        "mode": "CONSENSUS" if request.consensus else "SINGLE_AGENT",
+        "telemetry": timings
     }
 
 @app.get("/events")
@@ -1448,17 +1632,50 @@ async def sse_stream(request: Request):
                         except Exception as e:
                             print(f"🕵️ [Agent007/DB] {e}")
 
+                        # 🧬 Global Cluster Detection (Vault Total)
+                        try:
+                            # 1. Check historical unique collections from persistent store
+                            res = engine._prefilter.con.execute("SELECT COUNT(DISTINCT collection) FROM vault_metadata WHERE collection != 'default' AND collection IS NOT NULL").fetchone()
+                            db_clusters = res[0] if res else 0
+                            
+                            # 2. Fetch current session activity from Quantum Agent
+                            session_fused = 0
+                            if 'QA-101' in lab_status.get('agents', {}):
+                                session_fused = lab_status['agents']['QA-101'].get('fused_clusters', 0)
+                            
+                            # 3. Calculate Global Cumulative Total
+                            # We use max() because session_fused might represent new structures not yet committed or already counted in memory.
+                            mem_clusters = len(set(n.collection for n in engine._nodes.values() if n.collection and n.collection != 'default'))
+                            clusters_count = max(db_clusters, session_fused, mem_clusters)
+                        except Exception as e:
+                            # Fallback if DB query fails during high load
+                            clusters_count = len(set(n.collection for n in engine._nodes.values() if n.collection and n.collection != 'default'))
+
+                        # 📏 Semantic Distance Calculation (Cohesion Metric)
+                        try:
+                            # We use the standard deviation of projections as a proxy for 'distance'
+                            # Higher SD = nodes are more spread out (Semantic Diversity)
+                            # Lower SD = nodes are clustered (Semantic Focus)
+                            if points_array := [p.get("pos", [0,0,0]) for p in stats.get("point_cloud", [])]:
+                                p_arr = np.array(points_array)
+                                dist_val = float(np.std(p_arr)) / 500000.0 # Normalized for UI
+                            else: dist_val = 0.84 # Baseline
+                        except: dist_val = 0.84
+
                         data = {
                             "points": stats.get("point_cloud", []),
                             "links": stats.get("edge_sample", []),
                             "nodes_count": len(engine._nodes),
                             "edges_count": stats.get("edges_count", 0),
+                            "clusters_count": int(clusters_count),
+                            "semantic_distance": round(dist_val, 2),
                             "storage": storage_hud,
                             "lab": lab_status,
+                            "weather": app.state.lab.blackboard.get_weather() if hasattr(app.state, 'lab') else {},
                             "system": {
                                 "cpu": {"cores": cpu_percent, "overall": sum(cpu_percent)/len(cpu_percent)},
                                 "ram": {"used": ram.percent, "total": ram.total},
-                                "hardware_dna": f"APPLE-{platform.machine()}",
+                                "hardware_dna": getattr(engine, "hardware_dna", f"GENERIC-{platform.machine()}"),
                                 "ai_intelligence": {
                                     "model": "Llama 3.2 (Neural-8B)",
                                     "quantization": "TurboQuant 4-bit",
@@ -1497,17 +1714,87 @@ async def update_config(req: ConfigUpdateRequest):
     """Aggiorna una impostazione dello Swarm (es. auto_mode o default_oracle)."""
     if hasattr(app.state, 'lab'):
         app.state.lab.settings.update(req.key, req.value)
-        return {"status": "success", "settings": app.state.lab.settings.settings}
-    return JSONResponse(status_code=500, content={"message": "Lab not initialized"})
+        return {"status": "ok"}
+    return {"status": "error", "message": "Lab not initialized"}
+
+# 🤖 SWARM DYNAMIC ORCHESTRATION (v12.0)
+
+class SpawnAgentRequest(BaseModel):
+    name: str
+    role: str
+    prompt: Optional[str] = ""
+    model: Optional[str] = "llama3.2"
+    api_key: str
+
+@app.post("/api/swarm/spawn")
+async def spawn_custom_agent(req: SpawnAgentRequest):
+    if req.api_key != VAULT_KEY: raise HTTPException(status_code=403, detail="Invalid Vault Key")
+    if hasattr(app.state, 'lab'):
+        role_map = {
+            "archivist": AgentRole.EXPERT,
+            "analyst": AgentRole.ANALYST,
+            "creative": AgentRole.CREATIVE,
+            "guardian": AgentRole.GUARDIAN,
+            "architect": AgentRole.ARCHITECT
+        }
+        aid = app.state.lab.spawn_custom_agent(req.name, role_map.get(req.role, AgentRole.EXPERT), req.prompt, req.model)
+        return {"status": "ok", "agent_id": aid}
+    return {"status": "error", "message": "Lab not initialized"}
+
+class BroadcastCommandRequest(BaseModel):
+    command: str
+    api_key: str
+
+@app.post("/api/swarm/broadcast")
+async def broadcast_swarm_command(req: BroadcastCommandRequest):
+    if req.api_key != VAULT_KEY: raise HTTPException(status_code=403, detail="Invalid Vault Key")
+    if hasattr(app.state, 'lab'):
+        if req.command == "SCAN":
+            app.state.lab.dispatch_evolution_mission()
+        elif req.command == "PURGE":
+            app.state.lab.blackboard.post_signal("SYSTEM", "PURGE_REQUEST", "⚠️ GLOBAL PURGE INITIALIZED: Cleaning semantic cache...", 2.0)
+            # Logica di purge effettiva dipenderà dall'implementazione specifica degli agenti
+        return {"status": "ok", "command": req.command}
+    return {"status": "error", "message": "Lab not initialized"}
+
+@app.post("/api/swarm/delete")
+async def delete_swarm_agent(agent_id: str, api_key: str):
+    if api_key != VAULT_KEY: raise HTTPException(status_code=403, detail="Invalid Vault Key")
+    if hasattr(app.state, 'lab'):
+        if agent_id in app.state.lab.agents:
+            del app.state.lab.agents[agent_id]
+            return {"status": "ok"}
+    return {"status": "error", "message": "Agent not found or Lab not initialized"}
 
 @app.get("/api/audit/ledger")
 async def get_audit_ledger(full: bool = False, key: str = Depends(get_api_key)):
-    """[Chrono-Log] Recupera l'intera mission history degli agenti."""
-    if hasattr(app.state, 'lab'):
-        if full and hasattr(app.state.lab, 'archiver'):
-            return app.state.lab.archiver.history
-        return app.state.lab.get_audit_ledger()
-    return []
+    """[Chrono-Log] Recupera la storia delle missioni completa o di sessione."""
+    if not hasattr(app.state, 'lab'):
+        return []
+        
+    logs = []
+    # 1. Recupero log di sessione (Memory)
+    try:
+        logs = app.state.lab.get_audit_ledger()
+    except: pass
+    
+    # 2. Se richiesto, integriamo l'Archivio Permanente (DuckDB via Archiver)
+    if full:
+        try:
+            if hasattr(app.state.lab, 'archiver') and app.state.lab.archiver:
+                # Merge e Sort per timestamp decrescente
+                history = app.state.lab.archiver.history
+                seen_ids = {f"{l.get('timestamp')}-{l.get('agent')}" for l in logs}
+                for entry in history:
+                    unique_id = f"{entry.get('timestamp')}-{entry.get('agent')}"
+                    if unique_id not in seen_ids:
+                        logs.append(entry)
+        except: pass
+    
+    # Sort finale: i più recenti in alto
+    logs.sort(key=lambda x: str(x.get('timestamp', '')), reverse=True)
+    print(f"📄 [Audit] Serving {len(logs)} mission records (Full: {full})")
+    return logs
 
 # 🏛️ MISSION CONTROL & ORACLE ENDPOINTS (v10.6)
 class MissionResolution(BaseModel):

@@ -119,8 +119,8 @@ class SovereignWebForager:
 
     def __init__(
         self,
-        max_depth: int = 10,
-        max_pages: int = 5000,
+        max_depth: int = 12,
+        max_pages: int = 25000,
         rate_limit_sec: float = 0.2,
         same_domain_only: bool = True,
         timeout_sec: float = 20.0,
@@ -326,53 +326,54 @@ class SovereignWebForager:
         print(f"🕸️ [Forager] Avvio forage: {start_url} (max_depth={self.max_depth}, max_pages={self.max_pages})")
         
         pages_count = 0
-        while self.queue and pages_count < self.max_pages:
-            url, depth = self.queue.pop(0)
-            norm_url = self._normalize_url(url)
+        try:
+            while self.queue and pages_count < self.max_pages:
+                url, depth = self.queue.pop(0)
+                norm_url = self._normalize_url(url)
 
-            if norm_url in self._visited:
-                continue
-            
-            # --- BACKPRESSURE PROTOCOL (Gap #2) ---
-            throttle = backpressure.get_throttle_factor()
-            if throttle < 0.2:
-                await backpressure.async_wait_if_clogged()
-            elif throttle < 0.5:
-                print(f"⏳ [Backpressure] Throttling forager (factor: {throttle:.2f})...")
-                await asyncio.sleep(2.0 * (1.1 - throttle))
-            
-            self._visited.add(norm_url)
+                if norm_url in self._visited:
+                    continue
+                
+                # --- BACKPRESSURE PROTOCOL (Gap #2) ---
+                throttle = backpressure.get_throttle_factor()
+                if throttle < 0.2:
+                    await backpressure.async_wait_if_clogged()
+                elif throttle < 0.5:
+                    print(f"⏳ [Backpressure] Throttling forager (factor: {throttle:.2f})...")
+                    await asyncio.sleep(2.0 * (1.1 - throttle))
+                
+                self._visited.add(norm_url)
 
-            # Telemetria in tempo reale: Calcolo progresso
-            current_idx = pages_count + 1
-            progress_pct = (current_idx / self.max_pages) * 100 if self.max_pages > 0 else 0
-            
-            print(f"📄 [Forager] [{current_idx}/{self.max_pages}] {progress_pct:.1f}% | Memoria Synaptica: {url[:60]}...")
+                # Telemetria in tempo reale: Calcolo progresso
+                current_idx = pages_count + 1
+                progress_pct = (current_idx / self.max_pages) * 100 if self.max_pages > 0 else 0
+                
+                print(f"📄 [Forager] [{current_idx}/{self.max_pages}] {progress_pct:.1f}% | Memoria Synaptica: {url[:60]}...")
 
-            html = await self._fetch_page(url)
-            if not html:
-                continue
+                html = await self._fetch_page(url)
+                if not html:
+                    continue
 
-            page = await self._parse_html(html, url)
-            page.depth = depth
+                page = await self._parse_html(html, url)
+                page.depth = depth
 
-            pages_count += 1
-            yield page
+                pages_count += 1
+                yield page
 
-            # Aggiungi link validi alla coda (solo se non al massimo depth)
-            if depth < self.max_depth:
-                for link in page.links:
-                    norm_link = self._normalize_url(link)
-                    if (norm_link not in self._visited
-                            and self._is_valid_url(link, base_domain)
-                            and len(self.queue) < self.max_pages * 3):
-                        self.queue.append((link, depth + 1))
+                # Aggiungi link validi alla coda (solo se non al massimo depth)
+                if depth < self.max_depth:
+                    for link in page.links:
+                        norm_link = self._normalize_url(link)
+                        if (norm_link not in self._visited
+                                and self._is_valid_url(link, base_domain)
+                                and len(self.queue) < self.max_pages * 3):
+                            self.queue.append((link, depth + 1))
 
-            # Rate limiting cortese
-            await asyncio.sleep(self.rate_limit)
-
-        await self._client.aclose()
-        print(f"✅ [Forager] Completato: {pages_count} pagine estratte da {base_domain}")
+                # Rate limiting cortese
+                await asyncio.sleep(self.rate_limit)
+        finally:
+            await self._client.aclose()
+            print(f"✅ [Forager] Completato: {pages_count} pagine estratte da {base_domain}")
 
     def forage_sync(self, start_url: str) -> List[ForagedPage]:
         """Versione sincrona per utilizzo da script Python."""

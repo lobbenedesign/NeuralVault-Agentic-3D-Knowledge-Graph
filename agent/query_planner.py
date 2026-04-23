@@ -40,7 +40,7 @@ class AgentQueryPlanner:
         """
         Analizza la query e produce una strategia ottimizzata.
         """
-        q_lower = query_text.lower()
+        q_lower = (query_text or "").lower()
         
         # 1. Calcola Alpha (Bilanciamento Hybrid)
         # Se ci sono molti termini tecnici o ID, abbassiamo alpha (più importanza al BM25)
@@ -56,7 +56,7 @@ class AgentQueryPlanner:
         
         # 3. Calcola EF Search (Accuratezza)
         # Query lunghe o complesse richiedono più sforzo dall'HNSW
-        words = len(query_text.split())
+        words = len((query_text or "").strip().split())
         ef = 50
         if words > 15 or "?" in query_text:
             ef = 120

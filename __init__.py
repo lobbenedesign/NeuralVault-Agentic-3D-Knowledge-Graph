@@ -10,6 +10,8 @@ from typing import Optional, Any, Callable, OrderedDict, List, Dict
 from itertools import islice
 import threading
 import hashlib
+import gc
+import torch
 
 # Core Imports
 from index.node import VaultNode, QueryResult, RelationType, MemoryTier, SemanticEdge
@@ -51,7 +53,8 @@ class QueryIntent:
     HYBRID = "hybrid"
 
 class NeuralQueryPlanner:
-    def plan(self, query: str) -> str:
+    def plan(self, query: Optional[str]) -> str:
+        if not query: return QueryIntent.SEMANTIC
         q_lower = query.lower()
         analytic_words = ["mostra", "quanti", "data", "filtra", "dove", "somma", "media"]
         relational_words = ["legato a", "connessione", "perché", "relazione", "collegamento"]
@@ -232,6 +235,12 @@ class NeuralVaultEngine:
                     percent = ((i + 1) / total_hydration) * 100
                     print(f"\r   ➞ Sincronizzazione: {percent:.1f}% ({i+1}/{total_hydration})", end="", flush=True)
             print(f"\n✅ [Hydration] Sincronizzazione completata.")
+            
+            # [RAM-OPTIMIZATION] Libera memoria dopo il caricamento di massa
+            gc.collect()
+            if torch.backends.mps.is_available():
+                torch.mps.empty_cache()
+            print("🏺 [Memory] RAM Reclaimed post-hydration.")
             
             # v11.6: Persistenza Snapshot per accelerare il prossimo avvio (Instant Boot)
             try:
@@ -808,8 +817,11 @@ class NeuralVaultEngine:
             except Exception:
                 continue
 
-        # ── Costruzione Sinapsi (limite 2000 nodi per visibilità strutturale) ──────
-        for n in all_nodes[:2000]:
+        # ── Costruzione Sinapsi (limite 5000 nodi per visibilità strutturale) ──────
+        aura_edges = []
+        standard_edges = []
+        
+        for n in all_nodes[:5000]:
             if str(n.id) not in node_positions:
                 continue
             
@@ -818,43 +830,44 @@ class NeuralVaultEngine:
                 try:
                     target_id = str(edge.target_id)
                     if target_id in node_positions:
-                        all_edges.append({
+                        standard_edges.append({
                             "source": str(n.id),
                             "target": target_id,
                             "source_pos": list(node_positions[str(n.id)]),
                             "target_pos": list(node_positions[target_id]),
                             "color": "#ffffff",
-                            "is_aura": False, # Link standard
-                            "created_at": time.time()
+                            "is_aura": False,
+                            "created_at": edge.created_at
                         })
                 except Exception: continue
 
             # 2. 🌈 Super-Sinapsi Aura (Code-Doc Bridges)
             if "code_bridges" in n.metadata:
                 for target_path in n.metadata["code_bridges"]:
-                    # Cerchiamo se esiste un nodo che rappresenta questo file
-                    # Per ora cerchiamo match parziali nell'ID o nel testo
                     for other_id, other_pos in node_positions.items():
                         if target_path in other_id or (other_id in self._nodes and target_path in self._nodes[other_id].text):
-                            all_edges.append({
+                            aura_edges.append({
                                 "source": str(n.id),
                                 "target": other_id,
                                 "source_pos": list(node_positions[str(n.id)]),
                                 "target_pos": list(other_pos),
-                                "color": "rainbow", # Placeholder per il frontend
-                                "is_aura": True,    # IL TRIGGER PER IL RGB LED
+                                "color": "rainbow", 
+                                "is_aura": True,    
                                 "created_at": time.time()
                             })
                             break
 
+        # 🚀 [v14.5] PRIORITIZZAZIONE: Le Aura vanno sempre in testa e aumentiamo il sample totale
+        all_edges = aura_edges + standard_edges
+        
         res = {
             "nodes_count": len(self._nodes),
             "edges_count": len(all_edges),
             "point_cloud": point_cloud,
-            "edge_sample": all_edges[:1000],
+            "edge_sample": all_edges[:3000], # Incrementato da 1000 a 3000
         }
         self._stats_cache = {"time": now, "data": res}
-        print(f"📡 [Stats v14] {len(point_cloud)} punti | {len(all_edges)} archi")
+        print(f"📡 [Stats v14.5] {len(point_cloud)} punti | {len(aura_edges)} Aura | {len(standard_edges)} Stnd")
         return res
 
 
@@ -999,26 +1012,45 @@ class NeuralVaultEngine:
                 "active_agents": len(self.lab.agents) if hasattr(self, 'lab') else 0
             }
 
-    def evolve_graph(self) -> int:
-        """Esegue il Fact Mining accelerato tramite HNSW (O(log N))."""
+    def evolve_graph(self, dry_run: bool = False, limit: int = 500, offset: int = 0) -> Any:
+        """
+        [Phase 2 Sovereign Evolution] Esegue il Fact Mining accelerato per un sottoinsieme di nodi.
+        limit: Numero massimo di nodi da scansionare in questo turno.
+        offset: Punto di partenza per la scansione ciclica.
+        """
         new_links = 0
-        node_list = list(self._nodes.values())
+        candidates_list = []
+        node_ids = list(self._nodes.keys())
+        total = len(node_ids)
         
-        for node in node_list:
-            if node.vector is None: continue
+        # Selezione del batch
+        batch_ids = node_ids[offset : offset + limit]
+        
+        for nid in batch_ids:
+            node = self._nodes.get(nid)
+            if not node or node.vector is None: continue
             
-            # Ottimizzazione: Usiamo direttamente il vettore per evitare re-embedding
-            candidates = self.query("", query_vector=node.vector, k=6) 
-            for cand in candidates:
+            # Fact Mining via HNSW (Limitato ai risultati più forti)
+            cands = self.query("", query_vector=node.vector, k=4) 
+            for cand in cands:
                 if cand.node.id == node.id: continue
-                # Se la similarità è molto alta (sopra 0.88) e non c'è già un arco
+                # Soglia di evoluzione: Alta fedeltà
                 if cand.final_score > 0.88:
                     if not any(e.target_id == cand.node.id for e in node.edges):
-                        # Creazione sinapsi bidirezionale
-                        node.add_edge(cand.node.id, RelationType.SYNAPSE, weight=float(cand.final_score))
-                        cand.node.add_edge(node.id, RelationType.SYNAPSE, weight=float(cand.final_score))
-                        new_links += 1
-        return new_links
+                        if dry_run:
+                            candidates_list.append((node.id, cand.node.id, float(cand.final_score)))
+                        else:
+                            node.add_edge(cand.node.id, RelationType.SYNAPSE, weight=float(cand.final_score))
+                            cand.node.add_edge(node.id, RelationType.SYNAPSE, weight=float(cand.final_score))
+                            new_links += 1
+                            
+        return {
+            "candidates": candidates_list, 
+            "new_links": new_links, 
+            "scanned": len(batch_ids),
+            "total": total,
+            "next_offset": (offset + limit) % total if total > 0 else 0
+        }
 
     def purge_all(self):
         """Cancella ogni traccia dal disco e dalla memoria (v6.0: Protocollo VETRO Hardened)."""

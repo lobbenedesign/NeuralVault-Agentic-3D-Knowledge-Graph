@@ -13,6 +13,7 @@ class SwarmSettingsManager:
                 "entity_extraction": "llama3.2",
                 "synthesis": "mistral",
                 "foraging_analysis": "deepseek-v3",
+                "chat_mediator": "llama3.2",
                 "general_purpose": "llama3.2"
             },
             "agents": {
@@ -30,7 +31,15 @@ class SwarmSettingsManager:
             return self.default_settings
         try:
             with open(self.config_path, 'r') as f:
-                return json.load(f)
+                loaded = json.load(f)
+                # Ensure structure integrity (v2.9.11)
+                full_settings = self.default_settings.copy()
+                for k, v in loaded.items():
+                    if isinstance(v, dict) and k in full_settings:
+                        full_settings[k].update(v)
+                    else:
+                        full_settings[k] = v
+                return full_settings
         except:
             return self.default_settings
 
@@ -40,9 +49,34 @@ class SwarmSettingsManager:
 
     def get_model(self, task: str) -> str:
         """Ritorna il modello configurato per un determinato compito."""
-        return self.settings.get("routing", {}).get(task, "llama3")
+        return self.settings.get("routing", {}).get(task, "llama3.2")
+
+    def resolve_model(self, task: str, installed_models: list) -> str:
+        """
+        Ritorna il modello configurato, o il miglior fallback se non disponibile (Tiered Priority).
+        """
+        requested = self.get_model(task)
+        if requested in installed_models:
+            return requested
+            
+        # Registro Priorità Fallback (v5.0 Sovereign)
+        # Ordine decrescente di potenza cognitiva
+        priority_bridge = [
+            "llama3.1-nemotron-70b", "deepseek-r1:32b", "nemotron:latest", 
+            "deepseek-r1:14b", "mistral:latest", "llama3.1:latest", 
+            "llama3.2:3b", "qwen2.5:1.5b", "llama3.2:1b"
+        ]
+        
+        for p in priority_bridge:
+            if p in installed_models:
+                return p
+        
+        # Ultima speranza: il primo disponibile (o il richiesto originale se non c'è nulla)
+        return installed_models[0] if installed_models else requested
 
     def update_routing(self, new_routing: Dict):
+        if "routing" not in self.settings:
+            self.settings["routing"] = {}
         self.settings["routing"].update(new_routing)
         self._save(self.settings)
 

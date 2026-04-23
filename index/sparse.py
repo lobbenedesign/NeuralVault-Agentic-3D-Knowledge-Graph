@@ -41,7 +41,7 @@ def simple_tokenize(text: str) -> list[str]:
         "the", "a", "an", "in", "on", "at", "to", "for", "of", "and",
         "or", "but", "not", "is", "are", "was", "were", "be", "been",
     }
-    tokens = re.findall(r'\b\w+\b', text.lower())
+    tokens = re.findall(r'\b\w+\b', (text or "").lower())
     return [t for t in tokens if len(t) >= 2 and t not in STOPWORDS]
 
 
