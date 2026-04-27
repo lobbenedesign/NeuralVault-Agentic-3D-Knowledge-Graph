@@ -71,7 +71,7 @@ An orchestra of specialized agents balanced between conservative and destructive
 ---
 
 ## 👤 About the Author
-**Giuseppe Lobbene** — Programming enthusiast, software architect, and technology researcher. Driven by genuine curiosity for the evolution of AI and complex systems, I strive to bring innovation and research where others only see maintenance.
+**Giuseppe Lobbene** — Software architect and builder driven by the need to innovate. I spearheaded the technical growth of a beach-booking startup, scaling revenue by **10x in a single year** through the delivery of complex management software while wearing every hat necessary to ensure success. Despite these results, I faced a market that often fails to reward merit, leading me to seek stability in the construction industry. Yet, my true home is in IT. **NeuralVault is my manifesto**: proof that even at night, after a full day's work, it is possible to build the future of the AI revolution. I am looking for challenges that match my hunger for innovation, to prove to myself and my son **Oliver** that talent and dedication can still change the world.
 
 ---
 ---
@@ -133,9 +133,9 @@ Il "Cervello Analitico" per i metadati e la ricerca ibrida SQL/Vector.
 ---
 
 ## 👤 Chi sono
-**Giuseppe Lobbene** — Appassionato di programmazione, architetture software e ricerca tecnologica. Spinto da una curiosità genuina per l'evoluzione dell'intelligenza artificiale e dei sistemi complessi, cerco di portare innovazione e ricerca dove altri vedono solo manutenzione.
+**Giuseppe Lobbene** — Architetto software e costruttore spinto dalla necessità di innovare. Ho guidato la crescita tecnica di una startup nel settore del booking balneare, portando il fatturato a un incremento di **10x in un solo anno** attraverso lo sviluppo di gestionali complessi e ricoprendo ogni ruolo necessario per garantire la consegna. Nonostante i risultati, mi sono scontrato con un mercato che spesso non valorizza il merito, costringendomi a cercare stabilità nel settore edile. Ma la mia vera casa è l'informatica. **NeuralVault è il mio manifesto**: la prova che, anche di notte e dopo una giornata di lavoro, è possibile costruire il futuro della rivoluzione AI. Cerco sfide all'altezza della mia fame di innovazione, per dimostrare a me stesso e a mio figlio **Oliver** che il talento e la dedizione possono ancora cambiare il mondo.
 
 ---
 
 🏺 **NeuralVault: Turning Information into Active Wisdom.**
-**Temprato per la realtà. Sovrano per sempre.**
+**Temprato per la realtà. Sovrano per sempre.
