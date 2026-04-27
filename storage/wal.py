@@ -32,7 +32,7 @@ class WAL:
         entry = f"{checksum}|{payload}\n"
         with self._lock:
             with open(self.log_file, "a", encoding="utf-8") as f:
-                f.write(json.dumps(entry) + "\n")
+                f.write(entry)
                 f.flush()
                 # fsync per garantire la scrittura fisica sul disco
                 os.fsync(f.fileno())

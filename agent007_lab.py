@@ -97,8 +97,8 @@ class Agent007Lab:
 
     async def run_adversarial_session(self, node_id: str, text: str) -> Dict:
         """
-        LA CORTE DIGITALE (REAL).
-        Avvia un dibattito tra Prosecutor e Defender su un nodo specifico usando Ollama.
+        LA CORTE DIGITALE (SUPREME COURT ENSEMBLE).
+        Avvia un dibattito e calcola un verdetto basato su un Quorum matematico.
         """
         session_id = str(uuid.uuid4())
         
@@ -120,8 +120,35 @@ class Agent007Lab:
         d_arg = await self._generate_agent_move("Defender", text, [])
         v_report = await self._generate_verdict(text, [p_arg, d_arg])
 
+        # 3. --- QUORUM MATEMATICO DETERMINISTICO ---
+        # a. LLM Score (0-1)
+        llm_score = v_report.get("score", 5) / 10.0
+        
+        # b. Semantic Integrity (Basato sulla tensione massima)
+        max_tension = max([c[1] for c in contradictions]) if contradictions else 0.0
+        semantic_integrity = 1.0 - max_tension
+        
+        # c. Graph Connectivity (Deterministic Rule)
+        node = self.engine._nodes.get(node_id)
+        edge_count = len(node.edges) if node else 0
+        graph_authority = min(1.0, edge_count / 10.0) # Cap a 10 archi
+        
+        # d. Agent Relevance (Historical)
+        agent_relevance = node.agent_relevance_score if node else 0.5
+        
+        # Quorum Calculation: Weighted Average
+        # Pesi: LLM (40%), Semantic (30%), Authority (20%), Relevance (10%)
+        final_quorum_score = (
+            (llm_score * 0.4) + 
+            (semantic_integrity * 0.3) + 
+            (graph_authority * 0.2) + 
+            (agent_relevance * 0.1)
+        )
+        
         verdict = {
             "vulnerability_score": v_report.get("score", 5),
+            "quorum_score": round(final_quorum_score, 4),
+            "integrity_level": "High" if final_quorum_score > 0.7 else "Medium" if final_quorum_score > 0.4 else "Critical",
             "top_risks": v_report.get("risks", ["Ambiguity"]),
             "recommendation": v_report.get("rec", "No recommendation."),
             "debate_log": [p_arg, d_arg]
@@ -132,7 +159,12 @@ class Agent007Lab:
             (session_id, node_id, json.dumps(verdict), time.time())
         )
         
+        # Notifica all'Active Learning se il verdetto è troppo basso
+        if hasattr(self.engine, 'active_learning') and final_quorum_score < 0.3:
+            self.engine.active_learning.process_rejection(node_id, reason="supreme_court_veto")
+            
         return verdict
+
 
     async def _generate_agent_move(self, role: str, target_text: str, evidence: List[str]) -> str:
         prompt = f"Role: {role}. Analyze this text: '{target_text}'. "
@@ -141,8 +173,12 @@ class Agent007Lab:
         prompt += "Provide a short, sharp professional analysis."
         
         try:
+            base_url = "http://localhost:11434"
+            if hasattr(self.engine, 'settings'):
+                base_url = self.engine.settings.get("ollama_url")
+                
             async with httpx.AsyncClient() as client:
-                resp = await client.post("http://localhost:11434/api/generate", json={
+                resp = await client.post(f"{base_url}/api/generate", json={
                     "model": "phi3", "prompt": prompt, "stream": False
                 }, timeout=10.0)
                 if resp.status_code == 200:
@@ -154,8 +190,12 @@ class Agent007Lab:
     async def _generate_verdict(self, text: str, arguments: List[str]) -> Dict:
         prompt = f"Arbitrate this debate on the text: '{text}'. Arguments: {arguments}. Return JSON with 'score' (0-10), 'risks' (list), 'rec' (string)."
         try:
+            base_url = "http://localhost:11434"
+            if hasattr(self.engine, 'settings'):
+                base_url = self.engine.settings.get("ollama_url")
+
             async with httpx.AsyncClient() as client:
-                resp = await client.post("http://localhost:11434/api/generate", json={
+                resp = await client.post(f"{base_url}/api/generate", json={
                     "model": "phi3", "prompt": prompt, "stream": False, "format": "json"
                 }, timeout=10.0)
                 if resp.status_code == 200:
@@ -171,3 +211,16 @@ class Agent007Lab:
             (node_id,)
         ).fetchone()
         return json.loads(res[0]) if res else None
+
+    def _compute_semantic_heatmap(self, nodes):
+        """
+        [v1.1.0] Mappa di calore basata sulla densità semantica (numero di archi).
+        Permette alla dashboard di colorare i nodi in base alla loro 'importanza' nel grafo.
+        """
+        heatmap = {}
+        for nid, node in nodes.items():
+            # Il colore va da 0.0 (Blu/Freddo) a 1.0 (Rosso/Caldo)
+            # Densitá = num_archi / 5 (cap a 1.0)
+            density = min(1.0, len(node.edges) / 5.0) if hasattr(node, 'edges') else 0.0
+            heatmap[nid] = density
+        return heatmap

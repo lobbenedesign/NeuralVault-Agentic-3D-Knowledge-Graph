@@ -53,14 +53,32 @@ class DuckDBPrefilter:
                 importance DOUBLE DEFAULT 1.0,
                 modality VARCHAR DEFAULT 'text',
                 content_hash VARCHAR,
+                lifecycle_state VARCHAR DEFAULT 'stable',
                 metadata JSON
             )
         """)
+
+        # Memoria Episodica Persistente (v1.1.0 Sovereign Hardening)
+        self.con.execute("""
+            CREATE TABLE IF NOT EXISTS episodic_memory (
+                node_id VARCHAR PRIMARY KEY,
+                protected_at TIMESTAMP DEFAULT now(),
+                rejected_by VARCHAR,
+                reason VARCHAR,
+                protection_level INTEGER DEFAULT 1,
+                confidence DOUBLE DEFAULT 1.0
+            )
+        """)
         
-        # Migrazione schema se necessario (v0.5.5 Deduplication)
+        # Migrazione schema se necessario (v0.5.5 Deduplication + v1.1.0 Lifecycle)
         try:
             cols = self.con.execute("PRAGMA table_info('vault_metadata')").fetchall()
             col_names = [c[1] for c in cols]
+            
+            if 'lifecycle_state' not in col_names:
+                print("🔄 [v1.1.0] Aggiunta colonna Lifecycle State...")
+                self.con.execute("ALTER TABLE vault_metadata ADD COLUMN lifecycle_state VARCHAR DEFAULT 'stable'")
+
             if 'last_access' not in col_names:
                 print("🧠 [v0.5.0] Migrazione schema: Aggiunta pilastri cognitivi...")
                 self.con.execute("ALTER TABLE vault_metadata ADD COLUMN last_access TIMESTAMP DEFAULT now()")
@@ -72,8 +90,8 @@ class DuckDBPrefilter:
                 print("🔒 [v0.5.5] Inizializzazione motore di Deduplicazione...")
                 self.con.execute("ALTER TABLE vault_metadata ADD COLUMN content_hash VARCHAR")
                 self.con.execute("CREATE INDEX IF NOT EXISTS idx_content_hash ON vault_metadata(content_hash)")
-        except:
-            pass
+        except Exception as e:
+            print(f"⚠️ [DuckDB Migration] {e}")
 
         print("🦆 NeuralVault: DuckDB Analytical Engine online.")
 
@@ -93,14 +111,15 @@ class DuckDBPrefilter:
             modality = metadata.get("modality", "text")
             importance = metadata.get("importance", 1.0)
             c_hash = metadata.get("content_hash")
-            data_to_insert.append((node_id, collection, importance, modality, c_hash, meta_json))
+            l_state = metadata.get("lifecycle_state", "stable")
+            data_to_insert.append((node_id, collection, importance, modality, c_hash, l_state, meta_json))
 
         # Esecuzione in una singola transazione (Turbo Mode)
         try:
             self.con.executemany("""
                 INSERT OR REPLACE INTO vault_metadata 
-                (id, collection, created_at, last_access, access_count, importance, modality, content_hash, metadata)
-                VALUES (?, ?, now(), now(), 1, ?, ?, ?, ?)
+                (id, collection, created_at, last_access, access_count, importance, modality, content_hash, lifecycle_state, metadata)
+                VALUES (?, ?, now(), now(), 1, ?, ?, ?, ?, ?)
             """, data_to_insert)
         except Exception as e:
             print(f"⚠️ Errore nel Batch Ingest Prefilter: {e}")
@@ -140,6 +159,38 @@ class DuckDBPrefilter:
 
     def count(self) -> int:
         return self.con.execute("SELECT count(*) FROM vault_metadata").fetchone()[0]
+
+    # --- v1.1.0: Lifecycle & Episodic Memory ---
+    
+    def update_lifecycle_state(self, node_id: str, new_state: str):
+        """Aggiorna lo stato del nodo nella macchina a stati (v1.1.0)."""
+        self.con.execute(
+            "UPDATE vault_metadata SET lifecycle_state = ? WHERE id = ?",
+            (new_state.lower(), node_id)
+        )
+
+    def protect_node_persistent(self, node_id: str, rejected_by: str, reason: str, level: int = 1, confidence: float = 1.0):
+        """Salva permanentemente un rifiuto utente o un'istruzione di protezione."""
+        try:
+            self.con.execute("""
+                INSERT OR REPLACE INTO episodic_memory 
+                (node_id, protected_at, rejected_by, reason, protection_level, confidence)
+                VALUES (?, now(), ?, ?, ?, ?)
+            """, (node_id, rejected_by, reason, level, confidence))
+            # Promuove il nodo a PROTECTED anche nel lifecycle
+            self.update_lifecycle_state(node_id, "protected")
+        except Exception as e:
+            print(f"⚠️ [Episodic Memory Store] {e}")
+
+    def is_node_protected(self, node_id: str) -> bool:
+        """Controlla se un nodo è sotto protezione persistente (Episodic Memory)."""
+        res = self.con.execute("SELECT node_id FROM episodic_memory WHERE node_id = ?", (node_id,)).fetchone()
+        return res is not None
+
+    def get_protected_nodes(self) -> List[str]:
+        """Restituisce tutti gli ID protetti."""
+        res = self.con.execute("SELECT node_id FROM episodic_memory").fetchall()
+        return [r[0] for r in res]
 
     def get_knowledge_sources(self) -> List[Dict]:
         """Raggruppa la conoscenza per sorgente originaria (Analytic Hub)."""

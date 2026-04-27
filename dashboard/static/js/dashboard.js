@@ -33,7 +33,7 @@ let lastQuantumClusters = 0, lastSynthSparks = 0;
 let isEvolving = false;
 let evolutionProgress = 0;
 let evolutionStep = "";
-let quantumFlashTime = 0, synthFlashTime = 0;
+let quantumFlashTime = 0, synthFlashTime = 0, sentinelFlashTime = 0;
 let followedAgent = null;
 let clusterNodesGroup;
 let medicalCubes = [];
@@ -44,6 +44,8 @@ let layersVisibility = { agents: true, orphans: true, nodes: true, linked_nodes:
 let timeTravelFactor = 1.0;
 let nebulaQuality = 'HD';
 let clusterFocus = true;
+let radarChart = null; // 🧬 Sovereign Radar Reference
+let multimodalGroup, multimodalTextures = {}; // 📸 Multimodal Layer
 const VAULT_KEY = "vault_secret_aura_2026";
 
 function log(msg, color = '#4ade80') {
@@ -70,12 +72,22 @@ function init3D() {
         return;
     }
 
-    const glOptions = { antialias: false, depth: true, alpha: true };
+    const glOptions = { antialias: false, depth: true, alpha: true, preserveDrawingBuffer: true };
     let gl = canvas.getContext('webgl2', glOptions) || canvas.getContext('webgl', glOptions);
+    
     if (!gl) {
-        log("❌ WebGL Context Failure", "#ef4444");
+        log("❌ WebGL Context Failure - Retrying in 2s", "#ef4444");
+        setTimeout(init3D, 2000);
         return;
     }
+
+    canvas.addEventListener('webglcontextlost', (e) => {
+        e.preventDefault();
+        window.is3DInitialized = false;
+        log("⚠️ WebGL Context Lost - Emergency Re-init", "#f59e0b");
+        setTimeout(init3D, 3000);
+    }, false);
+
     log("🚀 WebGL Context Initialized", "#10b981");
 
     scene = new THREE.Scene();
@@ -131,6 +143,26 @@ function init3D() {
     }));
     scene.add(pointsMesh);
 
+    multimodalGroup = new THREE.Group();
+    scene.add(multimodalGroup);
+
+    // [v4.0] Pre-render Multimodal Textures (Image, Audio, Video)
+    const createIconTexture = (icon, color) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 128; canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = color;
+        ctx.font = '900 80px "Font Awesome 6 Free"';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(icon, 64, 64);
+        const tex = new THREE.CanvasTexture(canvas);
+        return tex;
+    };
+    multimodalTextures['image'] = createIconTexture('\uf03e', '#4ade80'); // Photo
+    multimodalTextures['audio'] = createIconTexture('\uf6a8', '#3b82f6'); // Waveform
+    multimodalTextures['video'] = createIconTexture('\uf03d', '#ef4444'); // Video Camera
+
     neuralLinks = new THREE.Group();
     scene.add(neuralLinks);
 
@@ -163,6 +195,24 @@ function init3D() {
 
     container.addEventListener('click', (e) => window.onNebulaClick(e));
     canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+    // [v4.0] Drag and Drop Implementation
+    container.classList.add('drop-zone');
+    container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        container.classList.add('drag-over');
+    });
+    container.addEventListener('dragleave', () => {
+        container.classList.remove('drag-over');
+    });
+    container.addEventListener('drop', (e) => {
+        e.preventDefault();
+        container.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            window.uploadMediaSynapse(files[0]);
+        }
+    });
     
     const probeToggle = document.getElementById('probe-toggle');
     if (probeToggle) {
@@ -242,21 +292,37 @@ function createTextSprite(text, color) {
 
 function provisionAgents() {
     janitorGroup = new THREE.Group();
-    // JANITRON Body
-    const jBodyGeo = new THREE.BoxGeometry(60000, 60000, 60000);
-    const jBodyMat = new THREE.MeshPhongMaterial({ color: 0x4ade80 });
-    const jBody = new THREE.Mesh(jBodyGeo, jBodyMat);
-    janitorGroup.add(jBody);
+    const jaMat = new THREE.MeshPhongMaterial({ color: 0xfacc15, emissive: 0x422006, shininess: 80 });
+    const jaBlackMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
 
-    // MOUTH (Always Black)
-    const mouthGeo = new THREE.BoxGeometry(40000, 20000, 10000);
-    const mouthMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-    const mouth = new THREE.Mesh(mouthGeo, mouthMat);
-    mouth.position.z = 30001;
-    mouth.userData.isMouth = true;
-    janitorGroup.add(mouth);
-    janitorLabel = createTextSprite("JA-001 JANITRON", "#FFFF00");
-    janitorLabel.position.y = 80000;
+    // Emisfero Superiore (Calotta Nord)
+    const topGeo = new THREE.SphereGeometry(45000, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    janitorTop = new THREE.Mesh(topGeo, jaMat);
+    // Orientamento iniziale neutro (chiuso verso Z)
+    
+    // 👀 OCCHI GIGANTI SUL FRONTE (Direzione bocca)
+    const eyeGeo = new THREE.SphereGeometry(18000, 16, 16);
+    const eyeL = new THREE.Mesh(eyeGeo, jaBlackMat);
+    eyeL.position.set(22000, 25000, 25000); // Alzati e portati in avanti
+    const eyeR = new THREE.Mesh(eyeGeo, jaBlackMat);
+    eyeR.position.set(-22000, 25000, 25000);
+    janitorTop.add(eyeL, eyeR);
+    
+    // Emisfero Inferiore (Calotta Sud)
+    const botGeo = new THREE.SphereGeometry(45000, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
+    janitorBottom = new THREE.Mesh(botGeo, jaMat);
+    
+    // Interno Bocca (Sfera interna nera per profondità totale)
+    const insideGeo = new THREE.SphereGeometry(43000, 16, 16);
+    const inside = new THREE.Mesh(insideGeo, jaBlackMat);
+    
+    janitorGroup.add(janitorTop, janitorBottom, inside);
+    janitorGroup.userData = { mat: jaMat };
+    // 🔄 Orientamento Default
+    janitorGroup.rotation.y = 0;
+
+    janitorLabel = createTextSprite("JA-001 JANITRON", "#facc15");
+    janitorLabel.position.y = 100000;
     janitorGroup.add(janitorLabel);
     scene.add(janitorGroup);
 
@@ -327,13 +393,46 @@ function provisionAgents() {
     quantumGroup.add(quantumLabel);
     scene.add(quantumGroup);
 
-    // SE-007 SENTINEL
+    // SE-007 SENTINEL: Sovereign Metallic Shield
     sentinelGroup = new THREE.Group();
-    const seMat = new THREE.MeshPhongMaterial({ color: 0xef4444, emissive: 0x991b1b, transparent: true, opacity: 0.9 });
-    sentinelShield = new THREE.Mesh(new THREE.CylinderGeometry(30000, 30000, 80000, 6), seMat);
-    sentinelGroup.add(sentinelShield);
-    sentinelLabel = createTextSprite("SE-007 SENTINEL", "#ef4444");
-    sentinelLabel.position.y = 100000;
+    const shieldShape = new THREE.Shape();
+    // Modellazione profilo scudo (premium curve)
+    shieldShape.moveTo(0, 50000);
+    shieldShape.quadraticCurveTo(20000, 60000, 45000, 50000); // Top Right arch
+    shieldShape.quadraticCurveTo(45000, 10000, 45000, 0);      // Right Side
+    shieldShape.quadraticCurveTo(45000, -40000, 0, -65000);    // Point Bottom
+    shieldShape.quadraticCurveTo(-45000, -40000, -45000, 0);   // Left Side
+    shieldShape.quadraticCurveTo(-45000, 10000, -45000, 50000); // Top Left arch
+    shieldShape.quadraticCurveTo(-20000, 60000, 0, 50000);
+
+    const extrudeSettings = { depth: 12000, bevelEnabled: true, bevelThickness: 4000, bevelSize: 4000, bevelSegments: 5 };
+    const shieldGeo = new THREE.ExtrudeGeometry(shieldShape, extrudeSettings);
+    
+    // Materiale Satin Chrome (Massima resa sotto luce)
+    const shieldMat = new THREE.MeshPhysicalMaterial({ 
+        color: 0xffffff, 
+        metalness: 0.85, 
+        roughness: 0.35, 
+        clearcoat: 1.0, 
+        clearcoatRoughness: 0.1,
+        emissive: 0x332211,
+        emissiveIntensity: 0.6
+    });
+    
+    sentinelShield = new THREE.Mesh(shieldGeo, shieldMat);
+    // Orientamento raddrizzato: 90° su Y e azzeramento X per posizione verticale
+    sentinelShield.rotation.x = 0; 
+    sentinelShield.rotation.y = Math.PI / 2; 
+    
+    // 💡 Aura Light dedicata
+    const shieldPointLight = new THREE.PointLight(0xffffff, 2, 250000);
+    shieldPointLight.position.set(0, 50000, 50000);
+    
+    sentinelGroup.add(sentinelShield, shieldPointLight);
+    sentinelGroup.userData = { mat: shieldMat };
+
+    sentinelLabel = createTextSprite("SE-007 SENTINEL", "#9de9ff");
+    sentinelLabel.position.y = 130000;
     sentinelGroup.add(sentinelLabel);
     scene.add(sentinelGroup);
 
@@ -468,19 +567,58 @@ function animate() {
     // 🧹 [JANITRON] Logic (Always Patrolling + Colored Body)
     const jColor = janitorFlashTime > 0 ? 0x3b82f6 : 0x4ade80;
     if (janitorGroup) {
-        janitorGroup.children.forEach(c => {
-            if (c.userData.isMouth) c.material.color.set(0x000000); // Always Black Mouth
-            else if (c.material) c.material.color.set(jColor);
-        });
-        if (janitorFlashTime > 0) janitorFlashTime--;
+        const isPurging = (janitorFlashTime > 0);
+        if (isPurging) {
+            janitorFlashTime--;
+            // 🌈 Sovereign Loop: Blue -> Orange -> Red (1sec per stage roughly)
+            const loopStage = (time * 6) % 3; 
+            let loopColor = 0x3b82f6; // Electric Blue
+            if (loopStage > 2) loopColor = 0xef4444; // Combat Red
+            else if (loopStage > 1) loopColor = 0xf97316; // Warning Orange
+            
+            janitorGroup.userData.mat.emissive.setHex(loopColor);
+            janitorGroup.userData.mat.color.setHex(loopColor);
+            janitorGroup.userData.mat.emissiveIntensity = 3.0 + Math.sin(time * 25) * 1.5;
+            
+            // 💓 Pulsazione dimensionale
+            const pulse = 1.0 + Math.sin(time * 25) * 0.15;
+            janitorGroup.scale.set(pulse, pulse, pulse);
+        } else {
+            janitorGroup.userData.mat.emissive.setHex(0x422006);
+            janitorGroup.userData.mat.color.setHex(0xfacc15); // Sovereign Yellow
+            janitorGroup.userData.mat.emissiveIntensity = 0.5;
+            janitorGroup.scale.set(1, 1, 1);
+        }
+
+        // Animazione Bocca (Apertura/Chiusura Pac-Man su asse X locale)
+        const mouthSpeed = isPurging ? 15 : 6;
+        const mouthOpen = Math.abs(Math.sin(time * mouthSpeed)) * 0.7;
+        janitorTop.rotation.x = -mouthOpen;
+        janitorBottom.rotation.x = mouthOpen;
         
-        // Persistent Patrol even if idle: orbit the base target
-        const time = Date.now() * 0.001;
-        const orbitX = Math.cos(time * 0.5) * 50000;
-        const orbitZ = Math.sin(time * 0.5) * 50000;
-        janitorGroup.position.x += (janitorTargetPos.x + orbitX - janitorGroup.position.x) * 0.05;
-        janitorGroup.position.y += (janitorTargetPos.y - janitorGroup.position.y) * 0.05;
-        janitorGroup.position.z += (janitorTargetPos.z + orbitZ - janitorGroup.position.z) * 0.05;
+        // Sovereign Patrol Logic: Incursiuoni dinamiche dentro e fuori la periferia
+        if (janitorGroup.position.distanceTo(janitorTargetPos) < 100000) {
+            const scope = 1500000; // Raggio periferico esteso
+            janitorTargetPos.set(
+                (Math.random() - 0.5) * scope * 2,
+                (Math.random() - 0.5) * 600000, // Variabilità Y per scansionare volumi diversi
+                (Math.random() - 0.5) * scope * 2
+            );
+        }
+
+        // Persistent Patrol: orbit moving target
+        const orbitX = Math.cos(time * 0.5) * 80000;
+        const orbitZ = Math.sin(time * 0.5) * 80000;
+        const nextPos = new THREE.Vector3(janitorTargetPos.x + orbitX, janitorTargetPos.y, janitorTargetPos.z + orbitZ);
+        
+        // Look towards movement: allineamento perfetto di occhi e bocca alla direzione di marcia
+        const lookDir = nextPos.clone().sub(janitorGroup.position);
+        if (lookDir.length() > 1000) {
+            const targetRot = Math.atan2(lookDir.x, lookDir.z);
+            janitorGroup.rotation.y = targetRot; 
+        }
+
+        janitorGroup.position.lerp(nextPos, 0.05);
     }
 
     // 🧪 [DISTILLER] Flash Logic
@@ -544,8 +682,27 @@ function animate() {
 
     if (sentinelGroup) {
         sentinelGroup.position.lerp(sentinelTargetPos, 0.04);
-        sentinelShield.rotation.y += 0.05;
+        sentinelShield.rotation.y += 0.03;
         sentinelGroup.position.y += Math.sin(time * 3) * 300;
+
+        const isWorking = (sentinelFlashTime > 0);
+        if (isWorking) {
+            sentinelFlashTime--;
+            const pulse = 1.0 + Math.sin(time * 25) * 0.2;
+            sentinelGroup.scale.setScalar(pulse);
+            
+            // 🔥 COMBAT_ALARM: Flashing Yellow -> Orange -> Red
+            const speed = time * 15;
+            const colors = [0xfacc15, 0xf97316, 0xef4444];
+            const colorIdx = Math.floor(speed % colors.length);
+            sentinelGroup.userData.mat.emissive.setHex(colors[colorIdx]);
+            sentinelGroup.userData.mat.emissiveIntensity = 1.0 + Math.abs(Math.sin(time * 30)) * 2.0;
+        } else {
+            sentinelGroup.scale.setScalar(1.0);
+            sentinelGroup.userData.mat.emissive.setHex(0x1e293b);
+            sentinelGroup.userData.mat.emissiveIntensity = 0.5;
+            sentinelGroup.userData.mat.color.setHex(0xcccccc);
+        }
     }
 
     if (synthGroup) {
@@ -773,6 +930,20 @@ function spawnSkywalkerLaser() {
     skywalkerLasers.push(line);
 }
 
+let heatmapMode = false;
+let currentHeatmap = {};
+
+function toggleHeatmap(enabled) {
+    heatmapMode = enabled;
+    if (enabled) {
+        log("🔥 HEATMAP_MODE: Active. Visualizing semantic density.", "#ff5555");
+    } else {
+        log("🧊 HEATMAP_MODE: Disabled. Restoring theme colors.", "#06b6d4");
+    }
+    // Forza aggiornamento scena se abbiamo dati
+    if (vaultPoints.length > 0) updateThreeScene(vaultPoints, []);
+}
+
 function updateThreeScene(points, links = []) {
     if (!pointsMesh || !neuralLinks) return;
     vaultPoints = points || [];
@@ -785,13 +956,24 @@ function updateThreeScene(points, links = []) {
     for (let i = 0; i < count; i++) {
         const p = vaultPoints[i];
         pos[i*3] = p.x || 0; pos[i*3+1] = p.y || 0; pos[i*3+2] = p.z || 0;
-        let displayColor = p.color || "#06b6d4";
-        if (isLight && (displayColor === "#06b6d4" || displayColor === "#ffffff")) {
-            displayColor = pastelPalette[i % pastelPalette.length];
+        
+        let displayColor;
+        if (heatmapMode && currentHeatmap[p.id] !== undefined) {
+            // Gradient: Blue (Cold) -> Red (Hot)
+            const temp = currentHeatmap[p.id]; // 0.0 - 1.0
+            const r = Math.floor(temp * 255);
+            const b = Math.floor((1 - temp) * 255);
+            displayColor = `rgb(${r}, 50, ${b})`;
+        } else {
+            displayColor = p.color || "#06b6d4";
+            if (isLight && (displayColor === "#06b6d4" || displayColor === "#ffffff")) {
+                displayColor = pastelPalette[i % pastelPalette.length];
+            }
+            if (!clusterFocus) {
+                displayColor = isLight ? "#94a3b8" : "#475569";
+            }
         }
-        if (!clusterFocus) {
-            displayColor = isLight ? "#94a3b8" : "#475569";
-        }
+        
         const color = new THREE.Color(displayColor);
         col[i*3] = color.r; col[i*3+1] = color.g; col[i*3+2] = color.b;
     }
@@ -800,6 +982,24 @@ function updateThreeScene(points, links = []) {
     renderClusters(vaultPoints);
     const drawCount = Math.floor(count * timeTravelFactor);
     pointsMesh.geometry.setDrawRange(0, drawCount);
+
+    // [v4.0] Render Multimodal Sprites
+    multimodalGroup.clear();
+    vaultPoints.forEach(p => {
+        if (p.media_type && multimodalTextures[p.media_type]) {
+            const material = new THREE.SpriteMaterial({ 
+                map: multimodalTextures[p.media_type],
+                transparent: true,
+                opacity: 0.9
+            });
+            const sprite = new THREE.Sprite(material);
+            sprite.scale.set(60000, 60000, 1);
+            sprite.position.set(p.x, p.y, p.z);
+            sprite.userData = { id: p.id, type: 'multimodal', media: p.media_type };
+            multimodalGroup.add(sprite);
+        }
+    });
+
     neuralLinks.clear();
     const now = Date.now();
     if (layersVisibility.edges && links && links.length > 0) {
@@ -951,6 +1151,54 @@ async function refreshModels() {
     } catch(e) { return {installed:[], available:[]}; }
 }
 
+async function registerCustomModel() {
+    const nameEl = document.getElementById('custom-model-name');
+    const providerEl = document.getElementById('custom-model-provider');
+    const pathEl = document.getElementById('custom-model-path');
+
+    if (!nameEl || !pathEl) return;
+
+    const name = nameEl.value.trim();
+    const provider = providerEl.value;
+    const path = pathEl.value.trim();
+
+    if (!name || !path) {
+        log("⚠️ FORGE: Nome modello e percorso sono obbligatori.", "#ef4444");
+        return;
+    }
+
+    log(`🔨 FORGE: Inizio registrazione core [${name}] via ${provider.toUpperCase()}...`, "#a855f7");
+
+    try {
+        const response = await fetch('/api/models/register', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-API-KEY': VAULT_KEY 
+            },
+            body: JSON.stringify({ name, provider, path })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            log(`✅ FORGE: Modello ${name} registrato con successo nel Vault.`, "#4ade80");
+            nameEl.value = '';
+            pathEl.value = '';
+            
+            // Re-sync UI
+            await refreshModels();
+            await renderModelHubTable();
+            if (typeof updateAllSwarmDropdowns === 'function') {
+                updateAllSwarmDropdowns();
+            }
+        } else {
+            log(`❌ FORGE Error: ${result.error || 'Errore sconosciuto'}`, "#ef4444");
+        }
+    } catch (e) {
+        log(`❌ FORGE: Errore critico durante la registrazione: ${e.message}`, "#ef4444");
+    }
+}
+
 async function renderModelHubTable() {
     const bodies = [document.getElementById('model-hub-table-body'), document.getElementById('settings-hub-table-body')];
     try {
@@ -958,48 +1206,98 @@ async function renderModelHubTable() {
         const d = await r.json();
         const models = d.installed || [];
         
-        const html = models.map(m => {
-            const row = `
-            <tr style="border-bottom:1px solid rgba(255,255,255,0.05); transition: background 0.3s;" onmouseover="this.style.background='rgba(168,85,247,0.02)'" onmouseout="this.style.background='transparent'">
-                <td style="padding:1.2rem;">
-                    <div style="font-weight:900; color:#fff; font-size:1.1rem; letter-spacing:1px;">
-                        ${m.name.split(':')[0].toUpperCase()} 
-                        <span style="font-size:0.7rem; color:#a855f7; margin-left:8px; font-weight:400;">v${m.name.split(':')[1] || 'latest'}</span>
-                    </div>
-                    <div style="font-family:'JetBrains Mono'; font-size:0.5rem; color:#4ade80; margin-top:6px; background:rgba(74,222,128,0.05); padding:4px 8px; border-radius:4px; display:inline-block;">
-                        <i class="fas fa-memory"></i> ${m.ram || '8GB RAM'} | <i class="fas fa-microchip"></i> ${m.cpu || 'Multi-Core'} ${m.vram ? `| <i class="fas fa-video" style="color:#f59e0b;"></i> ${m.vram}` : ''}
-                    </div>
-                </td>
-                <td style="padding:1.2rem; font-size:0.8rem; color:#fff; font-family:'JetBrains Mono';">${m.size}</td>
-                <td style="padding:1.2rem;">
-                    <span style="font-size:0.55rem; color:${m.status === 'INSTALLED' ? '#4ade80' : '#8b949e'}; font-weight:800; text-transform:uppercase; letter-spacing:1px;">
-                        <span class="pulse-dot" style="display:${m.status === 'INSTALLED' ? 'inline-block' : 'none'}; vertical-align:middle; margin-right:5px;"></span>
-                        ${m.status}
-                    </span>
-                </td>
-                <td style="padding:1.2rem; font-size:0.7rem; color:#8b949e; line-height:1.5; max-width:250px;">
-                    <strong style="color:#fff; display:block; margin-bottom:4px;">${m.strengths}</strong>
-                    <span style="font-style:italic;">${m.pros}</span>
-                </td>
-                <td style="padding:1.2rem;">
-                    <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">
-                        ${(Array.isArray(m.synergy) && m.synergy[0] !== 'None') ? m.synergy.map(s => `<span class="badge-synergy" style="font-size:0.5rem; padding:2px 8px;">${s}</span>`).join('') : '<span class="badge-synergy" style="opacity:0.5;">SOLO MODE</span>'}
-                    </div>
-                    <div style="font-size:0.5rem; color:#a855f7; font-weight:800; text-transform:uppercase; letter-spacing:1px; background:rgba(168,85,247,0.05); padding:2px 6px; border-radius:4px; display:inline-block;">
-                        <i class="fas fa-project-diagram"></i> OPTIMIZED: ${m.task || 'GENERAL'}
-                    </div>
-                </td>
-                <td style="padding:1.2rem; text-align:right;">
-                    <div style="display:flex; align-items:center; justify-content:flex-end; gap:10px;">
-                        ${m.status === 'INSTALLED' ? 
-                            `<button onclick="window.deleteModel('${m.name}')" style="background:rgba(239, 68, 68, 0.1); border:1px solid #ef4444; color:#ef4444; padding:6px 16px; border-radius:8px; font-size:0.6rem; font-weight:900; cursor:pointer; transition:0.3s;" onmouseover="this.style.background='#ef4444'; this.style.color='white'">DELETE</button>` :
-                            `<button onclick="window.deployModel('${m.name}')" style="background:rgba(74, 222, 128, 0.1); border:1px solid #4ade80; color:#4ade80; padding:6px 16px; border-radius:8px; font-size:0.6rem; font-weight:900; cursor:pointer; transition:0.3s;" onmouseover="this.style.background='#4ade80'; this.style.color='white'">DEPLOY</button>`
-                        }
+        // Ordine desiderato delle categorie
+        const categoryOrder = ["TINY_KINETIC", "MULTIMODAL_SENSORY", "SOVEREIGN_MID_CORE", "ELITE_HEAVY_WEIGHT", "CUSTOM_FORGE", "General"];
+        
+        // Raggruppamento
+        const groups = {};
+        models.forEach(m => {
+            const cat = m.category || "General";
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push(m);
+        });
+
+        let html = "";
+        
+        categoryOrder.forEach(cat => {
+            const groupModels = groups[cat];
+            if (!groupModels || groupModels.length === 0) return;
+
+            // Header della Categoria
+            const catLabel = cat.replace(/_/g, ' ');
+            html += `
+            <tr class="hub-category-header">
+                <td colspan="6" style="padding: 1.5rem 1rem 0.5rem 1rem;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="height: 2px; flex: 1; background: linear-gradient(90deg, rgba(168,85,247,0.5), transparent);"></div>
+                        <span style="font-size: 0.7rem; font-weight: 900; color: #a855f7; letter-spacing: 3px; text-transform: uppercase;">[ ${catLabel} ]</span>
+                        <div style="height: 2px; flex: 1; background: linear-gradient(270deg, rgba(168,85,247,0.5), transparent);"></div>
                     </div>
                 </td>
             </tr>`;
-            return row;
-        }).join('');
+
+            groupModels.forEach(m => {
+                const isInstalled = m.status === 'INSTALLED';
+                const capHtml = (m.capabilities || []).map(cap => 
+                    `<span class="capability-badge">${cap}</span>`
+                ).join('');
+
+                html += `
+                <tr class="hub-model-row" style="border-bottom:1px solid rgba(255,255,255,0.03); transition: all 0.3s;" onmouseover="this.style.background='rgba(168,85,247,0.03)'" onmouseout="this.style.background='transparent'">
+                    <!-- COL 1: MODELLO -->
+                    <td style="padding:1.2rem;">
+                        <div style="font-weight:900; color:#fff; font-size:1.1rem; letter-spacing:1px; display:flex; align-items:center; gap:8px;">
+                            ${m.name.split(':')[0].toUpperCase()}
+                            ${isInstalled ? '<i class="fas fa-check-circle" style="color:#4ade80; font-size:0.7rem;" title="Native Integration Active"></i>' : ''}
+                        </div>
+                        <div style="font-family:'JetBrains Mono'; font-size:0.5rem; color:#8b949e; margin-top:6px;">
+                            VERSION: <span style="color:#a855f7;">${m.name.split(':')[1] || 'latest'}</span> | SIZE: <span style="color:#fff;">${m.size}</span>
+                        </div>
+                    </td>
+
+                    <!-- COL 2: HARDWARE DNA -->
+                    <td style="padding:1.2rem;">
+                         <div style="font-family:'JetBrains Mono'; font-size:0.55rem; color:#4ade80; background:rgba(74,222,128,0.05); padding:6px 10px; border-radius:6px; border: 1px solid rgba(74,222,128,0.1); display:inline-block;">
+                            <div style="margin-bottom:4px;"><i class="fas fa-memory"></i> MIN_RAM: ${m.ram || '4GB'}</div>
+                            ${m.vram && m.vram !== 'N/D' ? `<div style="color:#f59e0b;"><i class="fas fa-video"></i> VRAM_OPT: ${m.vram}</div>` : '<div style="color:#94a3b8; opacity:0.6;"><i class="fas fa-microchip"></i> CPU_DRIVEN</div>'}
+                        </div>
+                    </td>
+
+                    <!-- COL 3: CAPABILITIES -->
+                    <td style="padding:1.2rem;">
+                        <div style="display:flex; flex-wrap:wrap; gap:5px; max-width:280px;">
+                            ${capHtml || '<span style="color:#64748b; font-size:0.6rem; font-style:italic;">General Reasoning</span>'}
+                        </div>
+                    </td>
+
+                    <!-- COL 4: PROS & STRENGTHS -->
+                    <td style="padding:1.2rem; max-width:300px;">
+                        <div style="font-size:0.75rem; color:#fff; font-weight:700; margin-bottom:4px; line-height:1.3;">${m.strengths || 'Performance Optimale'}</div>
+                        <div style="font-size:0.65rem; color:#94a3b8; font-style:italic; line-height:1.4;">"${m.pros}"</div>
+                    </td>
+
+                    <!-- COL 5: SWARM SINERGY -->
+                    <td style="padding:1.2rem;">
+                        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
+                            ${(Array.isArray(m.synergy) && m.synergy[0] !== 'None') ? m.synergy.map(s => `<span class="badge-synergy" style="font-size:0.5rem; padding:2px 8px;">${s}</span>`).join('') : '<span class="badge-synergy" style="opacity:0.4; background:transparent; border:1px solid rgba(255,255,255,0.1);">SOLO_NODE</span>'}
+                        </div>
+                        <div style="font-size:0.5rem; color:#a855f7; font-weight:800; text-transform:uppercase; letter-spacing:1px; background:rgba(168,85,247,0.05); padding:3px 8px; border-radius:4px; display:inline-block; border:1px solid rgba(168,85,247,0.2);">
+                            <i class="fas fa-project-diagram"></i> ROLE: ${m.task || 'GENERAL'}
+                        </div>
+                    </td>
+
+                    <!-- COL 6: ACTIONS -->
+                    <td style="padding:1.2rem; text-align:right;">
+                        <div style="display:flex; align-items:center; justify-content:flex-end; gap:10px;">
+                            ${isInstalled ? 
+                                `<button onclick="window.deleteModel('${m.name}')" class="hub-action-btn delete-btn">DELETE</button>` :
+                                `<button onclick="window.deployModel('${m.name}')" class="hub-action-btn deploy-btn">DEPLOY</button>`
+                            }
+                        </div>
+                    </td>
+                </tr>`;
+            });
+        });
         
         bodies.forEach(b => { if(b) b.innerHTML = html; });
         populateSwarmSelects(models);
@@ -1009,15 +1307,27 @@ async function renderModelHubTable() {
 }
 
 function populateSwarmSelects(models) {
-    const selects = ['route-audit', 'route-extraction', 'route-crossref', 'route-synthesis', 'route-chat-mediator', 'route-multimodal', 'route-evolution'];
+    const selects = [
+        'route-audit', 'route-extraction', 'route-crossref', 'route-synthesis', 
+        'route-chat-mediator', 'route-multimodal', 'route-vision-description', 
+        'route-vision-detection', 'route-vision-ocr', 'route-vision-analysis', 'route-evolution',
+        'route-evolution-suggestions', 'court-judge-1', 'court-judge-2', 'court-judge-3'
+    ];
     const installed = models.filter(m => m.status === 'INSTALLED');
     
     selects.forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             const currentVal = el.value;
-            el.innerHTML = installed.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
-            if (currentVal && installed.find(m => m.name === currentVal)) {
+            let options = installed.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+            
+            // Allow null/none for judges
+            if (id.startsWith('court-judge-')) {
+                options = `<option value="-">-</option>` + options;
+            }
+            
+            el.innerHTML = options;
+            if (currentVal && (currentVal === "-" || installed.find(m => m.name === currentVal))) {
                 el.value = currentVal;
             }
         }
@@ -1033,10 +1343,19 @@ window.saveSwarmRouting = async () => {
         'synthesis': document.getElementById('route-synthesis').value,
         'chat_mediator': document.getElementById('route-chat-mediator').value,
         'multimodal': document.getElementById('route-multimodal').value,
+        'vision_description': document.getElementById('route-vision-description')?.value || "moondream",
+        'vision_detection': document.getElementById('route-vision-detection')?.value || "moondream",
+        'vision_ocr': document.getElementById('route-vision-ocr')?.value || "moondream",
+        'vision_analysis': document.getElementById('route-vision-analysis')?.value || "moondream",
         'evolution_model': document.getElementById('route-evolution').value,
+        'evolution_suggestion_model': document.getElementById('route-evolution-suggestions')?.value || "llama3.2",
         'consensus_threshold': parseInt(document.getElementById('consensus-threshold').value || 2),
         'weaver_sensitivity': parseFloat(document.getElementById('weaver-sensitivity').value || 0.82),
-        'auto_evolve_active': document.getElementById('auto-evolve-toggle')?.checked || false
+        'auto_evolve_active': document.getElementById('auto-evolve-toggle')?.checked || false,
+        'autonomous_court': document.getElementById('autonomous-court-toggle')?.checked || false,
+        'court_judge_1': document.getElementById('court-judge-1')?.value || "llama3.2",
+        'court_judge_2': document.getElementById('court-judge-2')?.value || "-",
+        'court_judge_3': document.getElementById('court-judge-3')?.value || "-"
     };
     
     try {
@@ -1056,6 +1375,55 @@ window.saveSwarmRouting = async () => {
         console.error("Save Error:", e);
     }
 };
+
+window.updateSwarmConfig = async (key, val) => {
+    try {
+        const r = await fetch('/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: key, value: val })
+        });
+        if (r.ok) {
+            log(`⚙️ Swarm Config [${key}] -> ${val}`, "#10b981");
+            
+            // 🔄 Sincronizzazione Toggles UI (Per ridondanza richiesta)
+            if (key === 'auto_mode') {
+                const t1 = document.getElementById('autopilot-supervision-toggle');
+                const t2 = document.getElementById('autonomous-court-toggle');
+                if (t1) t1.checked = val;
+                if (t2) t2.checked = val;
+            }
+        }
+    } catch(e) {
+        console.error("Update error", e);
+    }
+};
+
+window.toggleTheme = () => {
+    const isLight = document.body.classList.toggle('light-theme');
+    const cb = document.getElementById('theme-checkbox');
+    if (cb) cb.checked = isLight;
+    
+    // Aggiornamento testuale UI
+    const title = document.getElementById('theme-toggle-title');
+    const desc = document.getElementById('theme-toggle-desc');
+    if (title) title.innerText = isLight ? "Modalità Light" : "Modalità Dark";
+    if (desc) desc.innerText = isLight ? "Testo nero, sfondo chiaro" : "Testo bianco, sfondo scuro";
+
+    // Update 3D Background if initialized
+    if (scene) {
+        scene.background = new THREE.Color(isLight ? 0xf8fafc : 0x020617);
+    }
+    
+    localStorage.setItem('aura-theme', isLight ? 'light' : 'dark');
+    log(`🎨 Tema ${isLight ? 'Light' : 'Dark'} Attivato`, isLight ? '#3b82f6' : '#a855f7');
+};
+
+// Inizializzazione Tema all'avvio
+document.addEventListener('DOMContentLoaded', () => {
+    const saved = localStorage.getItem('aura-theme');
+    if (saved === 'light') toggleTheme();
+});
 async function refreshHubVisual() { 
     log("🔄 Sincronizzazione Neural Hub...");
     await renderModelHubTable(); 
@@ -1068,6 +1436,8 @@ window.nuclearPurge = async () => {
         location.reload();
     } catch(e) {}
 };
+
+window.deployModel = async (id) => { return await window.installModel(id); };
 
 window.installModel = async (id) => {
     const modal = document.getElementById('install-modal');
@@ -1125,11 +1495,17 @@ function pollInstallProgress(modelId) {
 }
 
 window.deleteModel = async (id) => {
+    log(`🗑️ Richiesta eliminazione modello: ${id}`, "#3b82f6");
     const modal = document.getElementById('delete-confirm-modal');
     const targetSpan = document.getElementById('delete-target-id');
     const confirmBtn = document.getElementById('btn-confirm-delete');
-    if (!modal || !targetSpan || !confirmBtn) return;
-    targetSpan.innerText = id;
+    
+    if (!modal) {
+        log(`❌ Errore critico: Modale di eliminazione non trovata nel DOM.`, "#ef4444");
+        return;
+    }
+    
+    if (targetSpan) targetSpan.innerText = id;
     modal.style.display = 'flex';
     confirmBtn.onclick = async () => {
         try {
@@ -1160,6 +1536,68 @@ window.onNebulaClick = (event) => {
         if (!document.getElementById('probe-toggle').checked) return;
         selectNode(vaultPoints[intersects[0].index].id);
     }
+};
+window.uploadMediaSynapse = async (file) => {
+    if (!file) return;
+    
+    log(`☁️ [Multimodal] Ingestione avviata: ${file.name}...`, '#3b82f6');
+    
+    // Mostriamo progresso finto nel HUD (vettorializzazione locale)
+    const hud = document.getElementById('forage-telemetry-hud');
+    const bar = document.getElementById('forage-progress-bar');
+    const stats = document.getElementById('forage-telemetry-stats');
+    
+    if (hud) hud.style.display = 'flex';
+    if (bar) bar.style.set = '0%';
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const response = await fetch('/api/multimodal/upload', {
+            method: 'POST',
+            headers: { 'X-API-KEY': VAULT_KEY },
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            log(`✅ [Multimodal] Ingestione completata: ${result.ingested_nodes} segmenti sincronizzati.`, '#4ade80');
+            if (bar) bar.style.width = '100%';
+            setTimeout(() => { if(hud) hud.style.display = 'none'; }, 2000);
+        } else {
+            log(`❌ [Multimodal] Errore: ${result.detail || 'Ingestione fallita'}`, '#ef4444');
+        }
+    } catch (e) {
+        log(`❌ [Multimodal] Errore di rete: ${e.message}`, '#ef4444');
+    }
+};
+
+window.triggerShardClone = async () => {
+    log("🏺 [ShardGuard] Avvio clonazione shard manuale...", "#a855f7");
+    try {
+        const r = await fetch('/api/sharding/clone', {
+            method: 'POST',
+            headers: { 'X-API-KEY': VAULT_KEY }
+        });
+        const res = await r.json();
+        if (r.ok) log(`✅ [ShardGuard] Clone creato: ${res.shard_id}`, "#4ade80");
+        else log(`❌ [ShardGuard] Errore: ${res.detail}`, "#ef4444");
+    } catch (e) { log(`❌ [ShardGuard] Errore di rete: ${e.message}`, "#ef4444"); }
+};
+
+window.triggerShardBackup = async () => {
+    log("📦 [ShardGuard] Avvio backup fisico manuale...", "#3b82f6");
+    try {
+        const r = await fetch('/api/sharding/backup', {
+            method: 'POST',
+            headers: { 'X-API-KEY': VAULT_KEY }
+        });
+        const res = await r.json();
+        if (r.ok) log("✅ [ShardGuard] Backup fisico completato con successo.", "#4ade80");
+        else log(`❌ [ShardGuard] Errore: ${res.detail}`, "#ef4444");
+    } catch (e) { log(`❌ [ShardGuard] Errore di rete: ${e.message}`, "#ef4444"); }
 };
 
 window.toggleCommandMode = () => {
@@ -1254,6 +1692,10 @@ window.showSection = (s) => {
             bottomHUD.style.display = 'none';
         }
     }
+    const cycloHUD = document.getElementById('cycloscope-hud');
+    if (cycloHUD) {
+        cycloHUD.style.display = (s === 'overview') ? 'flex' : 'none';
+    }
     const t = document.getElementById(`${s}-view`);
     if (t) {
         t.style.display = 'flex';
@@ -1265,18 +1707,390 @@ window.showSection = (s) => {
         init3D(); 
         setTimeout(() => window.dispatchEvent(new Event('resize')), 100); 
     }
-    if (s === 'benchmark') { renderBenchmarkTable(); }
-    if (s === 'settings') { switchSettingsTab('swarm'); }
+    if (s === 'benchmark') { 
+        renderBenchmarkTable(); 
+        refreshRadar(); // 🧬 Trigger Radar Synthesis
+    }
+    if (s === 'lab') { refreshHistoricalEngine(); }
+    if (s === 'settings') { 
+        switchSettingsTab('swarm'); 
+        refreshHubVisual(); // Ensure judge selects are populated
+    }
 };
 
 window.switchLabTab = (tab) => {
     document.querySelectorAll('[id^="lab-tab-content-"]').forEach(c => c.style.display = 'none');
     document.querySelectorAll('.lab-tab-btn').forEach(btn => btn.classList.remove('active-tab'));
     const target = document.getElementById(`lab-tab-content-${tab}`);
-    if (target) target.style.display = (tab === 'active') ? 'flex' : 'block';
+    if (target) target.style.display = 'flex';
     const btn = document.getElementById(`tab-lab-${tab}`);
     if (btn) btn.classList.add('active-tab');
     if (tab === 'forge') renderModelHubTable();
+    if (tab === 'court') refreshCourt();
+};
+
+// 🏛️ SOVEREIGN SUPREME COURT: Verdict Filtering & Human Overrides
+window.refreshCourt = async () => {
+    try {
+        const r = await fetch('/api/lab/audit', { headers: { 'X-API-KEY': VAULT_KEY }});
+        const history = await r.json();
+        window.renderCourtVerdicts(history);
+    } catch (e) { console.error("Court sync failed", e); }
+};
+
+window.renderCourtVerdicts = (history) => {
+    const list = document.getElementById('court-verdicts-list');
+    if (!list) return;
+    
+    // Check if we already have the same number of items to avoid flickering if nothing changed
+    const judgeIcon = '<i class="fas fa-gavel" style="color: #facc15; margin-right: 10px;"></i>';
+    
+    // Filtriamo per azioni giudiziarie rilevanti o convalidate
+    const filtered = history.filter(entry => {
+        const act = entry.action.toUpperCase();
+        return act.includes("VETO") || 
+               act.includes("DIGESTION") || 
+               act.includes("SPARK") || 
+               act.includes("HOLD") || 
+               act.includes("VERDICT") ||
+               act.includes("COMMITTEE") ||
+               entry.wisdom_recorded;
+    }).slice(0, 50); // Increased slice for better scrolling history
+
+    list.innerHTML = '';
+    
+    if (filtered.length === 0) {
+        list.innerHTML = `<div style="text-align:center; padding:5rem; opacity:0.3; font-size:0.7rem; color:#fff;">
+            <i class="fas fa-balance-scale" style="font-size:2rem; display:block; margin-bottom:1rem;"></i>
+            PAX_NEBULA: La Corte suprema non ha verdetti pendenti.
+        </div>`;
+        return;
+    }
+
+    filtered.forEach(entry => {
+        const act = entry.action.toUpperCase();
+        const isVeto = act.includes("VETO") || act.includes("DIGESTION") || act.includes("HOLD") || act.includes("VERDICT");
+        const borderColor = entry.wisdom_recorded ? '#4ade80' : (isVeto ? '#facc15' : '#a855f7');
+        
+        const card = document.createElement('div');
+        card.className = "court-verdict-card";
+        card.style.cssText = `background: rgba(255,255,255,0.03); border: 1px solid ${borderColor}; padding: 1.2rem; border-radius: 12px; margin-bottom: 12px; font-size: 0.65rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-left: 4px solid ${borderColor};`;
+        
+        // Add subtle animation for new items
+        card.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 400 });
+
+        let actionText = act;
+        if (entry.wisdom_recorded) actionText += " (CONSOLIDATO)";
+
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                <span style="color:${borderColor}; font-weight:900; letter-spacing:1.5px; text-transform:uppercase;">${judgeIcon}${actionText}</span>
+                <span style="color:#64748b; font-family:'JetBrains Mono'; font-size:0.55rem; background:rgba(0,0,0,0.2); padding:2px 8px; border-radius:4px;">${entry.timestamp}</span>
+            </div>
+            <div style="color:#e2e8f0; margin-bottom: 15px; line-height: 1.6; font-family:'Inter'; font-weight:400; font-size:0.7rem;">${entry.reasoning || entry.motivation || "No reasoning provided."}</div>
+            <div style="display:flex; gap: 10px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 12px;">
+                <button onclick="window.selectNode('${entry.target_id || entry.node_id}')" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #3b82f6; font-size: 0.55rem; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight:800; text-transform:uppercase; transition:0.2s;" onmouseover="this.style.background='rgba(59, 130, 246, 0.2)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.1)'">INSPECT_NODE</button>
+                ${!entry.wisdom_recorded ? `
+                    <button onclick="window.recordWisdom('${btoa(entry.reasoning || "")}', true)" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; font-size: 0.55rem; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight:800; text-transform:uppercase; transition:0.2s;" onmouseover="this.style.background='rgba(16, 185, 129, 0.2)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.1)'">APPROVE</button>
+                    <button onclick="window.recordWisdom('${btoa(entry.reasoning || "")}', false)" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 0.55rem; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight:800; text-transform:uppercase; transition:0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.2)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)'">REJECT</button>
+                ` : `<span style="color:#4ade80; font-size:0.55rem; font-weight:900; display:flex; align-items:center; letter-spacing:1px;"><i class="fas fa-check-double" style="margin-right:8px;"></i> SOVEREIGN_DECISION_EXECUTED</span>`}
+            </div>
+        `;
+        list.appendChild(card);
+    });
+};
+
+window.updateCourtSettings = async () => {
+    const auto = document.getElementById('autonomous-court-toggle').checked;
+    const j1 = document.getElementById('court-judge-1').value;
+    const j2 = document.getElementById('court-judge-2').value;
+    const j3 = document.getElementById('court-judge-3').value;
+    
+    try {
+        await fetch('/api/lab/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-KEY': VAULT_KEY },
+            body: JSON.stringify({
+                autonomous_court: auto,
+                court_judge_1: j1,
+                court_judge_2: j2,
+                court_judge_3: j3
+            })
+        });
+        log(`⚖️ SUPREME_COURT: Protocollo aggiornato. Supervisione: ${auto ? 'AUTONOMA' : 'MANUALE'}`, "#facc15");
+    } catch(e) { console.error("Setting update failed", e); }
+};
+
+// 📜 PROTOCOL LIBRARY: Commands for the Swarm Console
+const SWARM_PROTOCOLS = [
+    { cmd: 'SYNC_MESH --force', desc: 'Forza ricalcolo nodi e archi semantici.' },
+    { cmd: 'PURGE_BUFFER', desc: 'Svuota i thread orfani e cluster volatili.' },
+    { cmd: 'BOOST_COGNITION', desc: 'Aumenta campionamento LLM per sintesi.' },
+    { cmd: 'SENTINEL_SCAN', desc: 'Avvia scansione vulnerabilità Sentinel.' },
+    { cmd: 'AUDIT_LEDGER', desc: 'Esporta cronologia convalidata Wisdom.' },
+    { cmd: 'NEBULA_RESET', desc: 'Resetta camera Cycloscope al centro.' },
+    { cmd: 'FORGE_DEFAULT', desc: 'Crea agente archivista standard.' }
+];
+
+window.toggleProtocolLibrary = () => {
+    const menu = document.getElementById('protocol-library-menu');
+    if (!menu) return;
+    const isHidden = menu.classList.contains('hidden');
+    if (isHidden) {
+        const body = document.getElementById('protocol-table-body');
+        body.innerHTML = SWARM_PROTOCOLS.map(p => `
+            <tr onclick="sendDirectCommand('${p.cmd}'); toggleProtocolLibrary();" style="cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='rgba(168,85,247,0.1)'" onmouseout="this.style.background='transparent'">
+                <td style="padding: 8px; color: #a855f7; font-family: 'JetBrains Mono'; font-weight: 800;">${p.cmd}</td>
+                <td style="padding: 8px; color: #94a3b8; font-style: italic;">${p.desc}</td>
+            </tr>
+        `).join('');
+        menu.classList.remove('hidden');
+    } else {
+        menu.classList.add('hidden');
+    }
+};
+
+window.sendDirectCommand = async (cmd) => {
+    if (!cmd) return;
+    const log = document.getElementById('swarm-telemetry-log');
+    const timestamp = new Date().toLocaleTimeString();
+    
+    // UI Log
+    const entry = document.createElement('div');
+    entry.innerHTML = `<span style="color: #64748b;">[${timestamp}]</span> <span style="color: #a855f7;">${cmd}</span> <span style="color: #4ade80;">> INJECTED</span>`;
+    log.appendChild(entry);
+    log.scrollTop = log.scrollHeight;
+    
+    // Simulate thinking/execution
+    setTimeout(() => {
+        const res = document.createElement('div');
+        res.innerHTML = `<span style="color: #64748b;">[${timestamp}]</span> <span style="color: #3b82f6;">KERNEL_RESPONSE:</span> Command accepted. Running sovereign protocol...`;
+        log.appendChild(res);
+        log.scrollTop = log.scrollHeight;
+    }, 500);
+
+    // Call Backend
+    try {
+        await fetch('/api/swarm/command', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ command: cmd, api_key: VAULT_KEY })
+        });
+    } catch(e) { console.error("Command uplink failed", e); }
+};
+
+// 📜 HISTORICAL ENGINE: Analytical comparison from Vault cycles
+window.refreshHistoricalEngine = async () => {
+    try {
+        const r = await fetch('/api/lab/audit', { headers: { 'X-API-KEY': VAULT_KEY }});
+        const history = await r.json();
+        
+        // Calcolo Wisdom Cycles (Audit approvati)
+        const wisdomCount = history.filter(h => h.wisdom_recorded).length || history.length;
+        const wisdomEl = document.getElementById('hist-wisdom');
+        if (wisdomEl) wisdomEl.innerText = wisdomCount + " CYCLES";
+
+        // Calcolo Knowledge Depth (Nodi medi per cluster)
+        const nodes = parseInt(document.getElementById('stat-nodes')?.innerText || "0");
+        const clusters = parseInt(document.getElementById('stat-clusters')?.innerText || "1");
+        const depth = (nodes / Math.max(1, clusters)).toFixed(1);
+        const depthEl = document.getElementById('hist-depth');
+        if (depthEl) depthEl.innerText = depth + " N/C";
+
+        // Calcolo Hardware Yield (Efficiency Grade dinamico)
+        const yieldEl = document.getElementById('hist-yield');
+        if (yieldEl) {
+            const stab = parseFloat(document.getElementById('stat-stability')?.innerText || "96");
+            const ret = parseFloat(document.getElementById('stat-retention')?.innerText || "97");
+            yieldEl.innerText = ((stab + ret) / 2).toFixed(1) + "%";
+        }
+
+        // Calcolo Growth Velocity (Stima proattiva)
+        const growthEl = document.getElementById('hist-growth');
+        if (growthEl) {
+            const nodeCount = parseInt(document.getElementById('stat-nodes')?.innerText || "0");
+            const rate = (nodeCount / 2880).toFixed(1); // Nodi per minuto stimati su finestra 48h
+            growthEl.innerText = "+" + rate + " N/m";
+        }
+    } catch (e) { console.error("Historical Engine failure", e); }
+};
+
+// 🏛️ ACTIVE SWARM: Rendering live status cards for each agent
+window.renderAgentGrid = (labData) => {
+    const grid = document.getElementById('agent-grid');
+    if (!grid) return;
+    const agents = labData.agents || {};
+    
+    // Se non ci sono agenti o siamo in polling iniziale
+    if (Object.keys(agents).length === 0) {
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.2); padding: 5rem;">
+                <i class="fas fa-satellite-dish fa-spin" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                NEBULA_EMPTY: Nessun agente attivo nel vault.
+            </div>
+        `;
+        return;
+    }
+
+    grid.innerHTML = Object.keys(agents).map(id => {
+        const a = agents[id];
+        const statusColor = a.status === 'active' ? '#4ade80' : a.status === 'Mission Hold' ? '#f59e0b' : '#3b82f6';
+        const isBlinking = a.status === 'active' ? 'pulse-active' : '';
+        
+        return `
+            <div class="agent-card-v2" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-left: 4px solid ${statusColor}; border-radius: 12px; padding: 1rem; display: flex; flex-direction: column; gap: 8px; transition: 0.3s;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.75rem; font-weight: 900; color: #fff; letter-spacing: 1px;">${id.toUpperCase()}</span>
+                    <span class="${isBlinking}" style="width: 8px; height: 8px; border-radius: 50%; background: ${statusColor};"></span>
+                </div>
+                <div style="font-size: 0.55rem; color: ${statusColor}; font-weight: 800; text-transform: uppercase;">${a.status}</div>
+                <div style="font-size: 0.65rem; color: #94a3b8; line-height: 1.4; height: 40px; overflow: hidden; text-overflow: ellipsis;">${a.last_action || 'Nessuna missione recente...'}</div>
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 0.5rem; color: #64748b;">LOAD: <span style="color: #fff;">${a.load || '0%'}</span></div>
+                    <button onclick="window.toggleFollow('${id}')" style="background: rgba(168, 85, 247, 0.1); border: 1px solid #a855f7; color: #a855f7; font-size: 0.5rem; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: 900;">HUD_FOCUS</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+};
+
+let consensusActive = false;
+window.toggleConsensusUI = () => {
+    consensusActive = !consensusActive;
+    const btn = document.getElementById('consensus-btn');
+    const status = document.getElementById('consensus-status');
+    if (btn && status) {
+        btn.style.background = consensusActive ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.05)';
+        btn.style.borderColor = consensusActive ? '#a855f7' : 'rgba(168, 85, 247, 0.2)';
+        btn.style.color = consensusActive ? '#fff' : '#8b949e';
+        status.innerText = consensusActive ? 'ACTIVE' : 'OFF';
+        status.style.color = consensusActive ? '#facc15' : '#8b949e';
+    }
+};
+
+window.sendNeuralProbe = async () => {
+    const input = document.getElementById('chat-input');
+    const query = input.value.trim();
+    if (!query) return;
+    
+    appendChatMessage('USER', query);
+    input.value = '';
+    
+    try {
+        const r = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-KEY': VAULT_KEY },
+            body: JSON.stringify({ query, consensus: consensusActive })
+        });
+        const d = await r.json();
+        appendChatMessage('NEBULA', d.answer, d.context_nodes);
+    } catch (e) {
+        appendChatMessage('SYSTEM', "Errore di uplink con l'Oracolo.");
+    }
+};
+
+function appendChatMessage(sender, text, nodes = []) {
+    const box = document.getElementById('chat-box');
+    if (!box) return;
+    const msg = document.createElement('div');
+    const isUser = sender === 'USER';
+    const borderColor = isUser ? '#a855f7' : (sender === 'SYSTEM' ? '#ef4444' : '#ec4899');
+    const label = isUser ? 'USER_PROBE' : (sender === 'SYSTEM' ? 'SYSTEM_ALERT' : 'NEBULA_ORACLE');
+    
+    msg.style.cssText = `margin-bottom: 12px; padding: 12px; border-radius: 12px; font-size: 0.72rem; line-height: 1.6; background: rgba(255,255,255,0.02); border-left: 4px solid ${borderColor}; transition: 0.3s;`;
+    
+    msg.innerHTML = `
+        <div style="color:${borderColor}; font-weight:950; font-size:0.55rem; letter-spacing:1px; margin-bottom:6px; text-transform:uppercase;">${label}</div>
+        <div style="color:#f8fafc;">${text}</div>
+    `;
+    
+    if (nodes && nodes.length > 0) {
+        const nodeLinks = document.createElement('div');
+        nodeLinks.style.cssText = "margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;";
+        nodes.forEach(n => {
+            const btn = document.createElement('button');
+            const nodeId = n.id || n;
+            btn.innerText = `[NODE_${String(nodeId).slice(0,6)}]`;
+            btn.style.cssText = "background: rgba(59,130,246,0.1); border: 1px solid #3b82f6; color: #3b82f6; font-size: 0.5rem; padding: 2px 6px; border-radius: 4px; cursor: pointer;";
+            btn.onclick = () => window.selectNode(nodeId);
+            nodeLinks.appendChild(btn);
+        });
+        msg.appendChild(nodeLinks);
+    }
+    
+    box.appendChild(msg);
+    box.scrollTop = box.scrollHeight;
+}
+
+window.recordWisdom = async (base64Text, approve) => {
+    const text = atob(base64Text);
+    try {
+        await fetch('/api/lab/wisdom/record', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-KEY': VAULT_KEY },
+            body: JSON.stringify({ text, approve, reason: "Manual Override from Sovereign UI" })
+        });
+        log(`⚖️ WISDOM_RECORDED: ${approve ? 'APPROVED' : 'REJECTED'}`, approve ? '#10b981' : '#ef4444');
+        window.refreshCourt();
+    } catch (e) { console.error(e); }
+};
+
+// 🧬 COGNITIVE RADAR: Model Performance Visualization
+window.refreshRadar = async () => {
+    log("📡 DNA_RECALIBRATION: Sincronizzazione metriche hardware...", "#a855f7");
+    try {
+        const r = await fetch('/api/models/benchmarks', { headers: { 'X-API-KEY': VAULT_KEY }});
+        const data = await r.json();
+        
+        if (!data.radar || data.radar.length === 0) return;
+        
+        const canvas = document.getElementById('radar-chart');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const labels = ['Speed (Tok/s)', 'Logic (Quality)', 'Memory (Inv)', 'Accuracy', 'Consistency'];
+        
+        const colors = [
+            { bg: 'rgba(168, 85, 247, 0.2)', border: '#a855f7' },
+            { bg: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6' },
+            { bg: 'rgba(16, 185, 129, 0.2)', border: '#10b981' }
+        ];
+
+        const datasets = data.radar.slice(0, 3).map((m, i) => ({
+            label: m.model,
+            data: [m.speed, m.logic, m.ram, m.quality, 95], 
+            backgroundColor: colors[i % colors.length].bg,
+            borderColor: colors[i % colors.length].border,
+            borderWidth: 2,
+            pointBackgroundColor: colors[i % colors.length].border,
+        }));
+
+        const existingChart = Chart.getChart(canvas);
+        if (existingChart) existingChart.destroy();
+        if (radarChart) radarChart = null; 
+        
+        radarChart = new Chart(ctx, {
+            type: 'radar',
+            data: { labels, datasets },
+            options: {
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { display: false },
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        angleLines: { color: 'rgba(255,255,255,0.05)' },
+                        pointLabels: { color: '#94a3b8', font: { size: 9, weight: '800' } }
+                    }
+                },
+                plugins: {
+                    legend: { labels: { color: '#fff', font: { size: 9, weight: 'bold' } } }
+                },
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+    } catch (e) { console.error("Radar refresh failed", e); }
 };
 
 window.switchSettingsTab = (tab) => {
@@ -1467,13 +2281,17 @@ window.loadSwarmConfig = async () => {
     try {
         const r = await fetch('/api/system/settings', { headers: { 'X-API-KEY': VAULT_KEY }});
         const c = await r.json();
-        ['route-audit', 'route-extraction', 'route-crossref', 'route-synthesis', 'route-chat-mediator', 'route-multimodal'].forEach(id => {
+        ['route-audit', 'route-extraction', 'route-crossref', 'route-synthesis', 'route-chat-mediator', 'route-multimodal', 'route-vision-description', 'route-vision-detection', 'route-vision-ocr', 'route-vision-analysis', 'route-evolution', 'route-evolution-suggestions', 'court-judge-1', 'court-judge-2', 'court-judge-3'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                const key = id.replace('route-', '').replace('-', '_');
-                el.value = c[key] || el.value;
+                const key = id.replace('route-', '').replace(/-/g, '_');
+                if (c[key] !== undefined) el.value = c[key];
             }
         });
+        const autoCourt = document.getElementById('autonomous-court-toggle');
+        if (autoCourt && c.autonomous_court !== undefined) autoCourt.checked = c.autonomous_court;
+        const autoEvolve = document.getElementById('auto-evolve-toggle');
+        if (autoEvolve && c.auto_evolve_active !== undefined) autoEvolve.checked = c.auto_evolve_active;
     } catch(e) {}
 };
 
@@ -1519,6 +2337,8 @@ function initSSE() {
             const ent = document.getElementById('stat-agent007-entities'); if(ent) ent.innerText = d.agent007.entities_count || 0;
             const rel = document.getElementById('stat-agent007-relations'); if(rel) rel.innerText = d.agent007.relations_count || 0;
         }
+        if (d.heatmap) currentHeatmap = d.heatmap;
+
         const weather = d.weather || (d.lab ? d.lab.weather : null);
         if (weather) {
             const cog = document.getElementById('metrics-data');
@@ -1528,8 +2348,23 @@ function initSSE() {
                     cog.style.color = weather.stability.includes('99') ? '#10b981' : weather.stability.includes('98') ? '#3b82f6' : '#f59e0b';
                 }
             }
+            // v1.1.0 Vault Mood Indicator
+            if (weather.mood) {
+                const light = document.getElementById('mood-light');
+                const text = document.getElementById('mood-text');
+                if (light && text) {
+                    text.innerText = weather.mood_status || 'STABLE';
+                    let color = '#10b981'; // Green
+                    if (weather.mood === '🟡') color = '#f59e0b'; // Yellow
+                    if (weather.mood === '🟠') color = '#ef4444'; // Orange/Red
+                    if (weather.mood === '🔴') color = '#ff0000'; // Pure Red
+                    light.style.background = color;
+                    light.style.boxShadow = `0 0 10px ${color}`;
+                }
+            }
         }
         if (d.lab && d.lab.agents) {
+            window.renderAgentGrid(d.lab);
             const a = d.lab.agents;
             Object.keys(a).forEach(id => {
                 const agentData = a[id];
@@ -1541,43 +2376,45 @@ function initSSE() {
                                 id.toLowerCase().includes('se') ? 'sentinel' : 
                                 id.toLowerCase().includes('sy') ? 'synth' : 
                                 id.toLowerCase().includes('fs') ? 'skywalker' : 'bridger';
+                
                 const hud = document.getElementById(`${cleanId}-hud-icon`);
                 if (hud) {
-                    const isActive = agentData.status && !agentData.status.toLowerCase().includes('idle');
-                    if (isActive) hud.classList.remove('inactive-agent');
+                    const hasActivity = (agentData.processed > 0 || agentData.purged > 0 || agentData.found > 0 || 
+                                         agentData.fused_clusters > 0 || agentData.validated > 0 || 
+                                         agentData.sparks > 0 || agentData.bridges > 0 || agentData.hits > 0);
+                    const isOperating = agentData.status && !agentData.status.toLowerCase().includes('idle') && !agentData.status.toLowerCase().includes('hold');
+                    
+                    if (isOperating || hasActivity) hud.classList.remove('inactive-agent');
                     else hud.classList.add('inactive-agent');
+
+                    // --- Updates dei Contatori ---
                     if (id === 'RP-001') { 
                         const el = document.getElementById('val-reaper-healed'); 
                         if(el) {
                             const newVal = agentData.processed || 0;
-                            const oldVal = parseInt(el.innerText);
-                            if (newVal > oldVal) {
-                                spawnReaperMonument(agentData.pos);
-                            }
+                            if (newVal > parseInt(el.innerText || "0")) spawnReaperMonument(agentData.pos);
                             el.innerText = newVal; 
                         }
+                        reaperTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
                     }
                     if (id === 'DI-007') { 
                         const el = document.getElementById('val-distiller-pruned'); 
-                        if(el) {
-                            const newVal = agentData.pruned || 0;
-                            if (newVal > parseInt(el.innerText)) distillerFlashTime = 240; // 4s at 60fps
-                            el.innerText = newVal; 
-                        }
+                        if(el) el.innerText = agentData.pruned || 0;
+                        distillerTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
                     }
                     if (id === 'JA-001') { 
                         const el = document.getElementById('val-janitron-purged'); 
                         if(el) {
                             const newVal = agentData.purged || 0;
-                            if (newVal > parseInt(el.innerText)) janitorFlashTime = 240; // 4s
+                            if (newVal > parseInt(el.innerText || "0")) janitorFlashTime = 180;
                             el.innerText = newVal; 
                         }
+                        janitorTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
                     }
                     if (id === 'SN-008') {
                         const f = document.getElementById('val-snake-found'); if(f) f.innerText = agentData.found || 0;
                         const c = document.getElementById('val-snake-crafted'); if(c) c.innerText = agentData.crafted || 0;
-                        const d_el = document.getElementById('val-snake-deleted'); if(d_el) d_el.innerText = agentData.deleted || 0;
-                        if (agentData.attached_nodes) syncSnakeTail(agentData.attached_nodes.length);
+                        const dsell = document.getElementById('val-snake-deleted'); if(dsell) dsell.innerText = agentData.deleted || 0;
                     }
                     if (id === 'QA-101') { 
                         const el = document.getElementById('val-quantum-fused'); if(el) el.innerText = agentData.fused_clusters || 0; 
@@ -1586,26 +2423,24 @@ function initSSE() {
                     }
                     if (id === 'SE-007') { 
                         const v = document.getElementById('val-sentinel-validated'); if(v) v.innerText = agentData.validated || 0;
-                        const s = document.getElementById('val-sentinel-synapses'); if(s) s.innerText = agentData.synapses || 0;
+                        const s = document.getElementById('val-sentinel-synapses'); if(s) s.innerText = agentData.synapses || (agentData.processed || 0);
+                        if (agentData.is_validating) sentinelFlashTime = 180; 
                         sentinelTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
                     }
-                    if (id === 'SY-009') { 
-                        const el = document.getElementById('val-synth-sparks'); if(el) el.innerText = agentData.sparks || 0; 
+                    if (id === 'SY-009') {
+                        const s = document.getElementById('val-synth-sparks'); if(s) s.innerText = agentData.sparks || 0;
+                        const t = document.getElementById('synth-team-status');
+                        if (t) t.style.background = agentData.status === 'active' ? '#ec4899' : '#4b5563';
                         synthTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
                     }
-                    if (id === 'CB-003') { 
-                        const el = document.getElementById('val-bridger-bridges'); if(el) el.innerText = agentData.bridges || 0; 
+                    if (id === 'CB-003') {
+                        const b = document.getElementById('val-bridger-bridges'); if(b) b.innerText = agentData.bridges || 0;
                         bridgerTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
-                        if (agentData.status && agentData.status.includes('Sincronizzazione')) bridgerPulseTime = 180;
                     }
                     if (id === 'FS-77') {
-                        const el = document.getElementById('val-skywalker-hits'); if(el) el.innerText = agentData.web_hits || 0;
+                        const h = document.getElementById('val-skywalker-hits'); if(h) h.innerText = agentData.hits || agentData.web_hits || 0;
                         skywalkerTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
-                        if (agentData.laser_active) spawnSkywalkerLaser();
                     }
-                    if (id === 'JA-001') janitorTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
-                    if (id === 'DI-007') distillerTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
-                    if (id === 'RP-001') reaperTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
                 }
             });
         }
@@ -1627,6 +2462,48 @@ function initSSE() {
                     refreshVaultState();
                 }
             }
+        }
+                    if (d.lab) {
+                        const l = d.lab;
+                        if (l.court_actions) {
+                            const courtList = document.getElementById('court-verdicts-list');
+                            const activeTab = document.querySelector('.settings-tab.active');
+                            if (courtList && activeTab && activeTab.id === 'tab-court') {
+                                window.renderCourtVerdicts(l.court_actions);
+                            }
+                        }
+                    }
+                    if (d.swarm_settings) {
+            const s = d.swarm_settings;
+            const toggle = document.getElementById('autonomous-court-toggle');
+            if (toggle && !toggle.matches(':focus')) toggle.checked = s.autonomous_court;
+            
+            // Populate and Sync Judge Selects
+            ['court-judge-1', 'court-judge-2', 'court-judge-3'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (sel) {
+                    // Populate if empty
+                    if (sel.options.length === 0) {
+                        // Always provide "-" as the first option
+                        const optNone = document.createElement('option');
+                        optNone.value = "-"; optNone.innerText = "-";
+                        sel.appendChild(optNone);
+
+                        if (installedModels && installedModels.length > 0) {
+                            installedModels.forEach(m => {
+                                const opt = document.createElement('option');
+                                opt.value = m.name; opt.innerText = m.name;
+                                sel.appendChild(opt);
+                            });
+                        }
+                    }
+                    // Sync value if not being interacted with
+                    const serverVal = s[id.replace(/-/g, '_')];
+                    if (serverVal && !sel.matches(':focus')) {
+                        sel.value = serverVal;
+                    }
+                }
+            });
         }
         if (d.system) {
             const s = d.system;
@@ -1651,12 +2528,22 @@ function initSSE() {
             }
             const dna = document.getElementById('hardware-dna-trace');
             if (dna && s.hardware_dna) dna.innerText = s.hardware_dna;
-            const aiModel = document.getElementById('ai-model-name');
-            if (aiModel && s.ai_intelligence) aiModel.innerText = s.ai_intelligence.model;
-            const aiQuant = document.getElementById('ai-model-quant');
-            if (aiQuant && s.ai_intelligence) aiQuant.innerText = s.ai_intelligence.quantization;
-            const aiSpeed = document.getElementById('ai-inference-speed');
-            if (aiSpeed && s.ai_intelligence) aiSpeed.innerText = s.ai_intelligence.inference_speed;
+            
+            const engineList = document.getElementById('active-engines-list');
+            if (engineList && s.active_engines) {
+                engineList.innerHTML = s.active_engines.map(eng => `
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border-left: 3px solid #10b981;">
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-size: 0.8rem; color: #fff; font-weight: 800;">${eng.name}</span>
+                            <span style="font-size: 0.55rem; color: #10b981; font-weight: 700; letter-spacing: 1px;">${eng.resource}</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #fff; font-family: 'JetBrains Mono'; font-weight: 900;">${eng.size}</div>
+                    </div>
+                `).join('');
+            }
+            
+            const mpsVal = document.getElementById('mps-pressure-val');
+            if (mpsVal && s.mps_pressure) mpsVal.innerText = `MPS: ${s.mps_pressure}`;
         }
         if (d.nodes_count && d.edges_count && window.densityChart) {
             const density = (d.edges_count / (d.nodes_count || 1)).toFixed(2);
@@ -1752,39 +2639,103 @@ async function renderBenchmarkTable() {
                 <td style="padding: 12px;"><span style="color: #4ade80;">OPTIMAL</span></td>
             </tr>
         `).join('');
-        const bestFast = b[0];
-        const bestSmart = b.find(m => m.model_name.includes('llama3.1') || m.model_name.includes('mistral')) || b[0];
-        const recContainer = document.getElementById('mission-recommendation');
-        if (recContainer && bestFast) {
-            recContainer.innerHTML = `
-                <div style="background: rgba(16, 185, 129, 0.1); padding: 1.2rem; border-radius: 12px; border-left: 4px solid #10b981;">
-                    <div style="font-size: 0.6rem; color: #10b981; font-weight: 900; margin-bottom: 5px;">ELITE CHOICE: DEEP_FORAGING</div>
-                    <div style="font-size: 0.8rem; font-weight: 700; color: #fff;">${bestFast.model_name.toUpperCase()}</div>
-                    <div style="font-size: 0.6rem; color: #64748b; margin-top: 5px;">Consigliato per velocità di scansione (${bestFast.tps.toFixed(1)} T/S).</div>
-                </div>
-                <div style="background: rgba(59, 130, 246, 0.1); padding: 1.2rem; border-radius: 12px; border-left: 4px solid #3b82f6;">
-                    <div style="font-size: 0.6rem; color: #3b82f6; font-weight: 900; margin-bottom: 5px;">ELITE CHOICE: SYNTHESIS</div>
-                    <div style="font-size: 0.8rem; font-weight: 700; color: #fff;">${bestSmart.model_name.toUpperCase()}</div>
-                    <div style="font-size: 0.6rem; color: #64748b; margin-top: 5px;">Consigliato per densità sinaptica e ragionamento critico.</div>
-                </div>
-            `;
+        
+        // 📋 Popolamento Mission History (v4.0)
+        const hBody = document.getElementById('mission-history-body');
+        const history = d.history || [];
+        if (hBody && history.length > 0) {
+            hBody.innerHTML = history.map(h => {
+                const date = new Date(h.timestamp * 1000).toLocaleTimeString();
+                const statusColor = h.quality > 0.8 ? '#10b981' : (h.quality > 0.5 ? '#f59e0b' : '#ef4444');
+                const statusText = h.quality > 0.8 ? 'SUCCESS' : (h.quality > 0.5 ? 'DEGRADED' : 'FAILED');
+                const ramGB = h.ram > 100 ? (h.ram / 1024).toFixed(2) + " GB" : h.ram.toFixed(0) + " MB";
+                return `
+                    <tr style="background: rgba(255,255,255,0.01); transition: 0.2s;">
+                        <td style="padding: 10px; color: #64748b; font-family: 'JetBrains Mono'; font-size: 0.6rem;">${date}</td>
+                        <td style="padding: 10px; color: #fff; font-weight: 800;">${h.model_name}</td>
+                        <td style="padding: 10px; color: #a855f7; font-weight: 600;">${h.task.toUpperCase()}</td>
+                        <td style="padding: 10px; color: #10b981; font-weight: 800;">${h.tps.toFixed(1)}</td>
+                        <td style="padding: 10px; color: #3b82f6;">${h.latency.toFixed(0)}ms</td>
+                        <td style="padding: 10px; color: #facc15;">${ramGB}</td>
+                        <td style="padding: 10px;"><span style="color: ${statusColor}; font-weight: 900; font-size: 0.55rem; border: 1px solid ${statusColor}; padding: 2px 6px; border-radius: 4px;">${statusText}</span></td>
+                    </tr>
+                `;
+            }).join('');
         }
         const advisor = document.getElementById('strategy-advisor-content');
         if (advisor) {
             const avgLat = b.reduce((s, x) => s + (x.avg_latency || 0), 0) / b.length;
+            const avgTps = b.reduce((s, x) => s + (x.tps || 0), 0) / b.length;
+            
+            // 🏅 Efficiency Rating Logic
+            let grade = "C";
+            let gradeColor = "#ef4444";
+            let statusLabel = "NECESSARIA OTTIMIZZAZIONE";
+            
+            if (avgTps > 30 && avgLat < 2000) { grade = "S"; gradeColor = "#facc15"; statusLabel = "PRESTAZIONI D'ELITE"; }
+            else if (avgTps > 15 && avgLat < 5000) { grade = "A"; gradeColor = "#10b981"; statusLabel = "OTTIMALE"; }
+            else if (avgTps > 5 && avgLat < 15000) { grade = "B"; gradeColor = "#3b82f6"; statusLabel = "STABILE"; }
+            
+            const displayLat = avgLat > 1000 ? (avgLat/1000).toFixed(2) + "s" : avgLat.toFixed(1) + "ms";
+            const dnaTrace = document.getElementById('hardware-dna-trace')?.innerText || "MPS";
+
             advisor.innerHTML = `
-                <div style="display:flex; align-items:center; gap:20px;">
-                    <div style="background:rgba(168,85,247,0.1); padding:20px; border-radius:50%; border:2px solid #a855f7;">
-                        <i class="fas fa-brain" style="color:#a855f7; font-size:1.5rem;"></i>
+                <div style="display:grid; grid-template-columns: auto 1fr auto; align-items:center; gap:20px; background: rgba(255,255,255,0.02); padding: 25px; border-radius: 16px; border: 1px solid rgba(168, 85, 247, 0.15);">
+                    <div style="width: 70px; height: 70px; border-radius: 50%; border: 4px solid ${gradeColor}; display: flex; align-items: center; justify-content: center; position: relative; box-shadow: 0 0 20px ${gradeColor}33;">
+                        <span style="font-size: 2rem; font-weight: 950; color: ${gradeColor}; text-shadow: 0 0 10px ${gradeColor};">${grade}</span>
+                        <div style="position: absolute; bottom: -10px; background: ${gradeColor}; color: #000; font-size: 0.5rem; font-weight: 900; padding: 2px 8px; border-radius: 4px; white-space: nowrap;">NEURAL GRADE</div>
                     </div>
-                    <div>
-                        <h4 style="color:#fff; margin:0; font-size:0.8rem; letter-spacing:1px;">HARDWARE ADVISOR v0.9</h4>
-                        <p style="color:#94a3b8; font-size:0.65rem; line-height:1.4; margin:5px 0;">
-                            Latenza media di sessione: <span style="color:#a855f7;">${avgLat.toFixed(1)}ms</span>. 
-                            ${avgLat > 100 ? "Si consiglia di ridurre i parametri di 'context window' per migliorare la fluidità." : "Performance termiche eccellenti. Pronto per missioni di estrazione massiva."}
+                    
+                    <div style="border-left: 1px solid rgba(255,255,255,0.05); padding-left: 20px;">
+                        <h4 style="color:#fff; margin:0; font-size:0.9rem; letter-spacing:1px; font-weight: 900;">HARDWARE ADVISOR v1.0 <span style="font-size: 0.6rem; color: #a855f7; margin-left: 10px;">[SOVEREIGN_DIAGNOSTICS]</span></h4>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 12px;">
+                            <div>
+                                <div style="font-size: 0.55rem; color: #64748b; font-weight: 800; letter-spacing: 1px;">LATENZA SESSIONE</div>
+                                <div style="font-size: 0.85rem; color: #fff; font-weight: 900; font-family: 'JetBrains Mono';">${displayLat}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.55rem; color: #64748b; font-weight: 800; letter-spacing: 1px;">EFFICIENZA MEDIA</div>
+                                <div style="font-size: 0.85rem; color: #10b981; font-weight: 900; font-family: 'JetBrains Mono';">${avgTps.toFixed(1)} <span style="font-size: 0.6rem;">tok/s</span></div>
+                            </div>
+                            <div>
+                                <div style="font-size: 0.55rem; color: #64748b; font-weight: 800; letter-spacing: 1px;">STATUS DNA</div>
+                                <div style="font-size: 0.85rem; color: #3b82f6; font-weight: 900; font-family: 'JetBrains Mono';">${dnaTrace.split('|')[0].trim()}</div>
+                            </div>
+                        </div>
+                        <p style="color:#94a3b8; font-size:0.65rem; line-height:1.4; margin:12px 0 0 0; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; border-left: 3px solid ${gradeColor};">
+                            <i class="fas fa-microchip" style="margin-right: 5px;"></i> ${avgLat > 10000 ? "⚠️ Rilevato congestionamento. Si consiglia l'uso di modelli GGUF Quantizzati (Q4_K_M) per scaricare lo stress sulla memoria di sistema." : "✅ Performance d'elite rilevate. L'architettura Metal/MPS è saturata correttamente con bassa dispersione termica."}
                         </p>
                     </div>
+                    
+                    <div style="text-align: right;">
+                        <div style="font-size: 0.6rem; color: ${gradeColor}; font-weight: 950; letter-spacing: 1px; margin-bottom: 5px;">${statusLabel}</div>
+                        <button onclick="window.refreshRadar()" class="sovereign-btn-active">RIPRISTINA DNA</button>
+                    </div>
                 </div>
+                <style>
+                    .sovereign-btn-active {
+                        background: rgba(168, 85, 247, 0.1); 
+                        border: 1px solid #a855f7; 
+                        color: #a855f7; 
+                        font-size: 0.6rem; 
+                        padding: 10px 20px; 
+                        border-radius: 10px; 
+                        cursor: pointer; 
+                        font-weight: 900; 
+                        transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+                        width: 100%;
+                        box-shadow: 0 4px 15px rgba(168, 85, 247, 0.1);
+                    }
+                    .sovereign-btn-active:hover {
+                        background: rgba(168, 85, 247, 0.2);
+                        box-shadow: 0 0 20px rgba(168, 85, 247, 0.3);
+                    }
+                    .sovereign-btn-active:active {
+                        transform: scale(0.92);
+                        background: rgba(168, 85, 247, 0.4);
+                        box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+                    }
+                </style>
             `;
         }
     } catch(e) { console.error("BenchErr:", e); }
@@ -1886,8 +2837,8 @@ function initCharts() {
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } },
-                    x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } }
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10 } } },
+                    x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
                 }
             }
         });
@@ -1937,7 +2888,7 @@ function initCharts() {
                     {
                         label: 'TPS (tok/s)',
                         data: [25, 12, 45, 18, 16],
-                        backgroundColor: 'rgba(168, 85, 247, 0.5)',
+                        backgroundColor: 'rgba(168, 85, 247, 0.1)',
                         borderColor: '#a855f7',
                         borderWidth: 1
                     }
@@ -1954,9 +2905,628 @@ function initCharts() {
             }
         });
     }
+
+    // 🧬 [Phase 3] Cognitive Radar Initialization
+    const radarCtx = document.getElementById('radar-chart')?.getContext('2d');
+    if (radarCtx) {
+        window.radarChart = new Chart(radarCtx, {
+            type: 'radar',
+            data: {
+                labels: ['SPEED', 'ACCURACY', 'STABILITY', 'DENSITY', 'REASONING'],
+                datasets: [{
+                    label: 'SOVEREIGN_SWARM_AVG',
+                    data: [85, 92, 78, 65, 88],
+                    backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                    borderColor: '#3b82f6',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#3b82f6'
+                }]
+            },
+            options: {
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(255,255,255,0.1)' },
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        pointLabels: { color: '#8b949e', font: { size: 10 } },
+                        ticks: { display: false }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
 }
 
+// 📊 [Phase 3] Refresh Benchmarks & Radar Logic
+async function refreshBenchmarks() {
+    try {
+        const r = await fetch('/api/models/benchmarks', { headers: { 'X-API-KEY': VAULT_KEY }});
+        const data = await r.json();
+        
+        // 1. Leaderboard Update
+        const body = document.getElementById('benchmark-leaderboard-body');
+        if (body && data.benchmarks) {
+            body.innerHTML = data.benchmarks.map((m, i) => `
+                <tr style="background: rgba(255,255,255,0.02); border-radius: 10px;">
+                    <td style="padding: 10px; font-weight: 950; color: ${i === 0 ? '#fbbf24' : '#fff'};">#${i+1}</td>
+                    <td style="padding: 10px; font-family: 'JetBrains Mono';">${m.name}</td>
+                    <td style="padding: 10px; color: #10b981;">${m.tps} <span style="font-size: 0.6rem;">tok/s</span></td>
+                    <td style="padding: 10px; color: #3b82f6;">${m.ram} <span style="font-size: 0.6rem;">MB</span></td>
+                    <td style="padding: 10px; color: #a855f7;">${m.stability}%</td>
+                </tr>
+            `).join('');
+        }
+
+        // 2. Radar Update
+        if (window.radarChart && data.radar) {
+            window.radarChart.data.datasets[0].data = data.radar;
+            window.radarChart.update();
+        }
+
+        // 3. Model Suggestions Logic
+        const recList = document.getElementById('mission-recommendation');
+        if (recList && data.benchmarks.length > 0) {
+            const bestSpeed = data.benchmarks[0].name;
+            const bestStability = [...data.benchmarks].sort((a,b) => b.stability - a.stability)[0].name;
+            
+            recList.innerHTML = `
+                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 12px; border-left: 3px solid #10b981;">
+                    <div style="font-size: 0.5rem; color: #10b981;">OPTIMAL FOR JANITORIAL/PURGE</div>
+                    <div style="font-weight: 900; font-size: 0.8rem; color: #fff;">${bestSpeed.toUpperCase()} (FAST)</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 12px; border-left: 3px solid #a855f7;">
+                    <div style="font-size: 0.5rem; color: #a855f7;">OPTIMAL FOR AUDITS/COURT</div>
+                    <div style="font-weight: 900; font-size: 0.8rem; color: #fff;">${bestStability.toUpperCase()} (STABLE)</div>
+                </div>
+            `;
+        }
+    } catch(e) {}
+}
+
+// ⚖️ [Phase 3] Supreme Court Verdict Review logic
+async function refreshCourtQueue() {
+    const root = document.getElementById('strategy-advisor-content');
+    if (!root) return;
+    
+    try {
+        const response = await fetch('/api/swarm/audit-queue', { headers: { 'X-API-KEY': VAULT_KEY }});
+        const queue = await response.json();
+        
+        if (!queue || queue.length === 0) {
+            root.innerHTML = `
+                <div style="text-align: center; padding: 2rem; color: #8b949e; font-size: 0.7rem; letter-spacing: 1px;">
+                    <i class="fas fa-balance-scale" style="font-size: 1.5rem; margin-bottom: 1rem; opacity: 0.3;"></i><br>
+                    CORTE SUPREMA: NESSUN VERDETTO PENDENTE. IL SISTEMA È IN EQUILIBRIO.
+                </div>
+            `;
+            return;
+        }
+
+        root.innerHTML = `
+            <div style="font-size: 0.7rem; font-weight: 900; color: #a855f7; margin-bottom: 1.5rem; letter-spacing: 2px;">⚖️ PENDING VERDICTS (${queue.length})</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+                ${queue.map((item, idx) => `
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(168, 85, 247, 0.2); padding: 1.2rem; border-radius: 16px;">
+                        <div style="font-size: 0.55rem; color: #8b949e; margin-bottom: 8px;">TARGET: ${item.src?.substring(0,8)} ⟷ ${item.dst?.substring(0,8)}</div>
+                        <div style="font-weight: 800; color: #fff; font-size: 0.7rem; margin-bottom: 12px;">ESCALATION: AMBIGUITÀ SEMANTICA RILEVATA</div>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="resolveVerdict(${idx}, 'approve')" style="flex: 1; padding: 6px; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; border-radius: 8px; font-size: 0.6rem; font-weight: 900; cursor: pointer;">APPROVA</button>
+                            <button onclick="resolveVerdict(${idx}, 'reject')" style="flex: 1; padding: 6px; background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid #ef4444; border-radius: 8px; font-size: 0.6rem; font-weight: 900; cursor: pointer;">RIFIUTA</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } catch(e) {}
+}
+
+async function resolveVerdict(idx, action) {
+    log(`⚖️ COURT: Procedura di arbitrato per verdetto #${idx}...`, "#a855f7");
+    try {
+        const r = await fetch('/api/swarm/resolve-verdict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ index: idx, decision: action, api_key: VAULT_KEY })
+        });
+        const res = await r.json();
+        if (res.status === 'ok') {
+            log(`✅ VERIZION_OK: Verdetto ${action.toUpperCase()} applicato alla Nebula.`, "#10b981");
+            refreshCourtQueue();
+        }
+    } catch(e) { log("❌ COURT_ERR: Connessione alla Gran Giuria interrotta.", "#ef4444"); }
+}
+
+// --- 🌍 SOVEREIGN LOCALIZATION ENGINE (v5.5) ---
+const NEURAL_LANG_PACK = {
+    "system_status": ["STATO SISTEMA", "SYSTEM STATUS"],
+    "kernel_online": ["KERNEL ONLINE", "KERNEL ONLINE"],
+    "nav_overview": ["PANORAMICA MEMORIA", "MEMORY OVERVIEW"],
+    "nav_lab": ["LABORATORIO NEURALE", "NEURAL LABORATORY"],
+    "nav_analytics": ["ANALISI AVANZATA", "ADVANCED ANALYTICS"],
+    "nav_benchmark": ["LLM BENCHMARK HUB", "LLM BENCHMARK HUB"],
+    "nav_settings": ["CONFIGURAZIONE", "SETTINGS"],
+    "stat_nodes": ["NODI", "NODES"],
+    "stat_edges": ["ARCHI", "EDGES"],
+    "stat_clusters": ["CLUSTER", "CLUSTERS"],
+    "stat_aura": ["AURA", "AURA"],
+    "stat_storage": ["VAULT", "VAULT"],
+    "stat_probe": ["SONDA", "PROBE"],
+    "btn_inspect": ["ISPEZIONA", "INSPECT"],
+    "btn_purge": ["PULIZIA", "PURGE"],
+    "btn_sync": ["SINCRONIZZA", "SYNC"],
+    "btn_save": ["SALVA CONFIGURAZIONE", "SAVE CONFIGURATION"],
+    "btn_synapse": ["SINAPSI", "SYNAPSE"],
+    "btn_hide": ["NASCONDI", "HIDE"],
+    "placeholder_search": ["Cerca nella Nebula...", "Search in the Nebula..."],
+    "placeholder_url": ["Incolla URL per sinapsi...", "Paste URL to synapse..."],
+    "placeholder_chat": ["Interroga il Vault...", "Probe the Vault..."],
+    "placeholder_command": ["Inserisci comando...", "Enter command..."],
+    "title_swarm": ["SCIAME NEURALE", "NEURAL SWARM"],
+    "title_history": ["LOG MISSIONI RECENTI", "RECENT MISSION LOG"],
+    "title_nav_guide": ["NAV-GUIDA: STATO", "NAV-GUIDE: STATUS"],
+    "title_agent_bar": ["BARRA AGENTI", "AGENT BAR"],
+    "title_integrated_chat": ["INTEGRATED_NEURAL_CHAT", "INTEGRATED_NEURAL_CHAT"],
+    "research_mode": ["RESEARCH MODE (Default)", "RESEARCH MODE (Default)"],
+    "evolution_mode": ["EVOLUTION MODE (Dev)", "EVOLUTION MODE (Dev)"],
+    "oracle_thinking": ["Analisi in corso...", "Analyzing..."],
+    "oracle_sources": ["Sorgenti attivate", "Sources activated"],
+    "guide_rotate": ["RUOTA", "ROTATE"],
+    "guide_pan": ["SPOSTA", "PAN"],
+    "guide_zoom": ["ZOOM", "ZOOM"],
+    "guide_probe": ["SONDA", "PROBE"],
+    "guide_ctrl": ["Usa Ctrl + Click per focus rapido.", "Use Ctrl + Click for rapid target focus."],
+    "agent_distiller": ["DI-007 DISTILLATORE", "DI-007 DISTILLER"],
+    "agent_janitron": ["JA-001 JANITRON", "JA-001 JANITRON"],
+    "agent_reaper": ["RP-001 DR. REAPER", "RP-001 DR. REAPER"],
+    "agent_snake": ["SN-008 SNAKE", "SN-008 SNAKE"],
+    "agent_quantum": ["QA-101 QUANTUM", "QA-101 QUANTUM"],
+    "agent_sentinel": ["SE-007 SENTINELLA", "SE-007 SENTINEL"],
+    "agent_synth": ["SY-009 SYNTH", "SY-009 SYNTH"],
+    "agent_bridger": ["CB-003 BRIDGER", "CB-003 BRIDGER"],
+    "agent_skywalker": ["FS-77 SKY-WALKER", "FS-77 SKY-WALKER"],
+    "stat_pruned": ["Archi Potati", "Arcs Pruned"],
+    "stat_purged": ["Nodi Eliminati", "Nodes Eaten"],
+    "stat_healed": ["Auto-Riparazione", "Self-Heal"],
+    "stat_found": ["Nodi Trovati", "Nodes Found"],
+    "stat_crafted": ["Nodi Creati", "Nodes Crafted"],
+    "stat_fused": ["Cluster Fusi", "Clusters Fused"],
+    "stat_validated": ["Validati", "Validated"],
+    "stat_bridges": ["Super-Ponti", "Super-Bridges"],
+    "label_swarm_config": ["CONFIGURAZIONE SCIAME", "SWARM CONFIGURATION"],
+    "label_extraction": ["ESTRAZIONE", "EXTRACTION"],
+    "label_synthesis": ["SINTESI (Synth)", "SYNTHESIS (Synth)"],
+    "label_mediator": ["CHAT MEDIATOR", "CHAT MEDIATOR"],
+    "label_evolution_suggestions": ["SUGGERIMENTI EVOLUTIVI", "EVOLUTION SUGGESTIONS"],
+    "label_supreme_committee": ["COMMISSIONE SUPREMA", "SUPREME COMMITTEE"],
+    "label_sovereign_protocol": ["PROTOCOLLO SOVRANO", "SOVEREIGN PROTOCOL"],
+    "label_consensus": ["CONSENSO LLM", "LLM CONSENSUS"],
+    "label_weaver_sensitivity": ["SENSIBILITA WEAVER", "WEAVER SENSITIVITY"],
+    "label_autopilot": ["Auto-Pilot Supervision", "Auto-Pilot Supervision"],
+    "label_vision_multimodal": ["VISION & MULTIMODAL INTELLIGENCE", "VISION & MULTIMODAL INTELLIGENCE"],
+    "label_theme_interface": ["TEMA E INTERFACCIA", "THEME & INTERFACE"],
+    "label_danger_zone": ["AREA PERICOLOSA", "DANGER ZONE"],
+    "label_operational_mode": ["MODALITA OPERATIVA", "OPERATIONAL MODE"],
+    "label_evolution_feedback": ["EVOLUTION FEEDBACK LOOP", "EVOLUTION FEEDBACK LOOP"],
+    "mode_research_desc": ["Lo sciame è blindato. Gli agenti ignorano la codebase e si concentrano solo sui dati dell'utente. Massima stabilità.", "The swarm is locked down. Agents ignore the codebase and focus only on user data. Maximum stability."],
+    "mode_evolution_desc": ["Lo sciame attiva il LatentBridge. L'IA torna a 'guardarsi allo specchio' per aiutarti a debuggare o ottimizzare.", "The swarm activates LatentBridge. The AI 'looks in the mirror' to help you debug or optimize."],
+    "tooltip_extraction": ["Modello rapido ottimizzato per il parsing di entità da file grezzi.", "Fast model optimized for parsing entities from raw files."],
+    "tooltip_sentinel": ["Il Sentinel valida i legami tra web e locale.", "The Sentinel validates links between web and local."],
+    "tooltip_synth": ["Il Muse genera intuizioni creative collegando nodi distanti.", "The Muse generates creative sparks by connecting distant nodes."],
+    "tooltip_consensus": ["Numero di modelli che devono concordare prima di una fusione.", "Number of models that must agree before a fusion."],
+    "tooltip_autopilot": ["Se attivo, lo swarm agisce in autonomia.", "If active, the swarm acts autonomously."],
+    "label_model": ["MODELLO", "MODEL"],
+    "label_mission": ["MISSIONE / TASK", "MISSION / TASK"],
+    "label_latency": ["LATENZA", "LATENCY"],
+    "label_speed": ["VELOCITA", "SPEED"],
+    "label_timestamp": ["ORARIO", "TIMESTAMP"],
+    "label_target_id": ["TARGET_ID", "TARGET_ID"],
+    "label_live_trace": ["LIVE TRACE: ATTIVO", "LIVE TRACE: ACTIVE"],
+    "label_awaiting_mission": ["In attesa di esecuzione missione...", "Awaiting mission execution..."],
+    "label_hardware_analysis": ["ANALISI HARDWARE IN CORSO...", "HARDWARE ANALYSIS IN PROGRESS..."],
+    "label_judge_alpha": ["GIUDICE_ALPHA", "JUDGE_ALPHA"],
+    "label_judge_beta": ["GIUDICE_BETA", "JUDGE_BETA"],
+    "label_judge_gamma": ["GIUDICE_GAMMA", "JUDGE_GAMMA"],
+    "title_mission_hold": ["MISSION HOLD: AGENTE", "MISSION HOLD: AGENT"],
+    "label_agent": ["AGENTE", "AGENT"],
+    "label_action": ["AZIONE", "ACTION"],
+    "label_impact": ["IMPATTO", "IMPACT"],
+    "label_motivation": ["LOGICA MOTIVAZIONALE", "MOTIVATIONAL LOGIC"],
+    "btn_close_ledger": ["CHIUDI VERBALE", "CLOSE AUDIT"],
+    "btn_resume": ["RIPRENDI", "RESUME"],
+    "btn_abort": ["ABORTISCI", "ABORT"],
+    "btn_implemented": ["IMPLEMENTATO", "IMPLEMENTED"],
+    "btn_discarded": ["SCARTATO", "DISCARDED"],
+    "btn_false_positive": ["FALSO POSITIVO", "FALSE POSITIVE"],
+    "msg_awaiting_evolution": ["In attesa di segnali evolutivi... Attiva Evolution Mode per iniziare.", "Awaiting evolution signals... Activate Evolution Mode to begin."],
+    "msg_bug_found": ["BUG RILEVATO", "BUG DETECTED"],
+    "msg_optimization": ["OTTIMIZZAZIONE SUGGERITA", "OPTIMIZATION SUGGESTED"],
+    "label_custom_forge": ["NEURAL FORGE: AGGIUNGI CORE CUSTOM", "NEURAL FORGE: ADD CUSTOM CORE"],
+    "label_model_name": ["NOME MODELLO", "MODEL NAME"],
+    "label_provider": ["PROVIDER (Ollama/HF/Local)", "PROVIDER (Ollama/HF/Local)"],
+    "label_endpoint_path": ["PERCORSO / ID REPO", "PATH / REPO ID"],
+    "btn_register_model": ["REGISTRA NEL VAULT", "REGISTER IN VAULT"],
+    "placeholder_custom_path": ["es: my-custom-model o /path/to/model", "e.g., my-custom-model or /path/to/model"],
+    "label_analytics_desc": ["Monitoraggio telemetrico delle risorse hardware e del framework cognitivo neurale.", "Telemetric monitoring of hardware resources and neural cognitive framework."],
+    "label_cognitive_density": ["COGNITIVE DENSITY", "COGNITIVE DENSITY"],
+    "label_density_desc": ["Relazioni per nodo (avg)", "Relations per node (avg)"],
+    "label_knowledge_growth": ["KNOWLEDGE GROWTH", "KNOWLEDGE GROWTH"],
+    "label_growth_desc": ["Nodi indicizzati nel tempo", "Nodes indexed over time"],
+    "label_hardware_observatory": ["HARDWARE OBSERVATORY", "HARDWARE OBSERVATORY"],
+    "label_hardware_desc": ["Monitoraggio fisico delle risorse di calcolo locale accelerato via Metal/MPS.", "Physical monitoring of local compute resources accelerated via Metal/MPS."],
+    "label_hardware_dna": ["HARDWARE DNA TRACE", "HARDWARE DNA TRACE"],
+    "label_ram_availability": ["SYSTEM RAM AVAILABILITY", "SYSTEM RAM AVAILABILITY"],
+    "label_neural_manifest": ["NEURAL RESOURCE MANIFEST", "NEURAL RESOURCE MANIFEST"],
+    "label_scanning_engines": ["Scansione motori neurali attivi...", "Scanning for active neural engines..."],
+    "label_status_optimized": ["STATO: OTTIMIZZAZIONE LOCALE", "STATUS: LOCAL-FIRST OPTIMIZED"],
+    "label_cpu_mesh": ["CPU_MESH (USO PER-CORE)", "CPU_MESH (PER-CORE USAGE)"],
+    "label_metal_accelerated": ["ACCELERAZIONE_METAL: ON", "METAL_ACCELERATED: ON"],
+    "label_neural_intelligence": ["INTELLIGENZA NEURALE", "NEURAL INTELLIGENCE"],
+    "label_mode_observation": ["MODALITÀ: OSSERVAZIONE", "MODE: OBSERVATION"],
+    "label_active_model": ["MODELLO_ATTIVO", "ACTIVE_MODEL"],
+    "label_quantization": ["QUANTIZZAZIONE", "QUANTIZATION"],
+    "label_avg_performance": ["PERFORMANCE_MEDIA (ALL-TIME)", "AVG_PERFORMANCE (ALL-TIME)"],
+    "label_sovereign_engine": ["SOVEREIGN ENGINE: ANALISI STORICA", "SOVEREIGN ENGINE: HISTORICAL ANALYSIS"],
+    "label_wisdom_cycles": ["Cicli di Saggezza", "Wisdom Cycles"],
+    "label_knowledge_depth": ["Profondità Conoscenza", "Knowledge Depth"],
+    "label_hardware_yield": ["Resa Hardware", "Hardware Yield"],
+    "label_growth_velocity": ["Velocità di Crescita", "Growth Velocity"],
+    "label_benchmark_desc": ["CLASSIFICA STORICA E ANALISI COMPARATIVA DELLE PRESTAZIONI", "HISTORICAL LEADERBOARD & COMPARATIVE PERFORMANCE ANALYSIS"],
+    "label_aggregator": ["AGGREGATORE MEDIE STORICHE", "HISTORICAL AVERAGE AGGREGATOR"],
+    "label_leaderboard_semantic": ["LEADERBOARD SEMANTICA (MEDIA)", "SEMANTIC LEADERBOARD (AVG)"],
+    "label_session_alltime": ["DATI SESSIONE: ALL-TIME", "SESSION DATA: ALL-TIME"],
+    "label_rank": ["RANK", "RANK"],
+    "label_stability": ["STABILITÀ", "STABILITY"],
+    "label_awaiting_telemetry": ["In attesa di dati telemetrici... Avvia una missione per iniziare il benchmark.", "Awaiting telemetric data... Start a mission to begin benchmark."],
+    "label_cognitive_radar": ["RADAR COGNITIVO (PRESTAZIONI)", "COGNITIVE RADAR (PERFORMANCE)"],
+    "label_elite_choice": ["SCELTA ELITE PER TASK", "ELITE CHOICE BY TASK"],
+    "label_impact_trace": ["IMPACT_TRACE: RISORSE VS VELOCITÀ", "IMPACT_TRACE: RESOURCE VS SPEED"],
+    "label_missing_ai": ["IA MANCANTE RILEVATA", "MISSING AI DETECTED"],
+    "label_missing_ai_desc": ["Il modello selezionato non è presente nel caveau locale. Desideri che Agent007 lo scarichi ora tramite Ollama?", "The selected model is not in the local vault. Would you like Agent007 to download it now via Ollama?"],
+    "btn_cancel": ["ANNULLA", "CANCEL"],
+    "btn_install_now": ["INSTALLA ORA", "INSTALL NOW"],
+    "label_expansion_knowledge": ["ESPANSIONE CONOSCENZA", "KNOWLEDGE EXPANSION"],
+    "label_expansion_desc": ["Il Foraging primario ha identificato argomenti esterni che richiedono approfondimento mission-critical per una comprensione completa.", "Primary Foraging identified external topics requiring mission-critical deepening for full understanding."],
+    "btn_ignore": ["IGNORA", "IGNORE"],
+    "btn_authorize_deep": ["AUTORIZZA RICERCA DEEP", "AUTHORIZE DEEP RESEARCH"],
+    "label_config_system": ["CONFIGURAZIONE SISTEMA", "SYSTEM CONFIGURATION"],
+    "tab_swarm_control": ["CONTROLLO SCIAME", "SWARM CONTROL"],
+    "tab_neural_hub": ["NEURAL HUB", "NEURAL HUB"],
+    "tab_settings": ["IMPOSTAZIONI", "SETTINGS"],
+    "label_swarm_model_hub": ["SWARM MODEL HUB", "SWARM MODEL HUB"],
+    "label_swarm_model_hub_desc": ["Assegna compiti specifici ai modelli locali. I modelli più potenti (es. DeepSeek-R1) sono consigliati per AUDIT e SINTESI.", "Assign specific tasks to local models. Powerful models (e.g., DeepSeek-R1) are recommended for AUDIT and SYNTHESIS."],
+    "label_audit_007": ["AUDIT (007)", "AUDIT (007)"],
+    "label_crossref_sentinel": ["CROSSREF (Sentinel)", "CROSSREF (Sentinel)"],
+    "label_chat_mediator": ["MEDIATORE CHAT", "CHAT MEDIATOR"],
+    "label_oracle_evolution_desc": ["ORACLE EVOLUTION (Ricerca Profonda)", "ORACLE EVOLUTION (Deep Research)"],
+    "label_vision_general": ["VISIONE GENERALE (Global)", "VISION GENERAL (Global)"],
+    "label_scene_description": ["DESCRIZIONE SCENA", "SCENE DESCRIPTION"],
+    "label_detection_tagging": ["RILEVAMENTO & TAGGING", "DETECTION & TAGGING"],
+    "label_ocr_documents": ["OCR & DOCUMENTI", "OCR & DOCUMENTS"],
+    "label_complex_analysis": ["ANALISI COMPLESSA", "COMPLEX ANALYSIS"],
+    "label_chat_evolution": ["CHAT PER SUGGERIMENTI EVOLUTIVI", "CHAT FOR EVOLUTION SUGGESTIONS"],
+    "label_save_swarm_config": ["SALVA CONFIGURAZIONE SWARM", "SAVE SWARM CONFIGURATION"],
+    "label_consensus_active": ["ATTIVO", "ACTIVE"],
+    "label_consensus_off": ["OFF", "OFF"],
+    "msg_uplink_error": ["Errore di uplink con l'Oracolo.", "Uplink error with the Oracle."],
+    "msg_nebula_empty": ["NEBULA_EMPTY: Nessun agente attivo nel vault.", "NEBULA_EMPTY: No active agents in the vault."],
+    "msg_no_recent_mission": ["Nessuna missione recente...", "No recent missions..."],
+    "label_user_probe": ["USER_PROBE", "USER_PROBE"],
+    "label_system_alert": ["AVVISO_SISTEMA", "SYSTEM_ALERT"],
+    "label_nebula_oracle": ["ORACOLO_NEBULA", "NEBULA_ORACLE"],
+    "label_select_point": ["Seleziona un punto...", "Select a point..."],
+    "label_synaptic_integrity": ["Integrità Link Sinaptico: Verificata", "Synaptic Link Integrity: Verified"],
+    "label_low_quality": ["Bassa Qualità (Performance)", "Low Quality (Performance)"],
+    "label_high_definition": ["Alta Definizione (Bilanciato)", "High Definition (Balanced)"],
+    "label_4k_ultra": ["4K Ultra (Fedeltà)", "4K Ultra (Fidelity)"],
+    "label_present": ["PRESENTE", "PRESENT"],
+    "label_layers_filter": ["FILTRO_LIVELLI", "LAYERS_FILTER"],
+    "label_layer_agents": ["Sprite Agenti", "Agent Sprites"],
+    "label_layer_clusters": ["Enfasi Cluster", "Cluster Emphasis"],
+    "label_layer_orphans": ["Nodi Orfani", "Orphan Nodes"],
+    "label_layer_nodes": ["Nodi (Tutti)", "Nodes (All)"],
+    "label_layer_linked": ["Nodi con Archi", "Linked Nodes"],
+    "label_layer_edges": ["Archi", "Edges"],
+    "label_layer_sparks": ["Archi Super Sinaptici", "Super Synaptic Arcs"],
+    "label_layer_cube": ["Cubo 3D", "3D Cube"],
+    "label_layer_grid": ["Piano Griglia", "Grid Plane"],
+    "label_rotation_pause": ["Pausa/Avvia Rotazione", "Pause/Play Rotation"],
+    "label_immersion": ["Immersione Totale", "Total Immersion"],
+    "label_protocol_library": ["LIBRERIA", "LIBRARY"],
+    "label_protocol_injection": ["INIEZIONE_PROTOCOLLO >", "PROTOCOL_INJECTION >"],
+    "label_command_ledger": ["REGISTRO_PROTOCOLLI_COMANDO", "COMMAND_PROTOCOL_LEDGER"],
+    "label_command": ["COMANDO", "COMMAND"],
+    "label_description": ["DESCRIZIONE", "DESCRIPTION"],
+    "label_sync_mesh": ["SINCRONIZZA_MESH", "SYNC_MESH"],
+    "label_purge_buffer": ["PULISCI_BUFFER", "PURGE_BUFFER"],
+    "tab_active_swarm": ["SCIAME ATTIVO", "ACTIVE SWARM"],
+    "tab_agent_forge": ["FORGIA AGENTI", "AGENT FORGE"],
+    "tab_supreme_court": ["CORTE SUPREMA", "SUPREME COURT"],
+    "label_autonomous_supervision": ["SUPERVISIONE_AUTONOMA", "AUTONOMOUS_SUPERVISION"],
+    "label_scanning_history": ["SCANSIONE ARCHIVIO SENTENZE...", "SCANNING VERDICT HISTORY..."],
+    "btn_refresh_history": ["AGGIORNA_CRONOLOGIA", "REFRESH_HISTORY"],
+    "label_voice_mic": ["VOCE", "VOICE"],
+    "btn_understood": ["COMPRESO", "UNDERSTOOD"],
+    "label_mission_profile": ["PROFILO_MISSIONE", "MISSION_PROFILE"],
+    "label_use_case": ["CASO D'USO / ESEMPIO:", "USE CASE / EXAMPLE:"],
+    "label_trust_oracle": ["Fidati sempre di questo Oracolo (Attiva Auto-Pilot sessione)", "Always trust this Oracle (Enable Auto-Pilot session)"],
+    "btn_ask_oracle": ["CHIEDI ALL'ORACOLO", "ASK THE ORACLE"],
+    "btn_approve_delete": ["APPROVA ELIMINAZIONE", "APPROVE DELETION"],
+    "btn_keep_node": ["MANTIENI NODO", "KEEP NODE"],
+    "label_ram_consumed": ["RAM CONSUMATA", "RAM CONSUMED"],
+    "label_status": ["STATO", "STATUS"],
+    "label_provisioning": ["PROVISIONING INTELLIGENZA", "INTELLIGENCE PROVISIONING"],
+    "label_initializing_uplink": ["Inizializzazione Uplink...", "Initializing Uplink..."],
+    "label_do_not_close": ["Non chiudere il Vault durante l'espansione neurale.", "Do not close the Vault during neural expansion."],
+    "title_agent_console": ["CONSOLE AGENTE", "AGENT CONSOLE"],
+    "label_awaiting_directive": ["In attesa di direttive...", "Awaiting task directive..."],
+    "placeholder_task": ["Assegna un compito specifico...", "Assign a specific task..."],
+    "btn_task": ["TASK", "TASK"],
+    "title_neural_benchmark": ["NEURAL_BENCHMARK_HUB", "NEURAL_BENCHMARK_HUB"],
+    "label_tasks": ["COMPITI", "TASKS"],
+    "label_latency_avg": ["LATENZA_MEDIA", "AVG_LATENCY"],
+    "label_tps_avg": ["TPS_MEDIO", "AVG_TPS"],
+    "label_peak_speed": ["VELOCITÀ_PICCO", "PEAK_SPEED"],
+    "btn_back_to_nebula": ["TORNA ALLA DASHBOARD", "BACK TO DASHBOARD"],
+    "title_chrono_log": ["CHRONO-LOG: AZIONI SISTEMA", "CHRONO-LOG: SYSTEM ACTIONS"],
+    "label_audit_mode": ["MODALITÀ_AUDIT_SOVRANO", "SOVEREIGN_AUDIT_MODE"],
+    "btn_export_logs": ["ESPORTA LOG", "EXPORT LOGS"],
+    "label_json_format": ["Formato JSON", "JSON Format"],
+    "label_csv_format": ["CSV (Excel)", "CSV (Excel)"],
+    "label_sql_archive": ["Archivio SQL Completo", "Full SQL Archive"],
+    "label_examine_content": ["CONTENUTO SOTTO ESAME", "CONTENT UNDER EXAMINATION"],
+    "label_acquiring_data": ["Acquisizione dati...", "Acquiring data..."],
+    "label_oracle_response": ["🔮 Responso Oracolo Neurale", "🔮 Neural Oracle Response"],
+    "label_analyzing": ["Analisi in corso...", "Analyzing..."],
+    "label_human_tip": ["Suggerimento per l'Oracolo (Opzionale)", "Human Tip for Oracle (Optional)"],
+    "placeholder_human_tip": ["Esempio: Mantieni solo se parla di Crittografia...", "Example: Keep only if it mentions Cryptography..."],
+    "label_polling_blackboard": ["INTERROGAZIONE BLACKBOARD NEURALE...", "POLLING NEURAL BLACKBOARD..."],
+    "label_judge_3": ["Giudice Corte Suprema #3", "Supreme Court Judge #3"],
+    "label_evolution_suggestion": ["Cervello Suggerimenti Evolutivi", "Evolution Suggestion Brain"],
+    "label_evolution_suggestion_desc": ["Seleziona l'LLM dedicato alla generazione di suggerimenti tecnici e bug-hunting.", "Select the LLM dedicated to generating technical suggestions and bug-hunting."],
+    "label_name": ["NOME", "NAME"],
+    "label_role": ["RUOLO", "ROLE"],
+    "role_archivist": ["Archivista (Ingestione)", "Archivist (Ingestion)"],
+    "role_analyst": ["Analista (Sintesi)", "Analyst (Synthesis)"],
+    "role_guardian": ["Guardiano (Sicurezza)", "Guardian (Security)"],
+    "role_distiller": ["Distillatore (Pruning)", "Distiller (Pruning)"],
+    "label_mission_directive": ["Mandato Missione (Prompt)", "Mission Directive (Prompt)"],
+    "placeholder_mission_directive": ["Definisci la missione specifica...", "Define the specific mission..."],
+    "btn_forge_agent": ["FORGIA AGENTE", "FORGE AGENT"],
+    "label_theme_desc": ["Personalizza l'aspetto visivo del Nexus Vault. Il tema Light è ottimizzato per la leggibilità diurna.", "Customize the visual appearance of Nexus Vault. Light theme is optimized for daylight readability."],
+    "label_light_mode": ["Modalità Light", "Light Mode"],
+    "label_light_mode_desc": ["Passa a testi neri e sfondo chiaro", "Switch to black text and light background"],
+    "btn_nuclear_purge": ["☢️ NUCLEAR PURGE ALL MEMORY", "☢️ NUCLEAR PURGE ALL MEMORY"],
+    "label_sovereign_mode": ["🛡️ MODALITÀ OPERATIVA SOVRANA", "🛡️ SOVEREIGN OPERATIONAL MODE"],
+    "label_swarm_scope": ["Configura il perimetro d'azione dello sciame", "Configure the swarm's scope of action"],
+    "label_research_mode": ["MODALITÀ RICERCA", "RESEARCH MODE"],
+    "title_evolution_loop": ["EVOLUTION FEEDBACK LOOP", "EVOLUTION FEEDBACK LOOP"],
+    "label_neural_model_hub": ["HUB MODELLI NEURALI", "NEURAL MODEL HUB"],
+    "label_management_sovereign": ["Gestione Sovrana dell'Intelligenza Locale", "Sovereign Local Intelligence Management"],
+    "btn_refresh_catalog": ["AGGIORNA CATALOGO", "REFRESH CATALOG"],
+    "btn_only_installed": ["SOLO INSTALLATI", "ONLY INSTALLED"],
+    "btn_all_models": ["TUTTI I MODELLI", "ALL MODELS"],
+    "label_model_tag": ["MODELLO & TAG", "MODEL & TAG"],
+    "label_capabilities": ["CAPACITÀ", "CAPABILITIES"],
+    "label_strengths": ["PUNTI DI FORZA", "STRENGTHS"],
+    "label_swarm_sinergy": ["SINERGIA SCIAME", "SWARM SYNERGY"],
+    "label_operations": ["OPERAZIONI", "OPERATIONS"],
+    "label_custom_forge_footer": ["* I modelli registrati appariranno automaticamente nel menu a tendina.", "* Registered models will automatically appear in the dropdown menu."],
+    "title_agent_factory": ["🧬 FABBRICA AGENTI NEURALI", "🧬 NEURAL AGENT FACTORY"],
+    "label_agent_factory_desc": ["Forgia nuovi mandati d'intelligenza", "Forge new intelligence mandates"],
+    "label_agent_name": ["Nome Agente", "Agent Name"],
+    "role_creative": ["Creativo (Sintesi)", "Creative (Synthesis)"],
+    "role_architect": ["Architetto (Struttura)", "Architect (Structure)"],
+    "title_metrics": ["METRICHE COGNITIVE", "COGNITIVE METRICS"],
+    "title_semantic_distance": ["DISTANZA SEMANTICA", "SEMANTIC DISTANCE"],
+    "title_hardbank": ["BANCA DATI AGENT007", "AGENT007 HARDBANK"],
+    "label_entities": ["ENTITÀ", "ENTITIES"],
+    "label_relations": ["RELAZIONI", "RELATIONS"],
+    "label_mission_ready": ["● PIANO MISSIONE PRONTO", "● MISSION BLUEPRINT READY"],
+    "title_engine_tracing": ["TRACCIAMENTO MOTORE", "ENGINE TRACING"],
+    "btn_copy_log": ["Copia Log", "Copy Log"],
+    "label_awaiting_resonance": ["In attesa di risonanza...", "Awaiting resonance..."],
+    "title_inventory": ["INVENTARIO CONOSCENZA", "KNOWLEDGE INVENTORY"],
+    "label_acquiring_history": ["Acquisizione cronologia sinaptica...", "Acquiring synaptic history..."],
+    "title_ingestion": ["PORTALE INGESTIONE", "INGESTION PORTAL"],
+    "label_drop_to_synapse": ["TRASCINA O CLICCA<br>PER SINAPSI", "DROP OR CLICK<br>TO SYNAPSE"],
+    "label_config_saved": ["CONFIGURAZIONE SALVATA", "CONFIGURATION SAVED"],
+    "label_config_saved_desc": ["Le preferenze dello Swarm sono state persistite nel nucleo.", "Swarm preferences have been persisted in the core."],
+    "btn_received": ["RICEVUTO", "RECEIVED"],
+    "label_fallback_activated": ["FALLBACK ATTIVATO", "FALLBACK ACTIVATED"],
+    "label_fallback_desc": ["Il modello richiesto non è disponibile.", "The requested model is not available."],
+    "label_reconfigured": ["Rotte Riconfigurate", "Reconfigured Routes"],
+    "label_resolved_model": ["UTILIZZO:", "USING:"],
+    "btn_continue_mission": ["CONTINUA MISSIONE", "CONTINUE MISSION"],
+    "label_deletion_consent": ["CONSENSO ELIMINAZIONE", "DELETION CONSENT"],
+    "label_deletion_desc": ["Sei sicuro di voler rimuovere permanentemente l'elemento?", "Are you sure you want to permanently remove the item?"],
+    "btn_delete_now": ["ELIMINA ORA", "DELETE NOW"],
+    "label_llm_core": ["CORE LLM & REQUISITI", "LLM CORE & REQUIREMENTS"],
+    "label_version": ["VERSIONE", "VERSION"],
+    "label_synergies": ["SINERGIE", "SYNERGIES"],
+    "label_actions": ["AZIONI", "ACTIONS"],
+    "label_awaiting_refresh": ["Usa il tasto Refresh per sincronizzare...", "Use Refresh to sync..."],
+    "btn_refresh": ["AGGIORNA", "REFRESH"],
+    "label_chrono_log": ["CHRONO-LOG", "CHRONO-LOG"],
+    "chart_knowledge_label": ["CONOSCENZA (NODI)", "KNOWLEDGE (NODES)"],
+    "chart_relations_label": ["RELAZIONI PER NODO", "RELATIONS PER NODE"],
+    "chart_latency_label": ["LATENZA (ms)", "LATENCY (ms)"],
+    "chart_tps_label": ["TPS (tok/s)", "TPS (tok/s)"],
+    "chart_radar_speed": ["VELOCITÀ", "SPEED"],
+    "chart_radar_accuracy": ["PRECISIONE", "ACCURACY"],
+    "chart_radar_stability": ["STABILITÀ", "STABILITY"],
+    "chart_radar_density": ["DENSITÀ", "DENSITY"],
+    "chart_radar_reasoning": ["RAGIONAMENTO", "REASONING"],
+    "label_mode_foraging": ["FORAGING", "FORAGING"],
+    "label_mode_query": ["QUERY", "QUERY"],
+    "label_auto_evolve": ["AUTO-EVOLVE", "AUTO-EVOLVE"],
+    "label_uplink_stability": ["STABILITÀ_UPLINK", "UPLINK_STABILITY"],
+    "msg_initializing_uplink": ["> Inizializzazione Uplink Neurale...", "> Initializing Neural Uplink..."],
+    "msg_kernel_synced": ["> Kernel Sincronizzato.", "> Kernel Synchronized."],
+    "msg_swarm_detected": ["> Battito Sciame rilevato.", "> Swarm Heartbeat detected."],
+    "label_model_header": ["Modello", "Model"],
+    "label_tps_peak": ["T/S (Picco)", "T/S (Peak)"],
+    "label_latency_header": ["Latenza", "Latency"],
+    "label_cpu_impact": ["Impatto CPU", "CPU Impact"],
+    "label_vram_header": ["VRAM", "VRAM"],
+    "label_status_header": ["Stato", "Status"],
+    "label_benchmark_telemetry_info": ["Dati aggiornati ogni ciclo di audit basati sulla telemetria di inferenza reale.", "Data refreshed every audit cycle based on real inference telemetry."],
+    "label_back_to_nebula": ["TORNA A NEBULA", "BACK TO NEBULA"],
+    "label_realtime_inference_desc": ["ANALISI INFERENZA IN TEMPO REALE & LEADERBOARD COGNITIVA", "REAL-TIME INFERENCE ANALYTICS & COGNITIVE LEADERBOARD"],
+    "label_mode_foraging_badge": ["RICERCA (FORAGING)", "FORAGING MODE"],
+    "label_auto_evolve_title": ["AUTO-EVOLVE", "AUTO-EVOLVE"],
+    "label_synthesis_team_status": ["Stato Team Sintesi", "Synthesis Team Status"],
+    "label_select_node": ["Seleziona un punto...", "Select a point..."],
+    "label_neural_time_drive": ["NEURAL_TIME_DRIVE", "NEURAL_TIME_DRIVE"],
+    "label_system_active": ["[SISTEMA_ATTIVO]", "[SYSTEM_ACTIVE]"],
+    "label_uplink_stability_label": ["STABILITÀ_UPLINK", "UPLINK_STABILITY"],
+    "label_consensus_badge": ["CONSENSO", "CONSENSUS"],
+    "label_mode_hybrid": ["MODALITÀ: IBRIDA", "MODE: HYBRID"],
+    "label_endpoint_path": ["PERCORSO / ID REPO", "PATH / REPO ID"],
+    "label_model_name": ["NOME MODELLO", "MODEL NAME"],
+    "label_provider": ["PROVIDER (Ollama/HF/Local)", "PROVIDER (Ollama/HF/Local)"],
+    "btn_register_model": ["REGISTRA NEL VAULT", "REGISTER IN VAULT"],
+    "placeholder_custom_path": ["es: my-custom-model o /path/to/model", "e.g., my-custom-model or /path/to/model"],
+    "label_custom_forge": ["NEURAL FORGE: AGGIUNGI CORE CUSTOM", "NEURAL FORGE: ADD CUSTOM CORE"],
+    "label_web_hits": ["Web-Hits", "Web-Hits"],
+    "label_drafting": ["DR", "DR"],
+    "label_critique": ["CR", "CR"],
+    "label_polishing": ["PO", "PO"],
+    "label_rgb_arcs": ["Archi RGB", "RGB Arcs"],
+    "label_synaptic_integrity_check": ["Controllo Integrità Link Sinaptico: Verificato", "Synaptic Link Integrity Check: Verified"]
+};
+
+let currentLang = localStorage.getItem('neuralvault_lang') || 'it';
+
+function getLang(key, defaultText = "") {
+    if (NEURAL_LANG_PACK[key]) {
+        return NEURAL_LANG_PACK[key][currentLang === 'en' ? 1 : 0];
+    }
+    return defaultText || key;
+}
+
+window.toggleLanguage = () => {
+    currentLang = (currentLang === 'it') ? 'en' : 'it';
+    localStorage.setItem('neuralvault_lang', currentLang);
+    applyLanguage();
+    log(`🌍 LANG: Switching to ${currentLang.toUpperCase()}`, "#3b82f6");
+};
+
+function applyLanguage() {
+    const isEn = (currentLang === 'en');
+    const flag = document.getElementById('current-flag');
+    if (flag) flag.innerText = isEn ? '🇮🇹' : '🇬🇧';
+    
+    // 1. Text Content
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (NEURAL_LANG_PACK[key]) {
+            el.innerHTML = NEURAL_LANG_PACK[key][isEn ? 1 : 0];
+        }
+    });
+
+    // 2. Placeholders
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (NEURAL_LANG_PACK[key]) {
+            el.placeholder = NEURAL_LANG_PACK[key][isEn ? 1 : 0];
+        }
+    });
+
+    // 3. Titles (Tooltips)
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        if (NEURAL_LANG_PACK[key]) {
+            el.title = NEURAL_LANG_PACK[key][isEn ? 1 : 0];
+        }
+    });
+
+    // 4. Custom tooltips
+    document.querySelectorAll('[data-i18n-tooltip]').forEach(el => {
+        const key = el.getAttribute('data-i18n-tooltip');
+        if (key && NEURAL_LANG_PACK[key]) {
+            el.setAttribute('data-tooltip', NEURAL_LANG_PACK[key][isEn ? 1 : 0]);
+        }
+    });
+    
+    // 5. Special cases for labels that might have been updated dynamically
+    const modeLabel = document.getElementById('mode-label-text');
+    if (modeLabel) {
+        const toggle = document.getElementById('evolution-mode-toggle');
+        if (toggle) {
+            const modeKey = toggle.checked ? "evolution_mode" : "research_mode";
+            modeLabel.innerText = getLang(modeKey).replace(' (Dev)', '').replace(' (Default)', '');
+        }
+    }
+
+    // Update Charts if initialized
+    if (window.growthChart) {
+        window.growthChart.data.datasets[0].label = getLang('chart_knowledge_label');
+        window.growthChart.update();
+    }
+    if (window.densityChart) {
+        window.densityChart.data.datasets[0].label = getLang('chart_relations_label');
+        window.densityChart.update();
+    }
+    if (window.impactChart) {
+        window.impactChart.data.datasets[0].label = getLang('chart_latency_label');
+        window.impactChart.data.datasets[1].label = getLang('chart_tps_label');
+        window.impactChart.update();
+    }
+    if (window.radarChart) {
+        window.radarChart.data.labels = [
+            getLang('chart_radar_speed'),
+            getLang('chart_radar_accuracy'),
+            getLang('chart_radar_stability'),
+            getLang('chart_radar_density'),
+            getLang('chart_radar_reasoning')
+        ];
+        window.radarChart.update();
+    }
+}
+// --- 🧬 EVOLUTION ADVISE MANAGER ---
+window.addEvolutionAdvice = (type, message, fileInfo) => {
+    const history = document.getElementById('evolution-chat-history');
+    if (!history) return;
+
+    // Remove placeholder if present
+    const placeholder = history.querySelector('[data-i18n="msg_awaiting_evolution"]');
+    if (placeholder) placeholder.remove();
+
+    const isEn = (currentLang === 'en');
+    const typeLabel = (type === 'BUG') ? getLang("msg_bug_found") : getLang("msg_optimization");
+    const color = (type === 'BUG') ? '#ef4444' : '#a855f7';
+
+    const card = document.createElement('div');
+    card.className = 'glass-card';
+    card.style.padding = '1.2rem';
+    card.style.borderLeft = `4px solid ${color}`;
+    card.style.marginBottom = '1rem';
+    card.style.animation = 'slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+    
+    card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.8rem;">
+            <div style="color:${color}; font-weight:900; font-size:0.6rem; letter-spacing:1.5px;">${typeLabel}</div>
+            <div style="color:rgba(255,255,255,0.4); font-size:0.55rem; font-family:'JetBrains Mono';">${fileInfo}</div>
+        </div>
+        <div style="color:#fff; font-size:0.75rem; margin-bottom:1.2rem; line-height:1.4;">${message}</div>
+        <div style="display:flex; gap:8px;">
+            <button onclick="handleEvolutionFeedback(this, 'IMPLEMENTED')" class="evolve-btn" style="background:rgba(16,185,129,0.1); border:1px solid #10b981; color:#10b981; padding: 4px 10px; border-radius: 6px; font-size: 0.55rem; font-weight: 800; cursor: pointer;" data-i18n="btn_implemented">${getLang("btn_implemented")}</button>
+            <button onclick="handleEvolutionFeedback(this, 'DISCARDED')" class="evolve-btn" style="background:rgba(245,158,11,0.1); border:1px solid #f59e0b; color:#f59e0b; padding: 4px 10px; border-radius: 6px; font-size: 0.55rem; font-weight: 800; cursor: pointer;" data-i18n="btn_discarded">${getLang("btn_discarded")}</button>
+            <button onclick="handleEvolutionFeedback(this, 'FALSE_POSITIVE')" class="evolve-btn" style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; color:#ef4444; padding: 4px 10px; border-radius: 6px; font-size: 0.55rem; font-weight: 800; cursor: pointer;" data-i18n="btn_false_positive">${getLang("btn_false_positive")}</button>
+        </div>
+    `;
+    history.prepend(card);
+};
+
+window.handleEvolutionFeedback = (btn, status) => {
+    const card = btn.closest('.glass-card');
+    card.style.opacity = '0.5';
+    card.style.pointerEvents = 'none';
+    log(`🧬 EVOLUTION: Feedback [${status}] registered.`, "#4ade80");
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
+    applyLanguage();
     const localTheme = localStorage.getItem('neuralvault_theme');
     const themeToggle = document.getElementById('theme-checkbox');
     if (localTheme === 'light') {
@@ -1978,11 +3548,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.body.classList.remove('light-theme');
             localStorage.setItem('neuralvault_theme', 'dark');
         }
-        if (settings.auto_evolve_active) {
-            const toggle = document.getElementById('auto-evolve-toggle');
-            if (toggle) toggle.checked = true;
-        }
+        const toggle = document.getElementById('auto-evolve-toggle');
+        if (toggle) toggle.checked = true;
         refreshVaultState();
+        // [Phase 3] Periodic Refresh Loops
+        setInterval(refreshBenchmarks, 30000); // 30s
+        setInterval(refreshCourtQueue, 15000);  // 15s
+        refreshBenchmarks();
+        refreshCourtQueue();
     } catch(e) {}
 });
 
@@ -2026,12 +3599,13 @@ window.showAgentHelp = (id) => {
     modal.style.display = 'flex';
 };
 
-window.createCustomAgent = async () => {
-    const isModal = !!document.getElementById('af-agent-name');
-    const name = isModal ? document.getElementById('af-agent-name').value : document.getElementById('lab-forge-name').value;
-    const role = isModal ? document.getElementById('af-agent-role').value : "analyst";
-    const model = isModal ? document.getElementById('af-agent-model').value : "llama3.2";
-    const prompt = isModal ? document.getElementById('af-agent-prompt').value : "";
+window.forgeCustomAgent = async () => {
+    // Check if we are in the standalone modal or in the Neural Lab card
+    const isModal = document.getElementById('custom-agent-modal')?.style.display === 'flex';
+    const name = isModal ? document.getElementById('custom-agent-name').value : document.getElementById('lab-forge-name').value;
+    const role = isModal ? (document.getElementById('custom-agent-role')?.value || "analyst") : (document.getElementById('lab-forge-role')?.value || "analyst");
+    const model = isModal ? document.getElementById('custom-agent-model').value : "llama3.2";
+    const prompt = isModal ? document.getElementById('custom-agent-prompt').value : document.getElementById('lab-forge-prompt').value;
     if (!name) { log("⚠️ AGENT_FORGE: Identity name required.", "#ef4444"); return; }
     log("⚒️ FORGING: Initializing custom mandate for " + name + "...", "#a855f7");
     try {
@@ -2145,3 +3719,115 @@ async function refreshVaultState() {
         console.error("InventoryRefreshErr:", e);
     }
 }
+
+// --- 🧪 EVOLUTION MODE CORE LOGIC ---
+window.toggleEvolutionMode = async () => {
+    const toggle = document.getElementById('evolution-mode-toggle');
+    const isEvo = toggle.checked;
+    const label = document.getElementById('mode-label-text');
+    const descRes = document.getElementById('desc-research');
+    const descEvo = document.getElementById('desc-evolution');
+    const chatContainer = document.getElementById('evolution-chat-container');
+
+    const isEn = (currentLang === 'en');
+    if (isEvo) {
+        label.innerText = NEURAL_LANG_PACK["evolution_mode"][isEn?1:0].replace(' (Dev)', '');
+        label.style.color = "#a855f7";
+        descRes.style.opacity = "0.4";
+        descEvo.style.opacity = "1";
+        chatContainer.style.display = "block";
+        refreshEvolutionChat();
+    } else {
+        label.innerText = NEURAL_LANG_PACK["research_mode"][isEn?1:0].replace(' (Default)', '');
+        label.style.color = "#10b981";
+        descRes.style.opacity = "1";
+        descEvo.style.opacity = "0.4";
+        chatContainer.style.display = "none";
+    }
+
+    try {
+        await fetch('/api/lab/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-KEY': VAULT_KEY },
+            body: JSON.stringify({ codebase_bridging: isEvo })
+        });
+    } catch(e) { console.error("Evo Toggle Error:", e); }
+};
+
+window.refreshEvolutionChat = async () => {
+    const history = document.getElementById('evolution-chat-history');
+    if (!history) return;
+    try {
+        const r = await fetch('/api/lab/evolution/suggestions', { headers: { 'X-API-KEY': VAULT_KEY }});
+        const suggestions = await r.json();
+        
+        if (!suggestions || suggestions.length === 0) {
+            history.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 0.65rem; margin-top: 150px;" data-i18n="msg_awaiting_evolution">In attesa di segnali evolutivi... Attiva Evolution Mode per iniziare.</div>';
+            return;
+        }
+
+        const isEn = (currentLang === 'en');
+        history.innerHTML = suggestions.map(s => `
+            <div class="evo-msg glass-card" style="margin-bottom:1rem; padding:1.2rem; border-left:4px solid ${s.type==='BUG'?'#ef4444':'#a855f7'};">
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <span style="font-size:0.6rem; font-weight:900; color:${s.type==='BUG'?'#ef4444':'#a855f7'}; letter-spacing:1px;">[${s.type}] - ${s.file}:${s.line}</span>
+                    <span style="font-size:0.5rem; color:#64748b;">${new Date(s.timestamp*1000).toLocaleTimeString()}</span>
+                </div>
+                <p style="color:#fff; font-size:0.75rem; font-weight:600; margin-bottom:12px; line-height:1.4;">${s.content}</p>
+                <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.6rem; color:#94a3b8; border-left:2px solid #3b82f6;">
+                    <strong data-i18n="label_impact">${NEURAL_LANG_PACK["label_impact"][isEn?1:0]}:</strong> ${s.impact}
+                </div>
+                
+                ${s.status === 'pending' ? `
+                    <div style="display:flex; gap:10px; justify-content:flex-end;">
+                        <button class="evolve-btn" style="background:rgba(16,185,129,0.1); border:1px solid #10b981; color:#10b981;" onclick="handleEvolutionFeedback(this, 'IMPLEMENTED')" data-i18n="btn_implemented">${NEURAL_LANG_PACK["btn_implemented"][isEn?1:0]}</button>
+                        <button class="evolve-btn" style="background:rgba(245,158,11,0.1); border:1px solid #f59e0b; color:#f59e0b;" onclick="handleEvolutionFeedback(this, 'DISCARDED')" data-i18n="btn_discarded">${NEURAL_LANG_PACK["btn_discarded"][isEn?1:0]}</button>
+                        <button class="evolve-btn" style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; color:#ef4444;" onclick="handleEvolutionFeedback(this, 'FALSE_POSITIVE')" data-i18n="btn_false_positive">${NEURAL_LANG_PACK["btn_false_positive"][isEn?1:0]}</button>
+                    </div>
+                ` : `<div style="text-align:right; font-size:0.5rem; color:#4ade80; font-weight:800;">✓ ${s.status.toUpperCase()}</div>`}
+            </div>
+        `).join('');
+    } catch(e) { console.error("Evo Chat Error:", e); }
+};
+
+window.sendEvolutionFeedback = async (id, feedback) => {
+    try {
+        await fetch('/api/lab/evolution/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-KEY': VAULT_KEY },
+            body: JSON.stringify({ id, feedback })
+        });
+        refreshEvolutionChat();
+    } catch(e) { console.error("Feedback Error:", e); }
+};
+
+// --- 🛠️ NEURAL FORGE: CUSTOM REGISTRATION ---
+window.registerCustomModel = async () => {
+    const name = document.getElementById('custom-model-name').value;
+    const provider = document.getElementById('custom-model-provider').value;
+    const path = document.getElementById('custom-model-path').value;
+
+    if (!name || !path) {
+        log("⚠️ FORGE: Nome e Percorso sono obbligatori.", "#ef4444");
+        return;
+    }
+
+    try {
+        const r = await fetch('/api/lab/hub/custom/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-KEY': VAULT_KEY },
+            body: JSON.stringify({ name, provider, path })
+        });
+        
+        if (r.ok) {
+            log(`✅ FORGE: Modello [${name}] registrato con successo.`, "#4ade80");
+            document.getElementById('custom-model-name').value = '';
+            document.getElementById('custom-model-path').value = '';
+            refreshHubVisual();
+        } else {
+            log("❌ FORGE: Errore durante la registrazione.", "#ef4444");
+        }
+    } catch(e) {
+        console.error("Forge Registration Error:", e);
+    }
+};

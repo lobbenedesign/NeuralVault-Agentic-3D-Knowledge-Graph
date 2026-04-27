@@ -27,6 +27,8 @@ Dashboard-BACKUP/
 Dashboard_BACKUP/
 .checkpoints/
 .snapshots/
+.backup_hub/
+scratch/
 
 # LLM & Large Binary Models
 models/

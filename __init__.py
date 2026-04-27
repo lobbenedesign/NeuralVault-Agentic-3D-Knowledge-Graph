@@ -12,6 +12,7 @@ import threading
 import hashlib
 import gc
 import torch
+import random
 
 # Core Imports
 from index.node import VaultNode, QueryResult, RelationType, MemoryTier, SemanticEdge
@@ -22,8 +23,6 @@ from index.turboquant import TurboQuantizer, TwoStageTurboSearch
 from index.sparse import BM25SEncoder
 from retrieval.fusion import FusionRanker
 from agent.session import SessionManager
-from retrieval.prefilter import DuckDBPrefilter
-from memory_tiers import MemoryTierManager
 from retrieval.prefilter import DuckDBPrefilter
 from memory_tiers import MemoryTierManager
 from utils.logger import NeuralLogger
@@ -45,6 +44,11 @@ from network.gossip import GossipManager
 from network.ledger import SovereignLedger
 from agent007_lab import Agent007Lab
 from utils.benchmark import ModelBenchmarkTracker
+from agent.active_learning import ActiveLearningModule
+from utils.crdt import LWWMap, PNCounter
+from graph.entropy import EntropyMonitor
+from index.lod import LODManager
+from storage.time_lapse import TimeLapseManager
 
 class QueryIntent:
     SEMANTIC = "semantic"
@@ -187,6 +191,12 @@ class NeuralVaultEngine:
         # Linea 141 rimossa per mantenere l'indipedenza e persistenza di agent007.db
         self.investigator = Agent007Investigator(self.agent007)
         self.lab = Agent007Lab(self)
+        self.active_learning = ActiveLearningModule(self)
+        self.entropy_monitor = EntropyMonitor(self)
+        self.crdt_metadata = LWWMap()
+        self.lod = LODManager(self)
+        self.timelapse = TimeLapseManager(self)
+        
         # v1.0.0 Enterprise: Gossip Mesh Initializer
         self.gossip = GossipManager(local_node_id=self.node_id)
         
@@ -197,6 +207,9 @@ class NeuralVaultEngine:
         print("🕵️ Agent007-march: Sovereign Intelligence Engine ONLINE.")
         print("🏛️ Agent007-Blueprint: Mission Architect READY.")
         print("🏛️ Sovereign Ledger: Integrity Chain ACTIVE.")
+        print("🧠 Active Learning: Self-Tuning Circuit Breaker ACTIVE.")
+        print("🌌 Entropy Monitor: Dreaming Trigger ENABLED.")
+
 
     def _recovery_boot(self):
         """Ripristina lo stato atomico della Mesh e l'integrità dei nodi."""
@@ -285,7 +298,7 @@ class NeuralVaultEngine:
                     self._tiers.episodic.put(node, immediate=False)
                     recovered_count += 1
                 
-                self._tiers.episodic._fd.flush()
+                self._tiers.episodic.flush()
                 print(f"✅ [Deep Recovery] {recovered_count} nodi riemersi dal Cold-Storage.")
             else:
                 print("⚠️ [Deep Recovery] DuckDB non contiene record validi.")
@@ -416,17 +429,28 @@ class NeuralVaultEngine:
     def delete_node(self, node_id: str):
         """
         Cancellazione Atomica: Rimuove un nodo da tutto l'ecosistema sovrano.
+        v1.1.0: Controllo protezione persistente (Episodic Memory).
         """
         node_id = str(node_id)
+        
+        # 🛡️ [v1.1.0 Guard] Controllo protezione
+        if self._prefilter.is_node_protected(node_id):
+            print(f"🛡️ [Guard] Tentativo di eliminazione bloccato: Il nodo {node_id[:8]} è sotto protezione persistente.")
+            return False
+
         with self._lock:
             # 1. Rimuove dalla Neural Grid (RAM)
-            node = self._nodes.get(node_id)
-            self._nodes.pop(node_id, None)
+            node = self._nodes.pop(node_id, None)
+            if not node:
+                print(f"⚠️ [Engine] Tentativo di cancellazione nodo inesistente: {node_id[:8]}")
+                return False
             
             # 2. Rimuove dall'indice HNSW
             try:
-                self._hnsw.delete(node_id)
-            except: pass
+                if node_id in self._hnsw.nodes:
+                    self._hnsw.delete(node_id)
+            except Exception as e:
+                print(f"⚠️ [Engine/HNSW] Errore rimozione {node_id[:8]}: {e}")
             
             # 3. Rimuove dai Tiers di Memoria (LRU + Disk)
             self._tiers.delete(node_id)
@@ -435,11 +459,24 @@ class NeuralVaultEngine:
             self._prefilter.delete(node_id)
             
             # 5. Invalida Shards e Cache Associate
-            if node:
-                self.shards.create_shard("hot_node", lambda n: n.id == node_id, {node_id: node})
+            self.shards.create_shard("hot_node", lambda n: n.id == node_id, {node_id: node})
             
         print(f"🗑️ [Engine] Nodo {node_id[:8]} cancellato permanentemente.")
         return True
+
+    def protect_node_persistent(self, node_id: str, reason: str = "User Override", rejected_by: str = "user"):
+        """Sottomette un nodo alla protezione eterna (v1.1.0 Hardening)."""
+        print(f"🧠 [Episodic Memory] Sigillando protezione persistente per {node_id[:8]}...")
+        self._prefilter.protect_node_persistent(node_id, rejected_by, reason)
+        # Aggiorna anche il nodo in RAM se presente
+        if node_id in self._nodes:
+            self._nodes[node_id].metadata["lifecycle_state"] = "protected"
+            self.storage_put(self._nodes[node_id])
+
+    def is_node_protected(self, node_id: str) -> bool:
+        """Query pubblica per gli agenti: il nodo è protetto? (v1.1.0)."""
+        return self._prefilter.is_node_protected(node_id)
+
 
     def rollback_node(self, node_id: str) -> bool:
         """
@@ -491,13 +528,6 @@ class NeuralVaultEngine:
                             broken_ids.add(edge.target_id)
         return list(broken_ids)
 
-    def insert(self, text, metadata=None, node_id=None, collection=None):
-        """
-        v1.3.0: High-Fidelity Semantic Ingestion.
-        """
-        meta = metadata or {}
-        filename = meta.get("source", "raw_input")
-
     def upsert_text(self, text, metadata=None, node_id=None):
         """
         v1.3.0: High-Fidelity Semantic Ingestion.
@@ -513,7 +543,8 @@ class NeuralVaultEngine:
             for i, chunk_text in enumerate(semantic_chunks):
                 cid = f"{node_id or uuid.uuid4().hex[:6]}_{i}"
                 v = self._embed_text(chunk_text)
-                nodes.append(VaultNode(id=cid, text=chunk_text, vector=v, metadata={**meta, "chunk_idx": i}))
+                coll = meta.get("source", "default")
+                nodes.append(VaultNode(id=cid, collection=coll, text=chunk_text, vector=v, metadata={**meta, "chunk_idx": i}))
             
             # Creazione sinapsi sequenziali automatiche (Narrative Chain)
             for i in range(len(nodes) - 1):
@@ -529,28 +560,36 @@ class NeuralVaultEngine:
             paragraphs = [p.strip() for p in text.split("\n\n") if len(p.strip()) > 20]
             if len(paragraphs) > 1:
                 nodes = []
+                coll = meta.get("source", "default")
                 for i, p in enumerate(paragraphs[:100]):
                     p_id = f"{node_id or 'doc'}_{int(time.time()) % 1000}_{i}"
                     v = self._embed_text(p)
-                    nodes.append(VaultNode(id=p_id, text=p, vector=v, metadata=meta))
+                    nodes.append(VaultNode(id=p_id, collection=coll, text=p, vector=v, metadata=meta))
                 self.upsert_batch(nodes)
                 return nodes[0]
         
         vector = self._embed_text(text)
-        node = VaultNode(id=node_id or f"node_{uuid.uuid4().hex[:6]}", text=text, vector=vector, metadata=meta)
+        coll = meta.get("source", "default")
+        node = VaultNode(id=node_id or f"node_{uuid.uuid4().hex[:6]}", collection=coll, text=text, vector=vector, metadata=meta)
         self.upsert(node)
         return node
 
     def add_node(self, node_id, text, metadata=None):
         """Ingestione atomica con propagazione di tensione avversariale."""
         vector = self._embed_text(text)
+        meta = metadata or {}
+        coll = meta.get("source", "default")
         node = VaultNode(
             id=node_id,
+            collection=coll,
             text=text,
             vector=vector,
-            metadata=metadata or {},
+            metadata=meta,
             created_at=time.time()
         )
+        # v1.1.0: Lifecycle State Machine (PENDING by default)
+        node.metadata["lifecycle_state"] = "pending"
+        
         if "color" not in node.metadata:
             node.metadata["color"] = "#a855f7"
         
@@ -562,8 +601,56 @@ class NeuralVaultEngine:
             self.lab.propagate_tension(node_id, vector)
         except Exception:
             pass
-            
         return node
+
+    async def upsert_multimodal(self, file_path: str, source_uri: str = None):
+        """
+        [Phase 4] Bridge Multimodale: Ingestione di Immagini, Audio e Video.
+        Integra i dati nel grafo semantico come nodi di prima classe.
+        """
+        if not hasattr(self, 'mm_processor') or self.mm_processor is None:
+            from retrieval.multimodal import MultimodalSynapseProcessor
+            self.mm_processor = MultimodalSynapseProcessor(
+                db_path=str(self.data_dir / "multimodal.duckdb"),
+                ollama_url=getattr(self, 'settings', {}).get("ollama_url", "http://127.0.0.1:11434") if hasattr(self, 'settings') else "http://127.0.0.1:11434"
+            )
+
+        # 1. Ingestione via Processor (Estrae trascrizioni, descrizioni visive e vettori 1024D)
+        synapse_ids = await self.mm_processor.ingest(file_path, source_uri=source_uri)
+        
+        nodes = []
+        for sid in synapse_ids:
+            data = self.mm_processor.get_synapse(sid)
+            if not data: continue
+            
+            # 2. Creazione VaultNode (First Class Citizen)
+            # Portiamo i metadati multimodali nel nodo per la visualizzazione
+            node_metadata = {
+                **data["metadata"],
+                "media_type": data["media_type"],
+                "source_uri": data["source_uri"],
+                "content_hash": data["content_hash"],
+                "t_start_ms": data["t_start_ms"],
+                "t_end_ms": data["t_end_ms"],
+                "speaker": data["speaker"]
+            }
+            
+            node = VaultNode(
+                id=data["id"],
+                text=data["transcript"],
+                vector=data["vector"],
+                metadata=node_metadata,
+                collection=self.collection,
+                tier=MemoryTier.WORKING
+            )
+            nodes.append(node)
+        
+        # 3. Iniezione nel Kernel (HNSW + Memory + Tiers)
+        if nodes:
+            self.upsert_batch(nodes)
+            print(f"🎬 [Multimodal] Ingeriti {len(nodes)} segmenti da {file_path}")
+            
+        return nodes
 
     def upsert_batch(self, nodes: list[VaultNode]):
         print(f"🧠 [Kernel] Ingesting batch of {len(nodes)} nodes...")
@@ -635,8 +722,38 @@ class NeuralVaultEngine:
             
         threading.Thread(target=_bg_broadcast, daemon=True).start()
 
+    def evolve_graph(self):
+        """
+        DREAMING PHASE (Fase 3): Riorganizzazione autonoma del grafo semantico.
+        Rileva nuove sinapsi latenti e consolida i cluster.
+        """
+        print("🌌 [Dreaming] Starting autonomous graph evolution...")
+        nodes_list = list(self._nodes.values())
+        if len(nodes_list) < 2: return
+        
+        # 1. Consolidamento Sinapsi Sequenziali
+        archi_creati = self._graph_ingester.link_batch(nodes_list, use_llm=False)
+        
+        # 2. Scoperta Sinapsi Latenti (Cross-Cluster)
+        # Selezioniamo nodi con pochi archi per forzare discovery
+        for node in nodes_list[:50]: # Limite a 50 nodi per efficienza in questa fase
+            if len(node.edges) < 2:
+                # Forza una ricerca ANN per trovare potenziali partner
+                results = self.query(node.text, k=3)
+                for res in results:
+                    if res.node_id != node.id and res.score > 0.85:
+                        node.add_edge(res.node_id, RelationType.SAME_ENTITY, weight=res.score, source="dreaming")
+                        archi_creati += 1
+                        
+        print(f"✨ [Dreaming] Evolution complete. {archi_creati} new synapses discovered.")
+
     def query(self, query_text: str, **kwargs) -> list[QueryResult]:
+        # [PHASE 3] Trigger Entropy Check: Il sistema "sente" se deve sognare
+        if hasattr(self, 'entropy_monitor'):
+            self.entropy_monitor.check_and_trigger()
+            
         start_t = time.time()
+
         
         # v0.5.0 Cross-Modal Logic
         modality = kwargs.pop('modality', 'text')
@@ -704,7 +821,7 @@ class NeuralVaultEngine:
 
     _stats_cache = {"time": 0, "data": None}
 
-    def stats(self, limit: int = 10000) -> dict:
+    def stats(self, limit: int = 25000) -> dict:
         """Telemetria 3D ottimizzata: campionamento, proiezione e posizionamento (v14.0 APEX)."""
         now = time.time()
         if now - self._stats_cache["time"] < 1.0 and self._stats_cache["data"]:
@@ -731,7 +848,7 @@ class NeuralVaultEngine:
             try:
                 # v14.1: SVD completa su tutti i nodi con vettore (dimensione 1024 completa)
                 # Sicuro perché stats() gira in run_in_executor (thread pool, non blocca l'event loop)
-                vectors = np.array([n.vector for n in nodes_with_vectors], dtype=np.float32)
+                vectors = np.stack([n.vector for n in nodes_with_vectors]).astype(np.float32)
                 v_mean = np.mean(vectors, axis=0)
                 v_centered = vectors - v_mean
                 _, _, vh = np.linalg.svd(v_centered, full_matrices=False)
@@ -756,7 +873,8 @@ class NeuralVaultEngine:
 
                 if n.id in norm_projections:
                     p_vec = norm_projections[n.id]
-                    node_opacity = 1.0
+                    # 💡 [Idea #3] Use Ebbinghaus Opacity
+                    node_opacity = float(n.metadata.get("opacity", 1.0))
                     node_color = color1
                 else:
                     seed = int(hashlib.md5(str(n.id).encode()).hexdigest()[:8], 16)
@@ -812,7 +930,8 @@ class NeuralVaultEngine:
                     "opacity": node_opacity,
                     "theme": cluster_key,
                     "label": (n.text[:40] + "...") if n.text else "...",
-                    "created_at": n.created_at
+                    "created_at": n.created_at,
+                    "media_type": n.metadata.get("media_type")
                 })
             except Exception:
                 continue
@@ -821,7 +940,7 @@ class NeuralVaultEngine:
         aura_edges = []
         standard_edges = []
         
-        for n in all_nodes[:5000]:
+        for n in all_nodes[:25000]:
             if str(n.id) not in node_positions:
                 continue
             
@@ -830,22 +949,32 @@ class NeuralVaultEngine:
                 try:
                     target_id = str(edge.target_id)
                     if target_id in node_positions:
-                        standard_edges.append({
+                        edge_is_aura = getattr(edge, 'is_aura', False)
+                        edge_data = {
                             "source": str(n.id),
                             "target": target_id,
                             "source_pos": list(node_positions[str(n.id)]),
                             "target_pos": list(node_positions[target_id]),
-                            "color": "#ffffff",
-                            "is_aura": False,
+                            "color": "rainbow" if edge_is_aura else "#ffffff",
+                            "is_aura": edge_is_aura,
                             "created_at": edge.created_at
-                        })
+                        }
+                        
+                        if edge_is_aura:
+                            aura_edges.append(edge_data)
+                        else:
+                            standard_edges.append(edge_data)
                 except Exception: continue
 
-            # 2. 🌈 Super-Sinapsi Aura (Code-Doc Bridges)
+            # 2. 🌈 Super-Sinapsi Aura (Metadata Fallback)
             if "code_bridges" in n.metadata:
                 for target_path in n.metadata["code_bridges"]:
                     for other_id, other_pos in node_positions.items():
                         if target_path in other_id or (other_id in self._nodes and target_path in self._nodes[other_id].text):
+                            # Evitiamo duplicati se già inserito sopra
+                            if any(e["target"] == other_id and e["source"] == str(n.id) for e in aura_edges):
+                                continue
+                                
                             aura_edges.append({
                                 "source": str(n.id),
                                 "target": other_id,
@@ -865,9 +994,11 @@ class NeuralVaultEngine:
             "edges_count": len(all_edges),
             "point_cloud": point_cloud,
             "edge_sample": all_edges[:3000], # Incrementato da 1000 a 3000
+            "heatmap": self.lab._compute_semantic_heatmap(self._nodes) if hasattr(self, 'lab') else {}
         }
         self._stats_cache = {"time": now, "data": res}
-        print(f"📡 [Stats v14.5] {len(point_cloud)} punti | {len(aura_edges)} Aura | {len(standard_edges)} Stnd")
+        # print(f"📡 [Stats v14.5] {len(point_cloud)} punti | {len(aura_edges)} Aura | {len(standard_edges)} Stnd")
+        pass
         return res
 
 
@@ -1006,6 +1137,7 @@ class NeuralVaultEngine:
             return {
                 "node_count": len(self._nodes),
                 "synapse_count": self.get_synapse_count(),
+                "clusters_count": len(set(n.collection for n in self._nodes.values() if n.collection and n.collection != 'default')),
                 "classes": sum(1 for n in self._nodes.values() if n.metadata.get("kind") == "class"),
                 "functions": sum(1 for n in self._nodes.values() if n.metadata.get("kind") == "function"),
                 "hit_rate": f"{hit_rate:.2f}%",
@@ -1034,8 +1166,8 @@ class NeuralVaultEngine:
             cands = self.query("", query_vector=node.vector, k=4) 
             for cand in cands:
                 if cand.node.id == node.id: continue
-                # Soglia di evoluzione: Alta fedeltà
-                if cand.final_score > 0.88:
+                # Soglia di evoluzione: Ottimizzata per Apple Silicon (v14.5 Upgrade)
+                if cand.final_score > 0.82:
                     if not any(e.target_id == cand.node.id for e in node.edges):
                         if dry_run:
                             candidates_list.append((node.id, cand.node.id, float(cand.final_score)))
@@ -1127,15 +1259,16 @@ class NeuralVaultEngine:
 
     def remove_node(self, node_id: str):
         """Rimuove un nodo dal sistema e ricalcola le dipendenze (Fase 6)."""
+        node_id = str(node_id)
         if node_id in self._nodes:
             # 1. Rimozione dalla memoria attiva
             node = self._nodes.pop(node_id)
             # 2. Rimozione dall'indice vettoriale
-            self._hnsw.remove(node_id)
+            self._hnsw.delete(node_id)
             # 3. Rimozione dalla persistenza (Cold Tier)
             self._tiers.remove(node_id)
             # 4. Rimozione dal prefiltro metadata
-            self._prefilter.remove_node(node_id)
+            self._prefilter.delete(node_id)
             
             self.logger.info(f"Neural Pruning: Node {node_id} removed from the grid.")
             return True

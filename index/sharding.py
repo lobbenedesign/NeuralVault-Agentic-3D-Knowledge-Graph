@@ -10,6 +10,8 @@ import shutil
 from pathlib import Path
 from typing import List, Dict
 import json
+import uuid
+import time
 
 class KnowledgeShard:
     def __init__(self, shard_id: str, nodes_ids: List[str], metadata: Dict = None):
@@ -54,3 +56,51 @@ class ShardManager:
         
         print(f"🚀 [Warp] Neural Warp completato con successo.")
         return True
+
+    def clone_shard(self, shard_id: str, clone_name: str = None) -> str:
+        """
+        [Phase 4 Evolution] Crea una copia esatta di uno Shard esistente.
+        Utile per il versioning della conoscenza o la distribuzione Mesh.
+        """
+        if shard_id not in self.active_shards:
+            # Tenta di caricare dal disco se non in memoria
+            shard_path = self.root / f"{shard_id}.json"
+            if not shard_path.exists():
+                return None
+            with open(shard_path, "r") as f:
+                data = json.load(f)
+                self.active_shards[shard_id] = KnowledgeShard(data["id"], data["nodes"])
+
+        source = self.active_shards[shard_id]
+        new_id = f"clone_{clone_name or 'backup'}_{uuid.uuid4().hex[:6]}"
+        
+        # Clone fisico dei metadati
+        clone = KnowledgeShard(new_id, list(source.nodes_ids), {**source.metadata, "parent": shard_id})
+        self.active_shards[new_id] = clone
+        
+        with open(self.root / f"{new_id}.json", "w") as f:
+            json.dump({"id": new_id, "nodes": clone.nodes_ids, "metadata": clone.metadata}, f)
+            
+        print(f"🧬 [Sharding] Shard '{shard_id}' clonato in '{new_id}'.")
+        return new_id
+
+    def auto_backup(self, vault_data_dir: Path):
+        """
+        Esegue il backup dei file critici del vault (AOBF e Snapshot) 
+        nella directory degli shards per ridondanza.
+        """
+        backup_dir = self.root / "backups" / time.strftime("%Y%m%d_%H%M%S")
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 1. Copia i file Aegis (.ael)
+        ael_files = list(vault_data_dir.glob("*.ael"))
+        for f in ael_files:
+            shutil.copy(f, backup_dir / f.name)
+            
+        # 2. Copia l'ultimo snapshot
+        snap = vault_data_dir / "vault_snapshot.bin"
+        if snap.exists():
+            shutil.copy(snap, backup_dir / "vault_snapshot.bin")
+            
+        print(f"🛡️ [Backup] Archiviata istantanea di sicurezza in: {backup_dir.name}")
+        return str(backup_dir)

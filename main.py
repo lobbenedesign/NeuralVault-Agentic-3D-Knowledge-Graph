@@ -282,22 +282,27 @@ def get_swarm_settings():
         "available_models": installed
     }
 
-@app.post("/settings/swarm")
-def update_swarm_settings(req: dict):
-    from utils.settings_manager import SwarmSettingsManager
-    if not _vaults: return {"error": "No collections"}
-    vault = next(iter(_vaults.values()))
-    sm = SwarmSettingsManager(vault.data_dir)
-    
-    if "routing" in req:
-        sm.update_routing(req["routing"])
-    
-    # Aggiorna anche altri campi se presenti
-    if "agents" in req:
-        sm.settings["agents"].update(req["agents"])
-        sm._save(sm.settings)
+@app.get("/collections/{name}/lod")
+def get_vault_lod(name: str, level: int = 1):
+    """Restituisce i nodi aggregati per la visualizzazione LOD."""
+    vault = get_vault(name)
+    if hasattr(vault, 'lod'):
+        return {"clusters": vault.lod.get_aggregated_nodes(level=level)}
+    return {"clusters": []}
+
+@app.get("/collections/{name}/history")
+def get_vault_history(name: str, timestamp: float | None = None):
+    """Restituisce lo stato o le statistiche cronologiche del vault."""
+    vault = get_vault(name)
+    if not hasattr(vault, 'timelapse'):
+        return {"error": "TimeLapseManager not found"}
         
-    return {"updated": True}
+    if timestamp:
+        node_ids = vault.timelapse.get_snapshot_at(timestamp)
+        return {"timestamp": timestamp, "node_ids": node_ids}
+    else:
+        return {"stats": vault.timelapse.get_history_stats()}
+
 
 if __name__ == "__main__":
     import uvicorn

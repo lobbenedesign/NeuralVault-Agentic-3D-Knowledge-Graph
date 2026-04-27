@@ -9,6 +9,7 @@ import os
 import re
 import httpx
 import asyncio
+import psutil
 
 class Agent007Intelligence:
     """
@@ -101,10 +102,11 @@ class Agent007Intelligence:
                     elif any("llama3.2" in m for m in installed): selected_model = "llama3.2"
                     else: selected_model = installed[0] if installed else "llama3"
                 
+                base_url = settings.get("ollama_url", "http://localhost:11434")
                 start_time = time.time()
                 # Timeout rimosso per permettere code di elaborazione (utile per grossi batch web)
                 with httpx.Client(timeout=None) as client:
-                    resp = client.post("http://localhost:11434/api/generate", json={
+                    resp = client.post(f"{base_url}/api/generate", json={
                         "model": selected_model,
                         "prompt": prompt,
                         "stream": False,
@@ -115,14 +117,43 @@ class Agent007Intelligence:
                     
                     if resp.status_code == 200:
                         raw_resp = resp.json().get("response", "{}")
-                        data = json.loads(raw_resp)
+                        try:
+                            # 🛡️ Sanitization: Remove potential markdown wrappers
+                            clean_resp = raw_resp.strip()
+                            if clean_resp.startswith("```json"): clean_resp = clean_resp[7:-3]
+                            elif clean_resp.startswith("```"): clean_resp = clean_resp[3:-3]
+                            data = json.loads(clean_resp.strip())
+                        except Exception as je:
+                            print(f"⚠️ [Agent007] JSON Parse Error: {je}. Raw: {raw_resp[:100]}...")
+                            data = {}
+
                         entities = data.get("entities", [])
                         relations = data.get("relations", [])
                         ollama_extracted = True
                         
-                        # Registrazione Benchmark Sovrano
+                        # Misurazione RAM Reale (v4.0)
+                        ram_usage = psutil.Process().memory_info().rss / (1024 * 1024)
+                        quality = 1.0 if len(entities) > 0 else 0.5
+                        
+                        # Registrazione Benchmark Sovrano con metriche complete
                         if hasattr(self.engine, 'benchmarks'):
-                            self.engine.benchmarks.record(selected_model, "entity_extraction", duration_ms, len(raw_resp.split()))
+                            # Supporto sia per il tracker DuckDB che JSON
+                            try:
+                                self.engine.benchmarks.record(
+                                    selected_model, 
+                                    "entity_extraction", 
+                                    duration_ms, 
+                                    len(raw_resp.split()),
+                                    ram_mb=ram_usage,
+                                    quality=quality,
+                                    precision=quality
+                                )
+                            except:
+                                # Fallback per il tracker JSON di neural_lab.py
+                                self.engine.benchmarks.record(
+                                    selected_model, "entity_extraction", duration_ms, 
+                                    len(raw_resp.split()), ram_usage, [], quality, quality
+                                )
                         
                         print(f"🕵️ Agent007-LLM ({selected_model}): Estratte {len(entities)} entità in {duration_ms:.0f}ms.")
             except Exception as e:
@@ -154,8 +185,17 @@ class Agent007Intelligence:
                             "fact": f"{s} {v} {t}".strip()
                         })
             
-            # Filtro duplicati
-            relations = list({ (r['source'], r['target'], r['type']): r for r in relations }.values())
+            # 🛡️ Defense: Safe Duplicate Filter (handles missing keys)
+            try:
+                unique_rels = {}
+                for r in relations:
+                    if not isinstance(r, dict): continue
+                    key = (r.get('source', ''), r.get('target', ''), r.get('type', ''))
+                    if any(key): unique_rels[key] = r
+                relations = list(unique_rels.values())
+            except Exception as e:
+                print(f"⚠️ [Agent007] Relation filter error: {e}")
+            
             if entities: print(f"🕵️ Agent007-Heuristic: Fallback attivo ({len(entities)} entità).")
 
         if entities or relations:
@@ -165,31 +205,42 @@ class Agent007Intelligence:
 
     def add_discrete_knowledge(self, entities: List[Dict], relations: List[Dict], source_node_id: str):
         """Inocula fatti certi nella Hard Memory di DuckDB."""
+        if not isinstance(entities, list): entities = []
+        if not isinstance(relations, list): relations = []
+
         for ent in entities:
+            if not isinstance(ent, dict): continue
             try:
+                # 🛡️ Ultra-Defense: Ensure mandatory keys exist
+                name = ent.get('name', ent.get('id', ent.get('label')))
+                e_type = ent.get('type', ent.get('category', 'Entity'))
+                if not name: continue
+
                 self.con.execute("""
                     INSERT OR REPLACE INTO agent007_entities 
                     (id, name, type, attributes, source_node_id)
                     VALUES (?, ?, ?, ?, ?)
-                """, (ent['name'], ent['name'], ent['type'], json.dumps(ent.get('attributes', {})), source_node_id))
+                """, (str(name), str(name), str(e_type), json.dumps(ent.get('attributes', {})), str(source_node_id)))
             except Exception as e:
-                # Se la connessione è chiusa, logghiamo in modo silenzioso o tentiamo il ripristino se necessario
                 if "closed" in str(e).lower(): pass
                 else: print(f"⚠️ Error adding entity: {e}")
 
         for rel in relations:
+            if not isinstance(rel, dict): continue
             try:
-                r_source = rel.get('source', '')
-                r_target = rel.get('target', rel.get('dest', ''))
-                r_type = rel.get('type', 'UNKNOWN')
-                r_fact = rel.get('fact', rel.get('description', ''))
+                # 🛡️ Defense: Support multiple key formats from different LLMs
+                r_source = rel.get('source', rel.get('src', rel.get('from', '')))
+                r_target = rel.get('target', rel.get('dest', rel.get('dst', rel.get('to', ''))))
+                r_type = rel.get('type', rel.get('relation', 'UNKNOWN'))
+                r_fact = rel.get('fact', rel.get('description', rel.get('info', '')))
+                
                 if not r_source or not r_target: continue
 
                 self.con.execute("""
                     INSERT OR REPLACE INTO agent007_relations 
                     (source_id, target_id, type, fact, source_node_id)
                     VALUES (?, ?, ?, ?, ?)
-                """, (r_source, r_target, r_type, r_fact, source_node_id))
+                """, (str(r_source), str(r_target), str(r_type), str(r_fact), str(source_node_id)))
             except Exception as e:
                 if "closed" in str(e).lower(): pass
                 else: print(f"⚠️ Error adding relation: {e}")

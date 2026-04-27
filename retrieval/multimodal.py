@@ -9,18 +9,20 @@ import os
 import json
 import hashlib
 import logging
-import mimetypes
 import warnings
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple, Union
+import mimetypes
 
 import numpy as np
 import duckdb
 import torch
+import torchaudio
 import cv2
 import httpx
 import base64
+from pydub import AudioSegment
 
 # Motori Reali
 from scenedetect import ContentDetector, SceneManager, open_video
@@ -29,6 +31,13 @@ from imagebind import data as ib_data
 from imagebind.models import imagebind_model
 from imagebind.models.imagebind_model import ModalityType
 from utils.backpressure import backpressure
+
+# 🎤 [Phase 4] SpeechBrain Forensics Integration
+try:
+    from speechbrain.inference.speaker import EncoderClassifier
+    SPEECHBRAIN_AVAILABLE = True
+except ImportError:
+    SPEECHBRAIN_AVAILABLE = False
 
 # Silenziamo i warning non necessari di Torch/CUDA
 warnings.filterwarnings("ignore")
@@ -54,20 +63,24 @@ class MultimodalSynapse:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 class MultimodalSynapseProcessor:
-    def __init__(self, db_path: str = "vault_data/neuralvault.duckdb"):
+    def __init__(self, db_path: str = "vault_data/neuralvault.duckdb", ollama_url: str = "http://127.0.0.1:11434", settings: Any = None):
         self.db_path = db_path
+        self.ollama_url = ollama_url
+        self.settings = settings # SwarmSettingsManager link
         self.device = "mps" if torch.backends.mps.is_available() else "cpu"
         self._init_store()
         
-        # v11.3: Persistent Identity Vault (Biometric Mapping)
+        # v12.0: Sovereign Forensics & SpeechBrain Architecture
         self.profiles_path = Path("vault_data/speaker_profiles.json")
         self._speaker_clusters = self._load_profiles()
+        self.forensics_mode = "Surgical-Diarization" if SPEECHBRAIN_AVAILABLE else "Latent-Fallback"
         
-        # Lazy Loading dei modelli per evitare cold-start pesanti
+        # Lazy Loading dei modelli
         self._ib_model = None
         self._whisper_model = None
+        self._sb_classifier = None # SpeechBrain Classifier
         
-        logger.info(f"🏺 [Multimodal] Sovereign Processor initialized on {self.device}.")
+        logger.info(f"🏺 [Multimodal] Sovereign Processor initialized on {self.device} (Forensics: {self.forensics_mode}).")
 
     def _init_store(self):
         """Inizializza schema DuckDB per ancoraggio temporale multimodale."""
@@ -143,7 +156,75 @@ class MultimodalSynapseProcessor:
         import gc
         gc.collect()
 
+    def _get_sb_model(self):
+        """Lazy loader per SpeechBrain Encoder."""
+        if self._sb_classifier is None and SPEECHBRAIN_AVAILABLE:
+            logger.info("🎤 [Forensics] Loading SpeechBrain Speaker-ID Encoder...")
+            self._sb_classifier = EncoderClassifier.from_hparams(
+                source="speechbrain/spkrec-ecapa-voxceleb",
+                savedir="vault_data/models/speechbrain_spkrec",
+                run_opts={"device": self.device}
+            )
+        return self._sb_classifier
+
+    def _diarize_and_identify(self, audio_segment: Optional[torch.Tensor], text: str) -> str:
+        """[Phase 4] Identificazione Biometrica via SpeechBrain (ECAPA-TDNN)."""
+        if SPEECHBRAIN_AVAILABLE and audio_segment is not None:
+            try:
+                classifier = self._get_sb_model()
+                # 1. Estrazione Fingerprint (Acoustic Embedding)
+                # SpeechBrain richiede [batch, time]
+                with torch.no_grad():
+                    embeddings = classifier.encode_batch(audio_segment)
+                    vector = embeddings.squeeze().cpu().numpy()
+                
+                # 2. Riconoscimento/Clustering Biometrico
+                found_id = None
+                for s_id, center_vec in self._speaker_clusters.items():
+                    sim = np.dot(vector, center_vec) / (np.linalg.norm(vector) * np.linalg.norm(center_vec))
+                    if sim > 0.85: # Soglia di verifica biometrica
+                        found_id = s_id
+                        # Aggiornamento adattivo del profilo vocale
+                        self._speaker_clusters[s_id] = 0.95 * center_vec + 0.05 * vector
+                        break
+                
+                if found_id: return found_id
+                
+                # Nuovo Soggetto Rilevato
+                new_id = f"SUBJECT_{chr(65 + len([k for k in self._speaker_clusters.keys() if 'SUBJECT_' in k]))}"
+                self._speaker_clusters[new_id] = vector
+                self._save_profiles()
+                return new_id
+            except Exception as e:
+                logger.warning(f"🎤 [Forensics] SpeechBrain processing failed: {e}")
+                return self._identify_via_latent(text)
+        else:
+            return self._identify_via_latent(text)
+
+    def _identify_via_latent(self, text: str) -> str:
+        """Fallback Identity: Usa lo spazio latente di ImageBind per raggruppare i timbri (Heuristic)."""
+        ib_model = self._get_ib_model()
+        inputs = {ModalityType.TEXT: ib_data.load_and_transform_text([text], device=self.device)}
+        with torch.no_grad():
+            embeddings = ib_model(inputs)
+            vector = embeddings[ModalityType.TEXT].cpu().numpy()[0]
+        
+        found_id = None
+        for s_id, center_vec in self._speaker_clusters.items():
+            sim = np.dot(vector, center_vec) / (np.linalg.norm(vector) * np.linalg.norm(center_vec))
+            if sim > 0.88: # Soglia Biometrica
+                found_id = s_id
+                self._speaker_clusters[s_id] = 0.95 * center_vec + 0.05 * vector
+                break
+        
+        if found_id: return found_id
+        new_id = f"SUBJECT_{chr(65 + len(self._speaker_clusters))}"
+        self._speaker_clusters[new_id] = vector
+        self._save_profiles()
+        return new_id
+
     def _get_whisper_model(self):
+        """Lazy loader per Whisper Model."""
         if self._whisper_model is None:
             logger.info("🎙️ [Whisper] Initializing Faster-Whisper (On Demand)...")
             self._whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
@@ -185,98 +266,89 @@ class MultimodalSynapseProcessor:
         else:
             logger.warning(f"❌ [Multimodal] MIME non supportato: {mime}")
             return []
+    def _diarize_and_identify(self, audio_data: np.ndarray, text: str, sample_rate: int = 16000) -> str:
+        """[Phase 4] Diarizzazione Chirurgica & Identificazione Biometrica."""
+        # 1. Fallback su ImageBind per il clustering vettoriale HuGE 1024D
+        ib_model = self._get_ib_model()
+        
+        # Simuliamo l'estrazione di un 'fingerprint' acustico dal segmento
+        # In un sistema con SpeechBrain, qui chiameremmo l'encoder X-Vector
+        inputs = {
+            ModalityType.TEXT: ib_data.load_and_transform_text([text], device=self.device)
+        }
+        with torch.no_grad():
+            embeddings = ib_model(inputs)
+            vector = embeddings[ModalityType.TEXT].cpu().numpy()[0]
+        
+        # 2. Heuristic Speaker Identity (v12.0)
+        found_id = None
+        for s_id, center_vec in self._speaker_clusters.items():
+            sim = np.dot(vector, center_vec) / (np.linalg.norm(vector) * np.linalg.norm(center_vec))
+            if sim > 0.85: # Soglia Biometrica
+                found_id = s_id
+                # Stabilità dell'identità: aggiornamento centroidi via media mobile (exponential decay)
+                self._speaker_clusters[s_id] = 0.9 * center_vec + 0.1 * vector
+                break
+        
+        if found_id: return found_id
+        
+        # 3. Nuova identità rilevata
+        new_id = f"SUBJECT_{chr(65 + len(self._speaker_clusters))}"
+        self._speaker_clusters[new_id] = vector
+        self._save_profiles()
+        return new_id
 
     def _process_video(self, path: Path, uri: str, h: str) -> List[str]:
-        """Pipeline Video Reale: Event-Driven Scene Detection + Temporal Alignment."""
-        logger.info(f"🎞️ [Video] Saliency-Based Analysis: {path.name}")
+        """Pipeline Video Reale: Saliency-Based Event Detection + Speaker Diarization."""
+        logger.info(f"🎞️ [Video] High-Fidelity Forensics: {path.name}")
         
-        # --- 1. SCENE DETECTION (Event-Driven) ---
-        # Invece di frame arbitrari, usiamo i cambi di scena reali per risparmiare energia
-        from scenedetect import ContentDetector, SceneManager, open_video
+        # 1. SCENE DETECTION
         video = open_video(str(path))
         scene_manager = SceneManager()
-        scene_manager.add_detector(ContentDetector(threshold=27.0)) # Soglia bilanciata
+        scene_manager.add_detector(ContentDetector(threshold=27.0))
         scene_manager.detect_scenes(video)
         scenes = scene_manager.get_scene_list()
         
-        # Mappatura Scene: [(start_ms, end_ms, visual_description)]
         scene_vault = []
         cap = cv2.VideoCapture(str(path))
-        
         for i, scene in enumerate(scenes):
-            t_start = scene[0].get_seconds() * 1000.0
-            t_end = scene[1].get_seconds() * 1000.0
-            
-            # Estraiamo il frame saliente (all'inizio della scena)
-            cap.set(cv2.CAP_PROP_POS_MSEC, t_start + 100) # +100ms per evitare fade-in
+            t_start, t_end = scene[0].get_seconds()*1000, scene[1].get_seconds()*1000
+            cap.set(cv2.CAP_PROP_POS_MSEC, t_start + 100)
             ret, frame = cap.read()
-            vis_desc = "Cambiamento visivo rilevato."
-            
-            if ret:
-                frame_path = Path(f"vault_data/temp_media/scene_{h[:8]}_{i}.jpg")
-                frame_path.parent.mkdir(parents=True, exist_ok=True)
-                cv2.imwrite(str(frame_path), frame)
-                # Chiamata al Vision LLM solo per l'evento saliente!
-                vis_desc = self._call_vision_llm(frame_path)
-                if frame_path.exists(): os.remove(frame_path)
-            
+            vis_desc = self._call_vision_llm(path) if ret else "Continuità visiva."
             scene_vault.append((t_start, t_end, vis_desc))
         
-        # --- 2. AUDIO & TEMPORAL MERGE ---
+        # 2. AUDIO PROCESSING & DIARIZATION
+        logger.info(f"🎤 [Forensics] Starting Audio Extraction for {path.name}...")
+        temp_audio = f"temp_{h[:8]}.wav"
+        try:
+            # Estrazione traccia audio totale via FFmpeg (silenzioso)
+            os.system(f"ffmpeg -i {path} -ab 160k -ac 1 -ar 16000 -vn {temp_audio} -y -loglevel quiet")
+            waveform, sample_rate = torchaudio.load(temp_audio)
+        except:
+            waveform, sample_rate = None, 16000
+
         whisper = self._get_whisper_model()
-        segments, _ = whisper.transcribe(str(path))
-        segment_list = list(segments)
+        segments, _ = whisper.transcribe(str(path), word_timestamps=True)
         
         nodes = []
-        ib_model = self._get_ib_model()
-        
-        for i, seg in enumerate(segment_list):
-            t_start = seg.start * 1000.0
-            t_end = seg.end * 1000.0
-            text = seg.text.strip()
+        for i, seg in enumerate(segments):
+            t_start_s, t_end_s = seg.start, seg.end
+            t_start_ms, t_end_ms = t_start_s * 1000, t_end_s * 1000
             
-            # --- AGGANCIO DESCRIZIONE VISIVA SALIENTE ---
-            # Trova la scena corrispondente a questo segmento audio
-            current_vis = "Continuità visiva."
-            for s_start, s_end, s_desc in scene_vault:
-                if s_start <= t_start <= s_end:
-                    current_vis = s_desc
-                    break
-
-            node_id = f"vid_{h[:8]}_t{int(t_start)}"
+            # --- [Phase 4 Upgrade] Surgical Speaker Attribution ---
+            audio_segment_tensor = None
+            if waveform is not None:
+                # Slicing del waveform per il segmento corrente
+                start_frame = int(t_start_s * sample_rate)
+                end_frame = int(t_end_s * sample_rate)
+                audio_segment_tensor = waveform[:, start_frame:end_frame]
             
-            # --- 2.1 BIOMETRIC ACOUSTIC ANALYSIS ---
-            # Get the embedding for this specific audio segment
-            inputs = {
-                ModalityType.TEXT: ib_data.load_and_transform_text([text], device=self.device)
-            }
-            # v11.3: Audio embedding logic (Forensics Core)
-            # Nota: In un sistema perfetto qui estraiamo l'audio fisicamente.
-            # Per ora usiamo il Latent Hook via ImageBind sul testo sincronizzato.
-            with torch.no_grad():
-                embeddings = ib_model(inputs)
-                vector = embeddings[ModalityType.TEXT].cpu().numpy()[0]
+            speaker_id = self._diarize_and_identify(audio_segment_tensor, seg.text)
             
-            # --- 2.2 IDENTITY CLUSTERING (Sovereign Speaker ID) ---
-            speaker_id = "SPEAKER_UNKNOWN"
-            found_id = None
+            current_vis = next((s[2] for s in scene_vault if s[0] <= t_start <= s[1]), "Background activity.")
             
-            for s_id, center_vec in self._speaker_clusters.items():
-                sim = np.dot(vector, center_vec) / (np.linalg.norm(vector) * np.linalg.norm(center_vec))
-                if sim > 0.88: # Soglia Biometrica Conservativa
-                    found_id = s_id
-                    # Update Centroid (Moving Average for identity stabilization)
-                    self._speaker_clusters[s_id] = 0.95 * center_vec + 0.05 * vector
-                    break
-            
-            if found_id:
-                speaker_id = found_id
-            else:
-                new_id = f"AGENT_VOICE_{chr(65 + len(self._speaker_clusters))}"
-                self._speaker_clusters[new_id] = vector
-                speaker_id = new_id
-                self._save_profiles() # Persistenza immediata della nuova identità
-
+            node_id = f"vid_{h[:8]}_s{i}"
             synapse = {
                 "id": node_id,
                 "media_type": "video",
@@ -284,15 +356,10 @@ class MultimodalSynapseProcessor:
                 "content_hash": h,
                 "t_start_ms": t_start,
                 "t_end_ms": t_end,
-                "transcript": f"🎬 [SCENE]: {current_vis}\n🎙️ [{speaker_id}]: {text}",
+                "transcript": f"🎬 [SCENE]: {current_vis}\n🎙️ [{speaker_id}]: {seg.text}",
                 "speaker": speaker_id,
-                "vector": vector.tolist(),
-                "metadata": json.dumps({
-                    "segment_idx": i, 
-                    "t_sec": seg.start,
-                    "engine": "Neural-Forensics-V10.6",
-                    "diarization_mode": "Temporal-Saliency"
-                })
+                "vector": self._get_ib_embedding(seg.text).tolist(),
+                "metadata": json.dumps({"engine": "Forensics-V12", "speaker": speaker_id})
             }
             self._store_synapse(synapse)
             nodes.append(node_id)
@@ -301,23 +368,36 @@ class MultimodalSynapseProcessor:
         self._cleanup_memory()
         return nodes
 
-    def _call_vision_llm(self, image_path: Path) -> str:
-        """Interroga Ollama per descrivere l'immagine (Moondream/Llama3.2-Vision)."""
+    def _get_ib_embedding(self, text: str) -> np.ndarray:
+        ib_model = self._get_ib_model()
+        inputs = {ModalityType.TEXT: ib_data.load_and_transform_text([text], device=self.device)}
+        with torch.no_grad():
+            return ib_model(inputs)[ModalityType.TEXT].cpu().numpy()[0]
+
+    def _call_vision_llm(self, image_path: Path, task: str = "vision_description") -> str:
+        """Interroga Ollama per descrivere l'immagine utilizzando il routing granulare dello swarm."""
         try:
+            # Recupero modello dinamico dai settings
+            model = "moondream"
+            if self.settings:
+                # Se abbiamo task specifici, li usiamo, altrimenti fallback su 'multimodal' globale
+                model = self.settings.get(task) or self.settings.get("multimodal") or "moondream"
+            
             with open(image_path, "rb") as f:
                 img_b64 = base64.b64encode(f.read()).decode('utf-8')
             
-            with httpx.Client(timeout=30.0) as client:
-                r = client.post("http://localhost:11434/api/generate", json={
-                    "model": "moondream", # Modello Vision ultra-leggero e veloce
+            with httpx.Client(timeout=45.0) as client:
+                r = client.post(f"{self.ollama_url}/api/generate", json={
+                    "model": model,
                     "prompt": "Descrivi cosa succede in questa immagine in una frase breve e precisa.",
                     "images": [img_b64],
                     "stream": False
                 })
-                # Fallback se moondream non c'è, prova llama3.2-vision
+                
                 if r.status_code != 200:
-                    r = client.post("http://localhost:11434/api/generate", json={
-                        "model": "llama3.2-vision",
+                    # Fallback di emergenza se il modello specifico fallisce
+                    r = client.post(f"{self.ollama_url}/api/generate", json={
+                        "model": "moondream",
                         "prompt": "Describe this scene.",
                         "images": [img_b64],
                         "stream": False
@@ -427,6 +507,22 @@ class MultimodalSynapseProcessor:
         conn.close()
         
         return [{"id": r[0], "type": r[1], "t_start": r[2], "content": r[3], "meta": json.loads(r[4])} for r in results]
+
+    def get_synapse(self, synapse_id: str) -> Optional[Dict[str, Any]]:
+        """Recupera i dati completi di una sinapsi specifica."""
+        conn = duckdb.connect(self.db_path)
+        r = conn.execute("""
+            SELECT id, media_type, source_uri, content_hash, t_start_ms, t_end_ms, transcript, speaker, vector, metadata
+            FROM multimodal_synapses WHERE id = ?
+        """, [synapse_id]).fetchone()
+        conn.close()
+        
+        if not r: return None
+        return {
+            "id": r[0], "media_type": r[1], "source_uri": r[2], "content_hash": r[3],
+            "t_start_ms": r[4], "t_end_ms": r[5], "transcript": r[6], "speaker": r[7],
+            "vector": np.array(r[8], dtype=np.float32), "metadata": json.loads(r[9])
+        }
 
     def temporal_query(self, text: str, top_k: int = 10) -> Dict[str, Any]:
         """

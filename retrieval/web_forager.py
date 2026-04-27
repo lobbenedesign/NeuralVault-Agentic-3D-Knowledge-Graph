@@ -268,19 +268,43 @@ class SovereignWebForager:
     async def _fetch_page(self, url: str) -> Optional[str]:
         """Fetch HTTP con fallback Playwright per SPA/JS-rendered."""
         try:
-            resp = await self._client.get(url)
-            if resp.status_code == 200:
-                ct = resp.headers.get("content-type", "")
-                if "html" in ct:
-                    return resp.text
-                elif "pdf" in ct and HAS_PDF:
-                    return self._extract_pdf(resp.content)
+            # 🛡️ Browser-like headers to avoid being blocked by WAFs
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Referer": "https://www.google.com/",
+                "Cache-Control": "max-age=0",
+                "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": '"macOS"',
+            }
+            
+            # Use a fresh client with verify=False to ignore SSL errors which are common on some domains
+            async with httpx.AsyncClient(headers=headers, timeout=self.timeout, follow_redirects=True, verify=False) as client:
+                resp = await client.get(url)
+                if resp.status_code == 200:
+                    ct = resp.headers.get("content-type", "").lower()
+                    if "html" in ct:
+                        return resp.text
+                    elif "pdf" in ct and HAS_PDF:
+                        return self._extract_pdf(resp.content)
+                else:
+                    print(f"⚠️ [Forager] HTTP {resp.status_code} per {url}. Tentativo fallback...")
+            
+            # Fallback immediato a Playwright se il primo tentativo fallisce o non è 200
+            if HAS_PLAYWRIGHT:
+                print(f"🎭 [Forager] Avvio Fallback Playwright per {url[:50]}...")
+                return await self._fetch_with_playwright(url)
             return None
-        except Exception as e:
-            print(f"⚠️ [Forager] Fetch fallito per {url}: {e}")
 
-            # Fallback: Playwright per pagine JS-rendered
-            if self.use_playwright:
+        except (httpx.ConnectError, httpx.TimeoutException, Exception) as e:
+            err_msg = f"{type(e).__name__}: {str(e)}"
+            print(f"⚠️ [Forager] Fetch HTTP fallito per {url}: {err_msg}. Provo Playwright...")
+            
+            # Fallback: Playwright per pagine JS-rendered o protette
+            if HAS_PLAYWRIGHT:
                 return await self._fetch_with_playwright(url)
             return None
 

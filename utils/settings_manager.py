@@ -21,7 +21,8 @@ class SwarmSettingsManager:
                 "sentinel_active": True,
                 "quantum_threshold": 0.92
             },
-            "hydration_limit": 50000
+            "hydration_limit": 50000,
+            "ollama_url": "http://127.0.0.1:11434"
         }
         self.settings = self._load()
 
@@ -46,6 +47,10 @@ class SwarmSettingsManager:
     def _save(self, data: Dict):
         with open(self.config_path, 'w') as f:
             json.dump(data, f, indent=4)
+
+    def get(self, key: str, default=None):
+        """Recupera un'impostazione generica."""
+        return self.settings.get(key, default)
 
     def get_model(self, task: str) -> str:
         """Ritorna il modello configurato per un determinato compito."""

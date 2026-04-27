@@ -85,9 +85,25 @@ class BinaryMappedLog:
         return self._cursor - 1
 
     def close(self):
-        self._mmap.flush()
-        self._mmap.close()
-        self._fd.close()
+        """Chiusura sicura e idempotente del log mappato."""
+        try:
+            if hasattr(self, '_mmap') and self._mmap:
+                # Verifichiamo se è già stato chiuso per evitare ValueError
+                try:
+                    self._mmap.flush()
+                except (ValueError, OSError):
+                    pass 
+                self._mmap.close()
+                self._mmap = None
+        except Exception:
+            pass
+            
+        try:
+            if hasattr(self, '_fd') and self._fd:
+                self._fd.close()
+                self._fd = None
+        except Exception:
+            pass
 
 class SovereignConsensus:
     """Consenso Pipelined: Gestisce il quorum tramite log binari e batching."""

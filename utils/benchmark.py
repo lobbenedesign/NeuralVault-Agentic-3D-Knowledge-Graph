@@ -95,3 +95,24 @@ class ModelBenchmarkTracker:
         except Exception as e:
             print(f"⚠️ [Benchmark] Get latest error: {e}")
             return []
+
+    def get_full_history(self, limit: int = 100) -> List[Dict]:
+        """[Phase 4] Recupera la cronologia completa delle missioni da DuckDB."""
+        try:
+            res = self.vault._prefilter.con.execute("""
+                SELECT 
+                    model_name, 
+                    task_type as task, 
+                    duration_ms as latency, 
+                    tokens_per_sec as tps, 
+                    ram_usage_mb as ram, 
+                    gen_quality as quality,
+                    epoch(timestamp) as timestamp
+                FROM model_benchmarks 
+                ORDER BY timestamp DESC 
+                LIMIT ?
+            """, [limit]).fetchdf()
+            return res.to_dict('records')
+        except Exception as e:
+            print(f"⚠️ [Benchmark] History error: {e}")
+            return []

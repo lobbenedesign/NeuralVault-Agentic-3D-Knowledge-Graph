@@ -1,6 +1,17 @@
 import os
+import sys
+
+# 🛡️ [Mac/Sovereign] Aggressive Environment Stabilization
+# Must be set BEFORE any other imports to silence OBJC/FFmpeg conflicts
+os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+os.environ["OBJC_PRINT_REPLACED_CLASSES"] = "NO"
+os.environ["AV_LOG_LEVEL"] = "quiet"
+os.environ["OPENCV_LOG_LEVEL"] = "OFF"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+os.environ["PYAV_SKIP_DLOPEN_CHECK"] = "1"
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
 import logging
-# [SOVEREIGN LOGGING] Silencing verbosity from framework libraries
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("transformers").setLevel(logging.ERROR)
 logging.getLogger("huggingface_hub").setLevel(logging.ERROR)
@@ -27,7 +38,6 @@ from datetime import datetime, date
 from contextlib import asynccontextmanager
 from typing import List, Dict, Optional, Any
 
-import os
 import sys
 
 # v2.6.0: Environment Stabilization & Warning Suppression
@@ -36,7 +46,6 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false" # Evita warning di deadlock in f-
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE" # Per librerie Intel/OpenMP
 
 # Silenzia i warning di caricamento di sentence-transformers / transformers
-import logging
 logging.getLogger("transformers.modeling_utils").setLevel(logging.ERROR)
 
 # v21.2: Suppress OBJC Duplicate warnings for cleaner log
@@ -44,6 +53,13 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
 
 import uvicorn
+import httpx
+import os
+
+# 🛡️ [Mac Fix] Suppress FFmpeg duplicate implementation warnings
+os.environ["OPENCV_VIDEOIO_PRIORITY_BACKEND"] = "0"
+os.environ["KINETIC_FFMPEG_FIX"] = "1"
+
 import torch
 from fastapi import FastAPI, UploadFile, File, Request, Depends, HTTPException, BackgroundTasks, Header
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -75,17 +91,43 @@ def json_serializer(obj):
     try: return float(obj)
     except: return str(obj)
 
+# --- 🛡️ SOVEREIGN SHUTDOWN PROTOCOL (v4.0) ---
+_shutdown_lock = threading.Lock()
+_is_shutting_down = False
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Arresto controllato via lifecycle FastAPI."""
+    global _is_shutting_down
+    with _shutdown_lock:
+        if _is_shutting_down: return
+        _is_shutting_down = True
+        
+    print("\n🛑 [Lifecycle] Eutanasia Digitale in corso...")
+    if hasattr(app.state, 'lab') and app.state.lab:
+        app.state.lab.stop()
+    if engine:
+        engine.close()
+    print("✅ [Lifecycle] Core spento.")
+
 def signal_handler(sig, frame):
-    print("\n🛑 [NeuralVault] Eutanasia Digitale in corso... Ciao!")
+    """Handler di emergenza per segnali OS (SIGINT/SIGTERM)."""
+    global _is_shutting_down
+    # Se il lifecycle ha già iniziato lo shutdown, usciamo e basta
+    with _shutdown_lock:
+        if _is_shutting_down: 
+            # Diamo tempo al lifecycle di finire o forziamo l'uscita se sigint ripetuto
+            os._exit(0)
+        _is_shutting_down = True
+
+    print(f"\n⚠️ [Signal {sig}] Interruzione forzata ricevuta.")
     try:
-        if engine: 
-            # Tentativo di chiusura pulita DuckDB prima del kill
-            try:
-                if hasattr(engine, '_prefilter'):
-                    engine._prefilter.con.close()
-            except Exception as e:
-                print(f"⚠️ [Gardening Error] {e}")
+        if hasattr(app.state, 'lab') and app.state.lab:
+            app.state.lab.stop()
+        if engine:
+            engine.close()
     except: pass
+    
     os._exit(0)
 
 # Aggancio segnali per Mac/Linux
@@ -104,6 +146,23 @@ app.add_middleware(
 engine = None
 engine_lock = asyncio.Lock()
 VAULT_KEY = "vault_secret_aura_2026"
+
+def get_custom_models_path():
+    storage_dir = Path(os.getenv("NEURALVAULT_DATA_DIR", "./vault_data"))
+    if not storage_dir.exists(): storage_dir.mkdir(parents=True, exist_ok=True)
+    return storage_dir / "custom_models.json"
+
+def load_custom_models():
+    path = get_custom_models_path()
+    if path.exists():
+        try:
+            with open(path, "r") as f: return json.load(f)
+        except: return {}
+    return {}
+
+def save_custom_models(models):
+    path = get_custom_models_path()
+    with open(path, "w") as f: json.dump(models, f, indent=2)
 
 # v21.0: Idle Tracking & Background Consolidation
 app.state.last_activity = time.time()
@@ -203,7 +262,7 @@ async def neural_dreaming_loop():
     batch_size = 200 
     offset = 0
     
-    while True:
+    while not _is_shutting_down:
         try:
             now = time.time()
             idle_time = now - app.state.last_activity
@@ -285,36 +344,68 @@ async def startup_event():
     storage_dir = os.getenv("NEURALVAULT_DATA_DIR", "./vault_data")
     engine = NeuralVaultEngine(data_dir=storage_dir)
     
-    # Inizializza Neural Lab una sola volta
+    # 1. Load Swarm Settings first
+    from neural_lab import SwarmSettingsManager
+    settings_manager = SwarmSettingsManager(storage_dir)
+    engine.settings = settings_manager # Shared access
+    base_url = settings_manager.get("ollama_url")
+    
+    # 2. Initialize Multimodal Engine with dynamic URL & Routing Settings
+    app.state.mm_processor = MultimodalSynapseProcessor(ollama_url=base_url, settings=settings_manager)
+    engine.mm_processor = app.state.mm_processor # Attach for health check
+    
+    # 3. Initialize Neural Lab (Orchestrator)
     app.state.lab = NeuralLabOrchestrator(engine)
     
-    # Gestione tabelle Agent007: delegata alla classe Agent007Intelligence in engine.agent007
-    # Se necessario, aggiungiamo colonne mancanti in modo proattivo
+    # 4. Agent007 Schema Gardening
     try:
         engine.agent007.con.execute("ALTER TABLE agent007_entities ADD COLUMN attributes JSON")
-    except: pass
-    try:
         engine.agent007.con.execute("ALTER TABLE agent007_entities ADD COLUMN relevance FLOAT")
     except: pass
     
-    app.state.mm_processor = MultimodalSynapseProcessor()
-    
-    # Pre-load settings
+    # 5. Pre-load UI settings
     settings = await get_system_settings()
     app.state.auto_evolve_active = settings.get("auto_evolve_active", False)
     
-    # Start the Neural Dreaming background loop
+    # Start background loops
     asyncio.create_task(neural_dreaming_loop())
+    asyncio.create_task(shard_maintenance_loop())
+
+async def shard_maintenance_loop():
+    """v3.0: Automated Shard Maintenance (Cloning & Backup). Runs every 30 minutes."""
+    iteration = 0
+    while not _is_shutting_down:
+        try:
+            if engine and hasattr(engine, 'shards'):
+                # 1. Incremental Backup (Every 30m)
+                print("🛡️ [Maintenance] Running automated shard backup...")
+                storage_dir_path = Path(os.getenv("NEURALVAULT_DATA_DIR", "./vault_data"))
+                await asyncio.to_thread(engine.shards.auto_backup, storage_dir_path)
+                
+                # 2. Full Shard Cloning (Every 12 hours = 24 iterations of 30m)
+                if iteration % 24 == 0:
+                    shards = getattr(engine.shards, 'active_shards', {})
+                    if shards:
+                        print(f"🛡️ [Maintenance] Creating clones for {len(shards)} shards...")
+                        for shard_id in list(shards.keys()):
+                            await asyncio.to_thread(engine.shards.clone_shard, shard_id)
+                    else:
+                        print("🛡️ [Maintenance] No active shards to clone.")
+                
+                # Signal on blackboard
+                if hasattr(app.state, 'lab'):
+                    msg = "📦 [ShardGuard] Backup automatico completato."
+                    if iteration % 24 == 0: msg = "🛡️ [ShardGuard] Clone e Backup completati."
+                    sig = SynapticSignal("SYSTEM", AgentRole.GUARDIAN, msg, SignalType.SYSTEM_NOTIFICATION)
+                    app.state.lab.blackboard.post(sig)
+        except Exception as e:
+            print(f"❌ [Maintenance Error] {e}")
+            
+        iteration += 1
+        await asyncio.sleep(1800) # 30 minutes
 
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    global engine
-    if engine:
-        print("🛑 [System] Shutting down NeuralVault Engine gracefully...")
-        engine.close()
-    print(f"🧬 NeuralVault: Hardware Trace -> CUDA: {torch.cuda.is_available()} | METAL: {torch.backends.mps.is_available()}")
-    print("🚀 Aura Nexus: Initializing NeuralVault Engine v2.5.5 Sovereign...")
+# Static Files (Dashboard)
 
 # Static Files (Dashboard)
 app.mount("/static", StaticFiles(directory="dashboard/static"), name="static")
@@ -546,6 +637,73 @@ async def client_log(request: Request):
     except: pass
     return {"status": "ok"}
 
+# --- MULTIMODAL BRIDGE ENDPOINTS (v4.0) ---
+
+@app.post("/api/multimodal/upload")
+async def upload_multimodal(file: UploadFile = File(...), api_key: str = Header(None)):
+    """Ingestione Drag-and-Drop: Caricamento e processamento di Immagini/Audio/Video."""
+    if api_key != VAULT_KEY:
+        raise HTTPException(status_code=403, detail="Invalid Vault Key")
+    
+    if engine is None:
+        raise HTTPException(status_code=503, detail="Neural Engine Offline")
+
+    try:
+        # 1. Salvataggio temporaneo
+        temp_dir = engine.data_dir / "temp_uploads"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        file_path = temp_dir / f"{uuid.uuid4().hex}_{file.filename}"
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        # 2. Ingestione nel Vault (Estrae trascrizioni, descrizioni e vettori)
+        nodes = await engine.upsert_multimodal(str(file_path))
+        
+        # 3. Pulizia (Opcionale, potremmo voler tenere i file originali)
+        # os.remove(file_path) 
+        
+        return {
+            "status": "success",
+            "ingested_nodes": len(nodes),
+            "source": file.filename,
+            "message": f"Ingeriti {len(nodes)} segmenti multimodali."
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- SHARDING & CLONING AUTOMATION (v1.0) ---
+
+@app.post("/api/sharding/clone")
+async def manual_shard_clone(api_key: str = Depends(get_api_key)):
+    """Clonazione manuale dello shard attivo (Snapshot atomico)."""
+    if not engine or not hasattr(engine, 'shards'):
+        raise HTTPException(status_code=503, detail="Sharding System Offline")
+    
+    try:
+        shard_id = engine.shards.clone_shard()
+        return {"status": "success", "shard_id": shard_id, "message": "Clonazione shard completata."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/sharding/backup")
+async def manual_shard_backup(api_key: str = Depends(get_api_key)):
+    """Trigger manuale per il backup fisico dei segmenti (.ael, .db)."""
+    if not engine or not hasattr(engine, 'shards'):
+        raise HTTPException(status_code=503, detail="Sharding System Offline")
+    
+    try:
+        engine.shards.auto_backup()
+        return {"status": "success", "message": "Backup fisico completato."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+        level = data.get("level", "INFO")
+        print(f"🖥️ [Interactive HUD] {msg}")
+    except: pass
+    return {"status": "ok"}
+
 @app.post("/api/files/upload")
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...), api_key: str = Depends(get_api_key)):
@@ -592,8 +750,9 @@ async def install_model(request: Request, background_tasks: BackgroundTasks, api
             
             for i in range(max_retries):
                 try:
-                    async with httpx.AsyncClient() as client:
-                        r = await client.get("http://localhost:11434/api/tags")
+                    async with httpx.AsyncClient(timeout=10.0) as client:
+                        base_url = app.state.lab.settings.get("ollama_url") if hasattr(app.state, 'lab') else "http://127.0.0.1:11434"
+                        r = await client.get(f"{base_url}/api/tags")
                         if r.status_code == 200:
                             ollama_ready = True
                             break
@@ -640,7 +799,8 @@ async def install_model(request: Request, background_tasks: BackgroundTasks, api
             # 2. Avvio PULL reale
             install_progress[model_name]["status"] = "pulling"
             async with httpx.AsyncClient(timeout=None) as client:
-                async with client.stream("POST", "http://localhost:11434/api/pull", json={"name": model_name}) as resp:
+                base_url = app.state.lab.settings.get("ollama_url") if hasattr(app.state, 'lab') else "http://127.0.0.1:11434"
+                async with client.stream("POST", f"{base_url}/api/pull", json={"name": model_name}) as resp:
                     async for line in resp.aiter_lines():
                         if not line: continue
                         chunk = json.loads(line)
@@ -667,7 +827,8 @@ async def install_model(request: Request, background_tasks: BackgroundTasks, api
 
             # 3. Post-Pull Verification
             async with httpx.AsyncClient(timeout=10.0) as client:
-                v_resp = await client.get("http://127.0.0.1:11434/api/tags")
+                base_url = app.state.lab.settings.get("ollama_url") if hasattr(app.state, 'lab') else "http://127.0.0.1:11434"
+                v_resp = await client.get(f"{base_url}/api/tags")
                 if v_resp.status_code == 200:
                     models = [m["name"] for m in v_resp.json().get("models", [])]
                     # Check both exact match and without :latest
@@ -696,136 +857,319 @@ async def get_install_progress(api_key: str = Depends(get_api_key)):
 @app.get("/api/models/benchmarks")
 async def get_model_benchmarks(api_key: str = Depends(get_api_key)):
     """Restituisce telemetria avanzata delle performance LLM locali."""
-    if engine and hasattr(engine, 'benchmarks'):
-        return {"benchmarks": engine.benchmarks.get_stats()}
-    return {"benchmarks": []}
+    if hasattr(app.state, 'lab') and hasattr(app.state.lab, 'benchmarks'):
+        stats = app.state.lab.benchmarks.get_stats()
+        if not stats: 
+            return {"benchmarks": [], "radar": [50, 50, 50, 50, 50]}
+            
+        top = stats[0]
+        # Calibrazione Sovrana (v3.1): Benchmarks reali normalizzati
+        # SPEED: Target 40 TPS | ACCURACY: Stability + Penality Latency | DENSITY: RAM Impact (16GB Scale)
+        radar_data = [
+            min(100, (top.get('tps', 0) / 40.0) * 100),         # SPEED
+            min(100, top.get('stability', 50) * 0.9 + (2000 / (top.get('latency', 2000) + 1)) * 10), # ACCURACY
+            top.get('stability', 50),                           # STABILITY
+            min(100, (top.get('ram', 0) / 16384) * 100),        # DENSITY (MB)
+            min(100, (top.get('stability', 50) * 0.7 + (top.get('tps', 0) / 40.0) * 30)) # REASONING
+        ]
+        return {
+            "benchmarks": stats, 
+            "radar": radar_data,
+            "history": app.state.lab.benchmarks.get_full_history()[:50] # Ultime 50 missioni
+        }
+    return {"benchmarks": [], "radar": [0,0,0,0,0], "history": []}
 
-# --- NEW: NEURAL MODEL CATALOG (v3.0 Sovereign) ---
-# --- NEW: NEURAL MODEL CATALOG (v3.5 High-Precision) ---
+# --- 🧪 EVOLUTION MODE ENDPOINTS ---
+@app.get("/api/lab/evolution/suggestions")
+async def get_evolution_suggestions(api_key: str = Depends(get_api_key)):
+    """Recupera la cronologia dei suggerimenti evolutivi dello sciame."""
+    if hasattr(app.state, 'lab') and hasattr(app.state.lab, 'evolution_advise'):
+        return app.state.lab.evolution_advise.history
+    return []
+
+@app.post("/api/lab/evolution/feedback")
+async def record_evolution_feedback(request: Request, api_key: str = Depends(get_api_key)):
+    """Registra il feedback di rinforzo (Implementato/Scartato/Falso Positivo)."""
+    data = await request.json()
+    sid = data.get("id")
+    feedback = data.get("feedback")
+    if hasattr(app.state, 'lab') and hasattr(app.state.lab, 'evolution_advise'):
+        success = app.state.lab.evolution_advise.record_feedback(sid, feedback)
+        return {"status": "recorded" if success else "not_found"}
+    return {"status": "error"}
+
+@app.get("/api/lab/wisdom/all")
+async def get_wisdom_all(api_key: str = Depends(get_api_key)):
+    """Ritorna tutto l'apprendimento accumulato dagli agenti."""
+    if not hasattr(app.state, 'lab'): return {"approved": [], "rejected": []}
+    return app.state.lab.wisdom.lessons
+
+@app.post("/api/lab/settings")
+async def update_lab_settings(req: Dict, api_key: str = Depends(get_api_key)):
+    """Aggiorna le impostazioni dello Swarm (es. Supreme Court Judges, Evolution Mode)."""
+    if not hasattr(app.state, 'lab'): raise HTTPException(status_code=500, detail="Lab not initialized")
+    
+    # Aggiorna il manager persistente
+    app.state.lab.settings.update(req)
+    
+    # 🔄 Trigger Mode Logic
+    if "auto_mode" in req:
+        status = "AUTONOMA" if req["auto_mode"] else "MANUALE"
+        sig = SynapticSignal("ORCHESTRATOR", AgentRole.MISSION_ARCHITECT, f"⚠️ SUPERVISIONE CAMBIATA: Ora in modalità {status}.", SignalType.SYSTEM_NOTIFICATION)
+        app.state.lab.blackboard.post(sig)
+
+    # Note: frontend might send 'codebase_bridging' OR 'evolution_mode'
+    is_evol = req.get("evolution_mode") or req.get("codebase_bridging")
+    if is_evol is not None:
+        if is_evol:
+            # Activate Bridger with current working directory (v17.6: Access via .bridger.project_root)
+            from pathlib import Path
+            app.state.lab.bridger_agent.bridger.project_root = Path(os.getcwd())
+            msg = "🚀 EVOLUTION MODE ATTIVATA: Ibridazione codebase/web iniziata."
+        else:
+            app.state.lab.bridger_agent.bridger.project_root = None # Research mode
+            msg = "🛡️ RESEARCH MODE ATTIVATA: Focus esclusivo sui dati esterni."
+        
+        app.state.lab.blackboard.post(SynapticSignal("ORCHESTRATOR", AgentRole.MISSION_ARCHITECT, msg, SignalType.SYSTEM_NOTIFICATION))
+
+    return {"status": "success", "settings": app.state.lab.settings.settings}
+
+@app.post("/api/lab/wisdom/record")
+async def record_human_wisdom(data: dict, api_key: str = Depends(get_api_key)):
+    """Human-in-the-loop: Inserisce manualmente un'istruzione di protezione o rifiuto."""
+    if not hasattr(app.state, 'lab'): raise HTTPException(status_code=500)
+    
+    text = data.get("text")
+    success = data.get("approve", False)
+    reason = data.get("reason", "Human Override")
+    
+    app.state.lab.wisdom.add_lesson("HUMAN", success, text, reason)
+    return {"status": "recorded", "category": "approved" if success else "rejected"}
+
+# --- NEW: NEURAL MODEL CATALOG (v4.0 Sovereign - Categorized) ---
 MODEL_CATALOG = {
-    # ── ELITE NANO (Under 2GB) ──────────────────────────────────────────
+    # ── CATEGORIA: [TINY_KINETIC] - Leggerissimi & Ultra-Veloci (0-2GB) ────────────────
     "llama3.2:1b": {
-        "name": "Llama 3.2 (1B)", "size": "1.3GB", "category": "Nano", 
-        "pros": "Velocità estrema, zero lag", "cons": "Cognizione base", 
-        "caveau": "L'Ombra Silenziosa per il background.", "forza": "Perfetto per task costanti senza pesare sulla RAM.",
-        "synergy": ["phi3:latest"], "task": "Silent Assistant",
-        "ram": "2GB RAM", "cpu": "Apple Silicon / 2 Cores", "vram": "1GB VRAM"
+        "name": "Llama 3.2 (1B)", "size": "1.3GB", "category": "TINY_KINETIC", 
+        "pros": "Velocità estrema (100+ t/s), zero lag", "cons": "Cognizione base", 
+        "caveau": "L'Ombra Silenziosa per il background.", "forza": "Parsing testuale rapido e routing di segnali.",
+        "synergy": ["phi3:latest"], "task": "Fast Signal Routing",
+        "ram": "2GB RAM", "cpu": "2 Cores", "vram": "1GB",
+        "capabilities": ["Text Summarization", "Format Conversion", "Token Filtering", "Intent Detection"]
     },
-    "qwen2.5:1.5b": {
-        "name": "Qwen 2.5 (1.5B)", "size": "986MB", "category": "Nano-Reasoning", 
-        "pros": "Matematica e logica densa", "cons": "Vocabolario compatto", 
-        "caveau": "Il Re dei piccoli per logica pura.", "forza": "Ragionamento superiore a molti 3B.",
-        "synergy": ["phi4:latest"], "task": "Technical Data",
-        "ram": "2GB RAM", "cpu": "Any CPU / 2 Cores"
-    },
-    "smollm2:1.7b": {
-        "name": "SmolLM2 1.7B", "size": "1.0GB", "category": "Nano-Speed", 
-        "pros": "Addestrato su dati purissimi", "cons": "Poca conoscenza enciclopedica", 
-        "caveau": "Il velocista di Hugging Face.", "forza": "Ideale come agente di smistamento rapido.",
-        "synergy": ["mistral:latest"], "task": "Fast Routing",
-        "ram": "2GB RAM", "cpu": "Any CPU / 2 Cores"
-    },
-    "gemma2:2b": {
-        "name": "Gemma 2 (2B)", "size": "1.6GB", "category": "Nano-Elite", 
-        "pros": "Tecnologia Google DeepMind", "cons": "Richiede prompt precisi", 
-        "caveau": "Qualità Google nel palmo della mano.", "forza": "Incredibilmente eloquente per la taglia.",
-        "synergy": ["deepseek-r1:7b"], "task": "Premium Chat",
-        "ram": "4GB RAM", "cpu": "Apple Silicon / 4 Cores"
-    },
-    
-    # ── THE ULTIMATE SOVEREIGN (v4.0 Next-Gen) ─────────────────────────
-    "gemma:4-26b": {
-        "name": "Gemma 4 (26B-A4B)", "size": "16.1GB", "category": "Sovereign-Master", 
-        "pros": "Capacità di ragionamento multi-agente nativa", "cons": "Richiede 32GB+ RAM", 
-        "caveau": "L'Orchestratore Supremo della Conoscenza.", "forza": "Capacità di coordinare interi swarm di IA minori.",
-        "synergy": ["deepseek-r1:14b", "llama3.2:1b"], "task": "Global Orchestration",
-        "url": "https://huggingface.co/google/gemma-4-26B-A4B",
-        "ram": "32GB RAM", "cpu": "Apple Studio/Ultra / 12 Cores", "vram": "16GB VRAM"
-    },
-    
-    # ── DEEPSEEK REASONING (The New Standard) ─────────────────────────
-    "deepseek-r1:1.5b": {
-        "name": "DeepSeek R1 (1.5B)", "size": "1.1GB", "category": "Reasoning-UPLINK", 
-        "pros": "Chain of Thought su mini-scala", "cons": "Pochi step di riflessione", 
-        "caveau": "Primo assaggio di CoT (Chain of Thought).", "forza": "Risposta istantanea con logica visibile.",
-        "synergy": ["qwen2.5:1.5b"], "task": "Instant Logic",
-        "ram": "4GB RAM", "cpu": "Apple Silicon / 4 Cores"
-    },
-    "deepseek-r1:7b": {
-        "name": "DeepSeek R1 (7B)", "size": "4.7GB", "category": "Reasoning-Master", 
-        "pros": "Logica di livello o1-preview", "cons": "Più lento dei modelli standard", 
-        "caveau": "L'ottimale per M1 16GB.", "forza": "Capacità analitica d'élite sotto i 5GB.",
-        "synergy": ["mistral:latest"], "task": "Deep Analysis",
-        "ram": "8GB RAM", "cpu": "Apple Silicon / 8 Cores", "vram": "6GB VRAM"
-    },
-    "deepseek-r1:14b": {
-        "name": "DeepSeek R1 (14B)", "size": "9.0GB", "category": "Reasoning-Peak", 
-        "pros": "Potenza di ragionamento bruta", "cons": "Occupa molta RAM (10GB+)", 
-        "caveau": "Il massimo raggiungibile fluidamente.", "forza": "Il 'Claude-Killer' locale per eccellenza.",
-        "synergy": ["phi4:latest"], "task": "Scientific Research",
-        "ram": "16GB RAM", "cpu": "Apple M1 Pro/Max / 10 Cores"
-    },
-
-    # ── NVIDIA NEMOTRON SERIES (Hardware Optimized) ─────────────────────
-    "nemotron-mini:latest": {
-        "name": "NVIDIA Nemotron-Mini-4B", "size": "2.8GB", "category": "NVIDIA-Sovereign", 
-        "pros": "Dati sintetici NVIDIA di alta qualità", "cons": "Fine-tuning limitato", 
-        "caveau": "Precisione chirurgica in task brevi.", "forza": "Modello ultra-efficiente per agenti di tool-use.",
-        "synergy": ["llama3.2:1b"], "task": "Agentic Tasks"
-    },
-    "nemotron:latest": {
-        "name": "NVIDIA Nemotron-70B", "size": "39GB", "category": "NVIDIA-Elite", 
-        "pros": "Superiore a Llama-3-70B in molti benchmark", "cons": "Richiede 64GB+ Unified Memory / VRAM", 
-        "caveau": "Il Titano per Apple Studio/Ultra.", "forza": "Capacità di dialogo estesa e naturalezza estrema.",
-        "synergy": ["deepseek-r1:32b"], "task": "Enterprise Logic"
-    },
-
-    # ── GEMMA 2 EVOLUTION (The Standard) ───────────────────────────────
-    "gemma2:9b": {
-        "name": "Gemma 2 (9B)", "size": "5.4GB", "category": "Gemma-Core", 
-        "pros": "Equilibrio perfetto velocità/qualità", "cons": "Tende a essere prolisso", 
-        "caveau": "Lo standard d'oro per M1/M2/M3.", "forza": "Incredibile nel seguire istruzioni complesse.",
-        "synergy": ["mistral:latest"], "task": "Balanced Creative"
-    },
-    "gemma2:27b": {
-        "name": "Gemma 2 (27B)", "size": "16GB", "category": "Gemma-Peak", 
-        "pros": "Intelligenza di livello 70B in 27B", "cons": "Pesante per Mac con 16GB RAM", 
-        "caveau": "Il 'Sweet Spot' per Mac con 32GB RAM.", "forza": "Il miglior rapporto intelligenza/parametri sul mercato.",
-        "synergy": ["phi4:latest"], "task": "Advanced Knowledge",
-        "ram": "32GB RAM", "cpu": "Apple Ultra / 12 Cores", "vram": "16GB VRAM"
-    },
-    
-    # ── BALANCED & SPECIALISTS ──────────────────────────────────────────
-    "mistral:latest": {
-        "name": "Mistral 7B", "size": "4.1GB", "category": "Sovereign-Core", 
-        "pros": "Affidabilità Totale", "cons": "Standard 2024", 
-        "caveau": "Il fulcro del tuo cervello digitale.", "forza": "Sintesi eccelsa e stabilità granitica.",
-        "synergy": ["deepseek-r1:7b"], "task": "Vault Indexing"
-    },
-    "phi4:latest": {
-        "name": "Phi-4 Specialist", "size": "9.1GB", "category": "Advanced-Logic", 
-        "pros": "Precisione Scientifica Microsoft", "cons": "Molto esigente", 
-        "caveau": "L'analista di dati pesanti.", "forza": "Logica cristallina su problemi complessi.",
-        "synergy": ["qwen2.5:1.5b"], "task": "Scientific Mode"
-    },
-    "qwen3.6:35b-a3b": {
-        "name": "Qwen 3.6 (35B-A3B)", "size": "4.2GB", "category": "Efficient-MoE",
-        "pros": "Mixture-of-Experts (3B attivi), Prestazioni d'élite", "cons": "VRAM spikes occasionali",
-        "caveau": "Il Cavallo di Troia semantico: piccolo fuori, gigante dentro.", "forza": "Rapporto intelligenza/RAM senza precedenti.",
-        "synergy": ["llama3.2:1b", "deepseek-r1:7b"], "task": "Advanced Synthesis"
+    "qwen2.5:0.5b": {
+        "name": "Qwen 2.5 (0.5B)", "size": "394MB", "category": "TINY_KINETIC", 
+        "pros": "Il più piccolo al mondo con logica reale", "cons": "Memoria a breve termine limitata", 
+        "caveau": "Il micro-cervello per task atomici.", "forza": "Esecuzione istantanea su CPU datate.",
+        "synergy": ["llama3.2:1b"], "task": "Atomic Logic",
+        "ram": "1GB RAM", "cpu": "1 Core",
+        "capabilities": ["Micro-Classification", "Language ID", "Basic Logic", "Text Cleaning"]
     },
     "ministral:latest": {
-        "name": "Ministral 3B", "size": "2.1GB", "category": "Balanced-Elite", 
-        "pros": "Equilibrio Mistral AI", "cons": "Nuova architettura", 
-        "caveau": "Il miglior compromesso peso/potenza.", "forza": "Qualità 7B in soli 2GB di spazio.",
-        "synergy": ["smollm2:1.7b"], "task": "Hybrid Reasoning"
+        "name": "Ministral 3B", "size": "2.1GB", "category": "TINY_KINETIC", 
+        "pros": "Stato dell'arte per modelli sotto i 5B", "cons": "Finestra di contesto 128k richiede molta RAM", 
+        "caveau": "Il piccolo Titano di Mistral.", "forza": "Densità di intelligenza estrema e logica impeccabile.",
+        "synergy": ["mistral:latest"], "task": "Edge Intelligence",
+        "ram": "4GB RAM", "vram": "2GB",
+        "capabilities": ["High-Density Logic", "Complex Reasoning", "Large Context (128k)", "Italian Mastery"]
     },
-    # ── AGENTIC ENGINES (Extra) ─────────────────────────────────────────
-    "codellama:latest": {
-        "name": "CodeLlama 7B", "size": "3.8GB", "category": "Coding",
-        "pros": "Autocompletamento esperto", "cons": "Meno performante in chat generalista",
-        "caveau": "L'ingegnere del Vault.", "forza": "Parsing di codice multilingua.",
-        "synergy": ["qwen2.5:1.5b"], "task": "Code Analysis"
+    "deepseek-r1:1.5b": {
+        "name": "DeepSeek R1 (1.5B Distill)", "size": "1.1GB", "category": "TINY_KINETIC", 
+        "pros": "Ragionamento logico estremo in 1GB", "cons": "Più lento dei modelli non-R1", 
+        "caveau": "Il Pensatore in miniatura.", "forza": "Risoluzione di problemi matematici e logici complessi.",
+        "synergy": ["qwen2.5:1.5b"], "task": "Logical Reasoning",
+        "ram": "2GB RAM", "vram": "1GB",
+        "capabilities": ["Complex Reasoning", "Math Solving", "Step-by-step Logic", "Code Analysis"]
+    },
+    "deepseek-r1:8b": {
+        "name": "DeepSeek R1 (8B Distill - Llama)", "size": "4.7GB", "category": "SOVEREIGN_MID_CORE", 
+        "pros": "Logica Llama 3.1 potenziata dal ragionamento R1", "cons": "Richiede 8GB RAM libera", 
+        "caveau": "Il Saggio della fascia media.", "forza": "Scrittura creativa e debug di codice complesso.",
+        "synergy": ["mistral:latest"], "task": "Advanced Reasoning",
+        "ram": "8GB RAM", "vram": "4GB",
+        "capabilities": ["Expert Coding", "Philosophical Reasoning", "Complex Instructions", "Multilingual Logic"]
+    },
+    "llama3.2:3b": {
+        "name": "Llama 3.2 (3B)", "size": "2.0GB", "category": "TINY_KINETIC", 
+        "pros": "Il miglior rapporto intelligenza/peso di Meta", "cons": "Meno profondo della versione 8B", 
+        "caveau": "L'Assistente Bilanciato.", "forza": "Comprensione del linguaggio naturale e chat fluida.",
+        "synergy": ["phi3.5:latest"], "task": "Balanced Chat",
+        "ram": "4GB RAM", "vram": "2GB",
+        "capabilities": ["General Chat", "Summarization", "Entity Extraction", "Intent Detection"]
+    },
+    "smollm2:1.7b": {
+        "name": "SmolLM2 (1.7B)", "size": "1.0GB", "category": "TINY_KINETIC", 
+        "pros": "Velocità di risposta istantanea", "cons": "Conoscenza enciclopedica limitata", 
+        "caveau": "Il Lampo di HuggingFace.", "forza": "Task atomici e classificazione rapida in background.",
+        "synergy": ["llama3.2:1b"], "task": "Fast Processing",
+        "ram": "2GB RAM", "vram": "1GB",
+        "capabilities": ["Text Classification", "Keyword Extraction", "Fast Summaries", "Log Parsing"]
+    },
+    "qwen2.5:1.5b": {
+        "name": "Qwen 2.5 (1.5B)", "size": "1.2GB", "category": "TINY_KINETIC", 
+        "pros": "Efficienza estrema con intelligenza da 7B", "cons": "Capacità ridotte per task lunghi", 
+        "caveau": "La Scintilla Neurale.", "forza": "Routing intelligente e parsing istantaneo.",
+        "synergy": ["llama3.2:1b"], "task": "Micro-Logic",
+        "ram": "2GB RAM", "vram": "1GB",
+        "capabilities": ["Smart Routing", "Text Cleanup", "Format Validation", "Fast Chat"]
+    },
+    "gemma2:2b": {
+        "name": "Gemma 2 (2B)", "size": "1.8GB", "category": "TINY_KINETIC", 
+        "pros": "Architettura Google v2, ultra-compressa", "cons": "Tende alla brevità", 
+        "caveau": "Il Nucleo di Cristallo.", "forza": "Spiegazioni concise e logica matematica solida in formato pocket.",
+        "synergy": ["qwen2.5:1.5b"], "task": "Pocket Reasoning",
+        "ram": "4GB RAM", "vram": "2GB",
+        "capabilities": ["Math Solving", "Concise Summaries", "Code Snippets", "Logical Filters"]
+    },
+    
+    # ── CATEGORIA: [MULTIMODAL_SENSORY] - Visione, Video & Immagini ───────────────────
+    "moondream:latest": {
+        "name": "Moondream 2", "size": "1.6GB", "category": "MULTIMODAL_SENSORY", 
+        "pros": "Visione eccelsa in formato Nano", "cons": "Solo immagini statiche", 
+        "caveau": "L'occhio vigile del Vault.", "forza": "Descrizione visiva chirurgica e Q&A su immagini.",
+        "synergy": ["florence2:latest"], "task": "Visual Reasoning",
+        "ram": "4GB RAM", "vram": "2GB",
+        "capabilities": ["Image Captioning", "Visual Q&A", "Object Identification", "OCR Basic"]
+    },
+    "phi3:vision": {
+        "name": "Phi-3.5 Vision (4.2B)", "size": "2.6GB", "category": "MULTIMODAL_SENSORY", 
+        "pros": "Ragionamento logico applicato alla visione", "cons": "Lento nel caricamento immagini", 
+        "caveau": "L'Analista Visivo Logico.", "forza": "Interpretazione di grafici, diagrammi e screenshot tecnici.",
+        "synergy": ["florence2:latest"], "task": "Technical Vision",
+        "ram": "6GB RAM", "vram": "4GB",
+        "capabilities": ["Chart Reading", "Diagram Analysis", "Technical OCR", "Visual Reasoning"]
+    },
+    "florence2:latest": {
+        "name": "Microsoft Florence-2", "size": "1.1GB", "category": "MULTIMODAL_SENSORY", 
+        "pros": "Leader mondiale nel Grounding visivo", "cons": "Richiede Python Runtime", 
+        "caveau": "L'Analista Forense delle Immagini.", "forza": "Individuazione coordinate oggetti e OCR denso.",
+        "synergy": ["moondream:latest"], "task": "Visual Forensics",
+        "ram": "4GB RAM", "vram": "2GB",
+        "capabilities": ["Detailed Captioning", "Object Detection (BBox)", "Dense OCR", "Region Description"]
+    },
+    "qwen2-vl:2b": {
+        "name": "Qwen2-VL (2B)", "size": "2.4GB", "category": "MULTIMODAL_SENSORY", 
+        "pros": "Supporto Video Nativo", "cons": "Richiede molta VRAM per video lunghi", 
+        "caveau": "Il Cinema neurale.", "forza": "Comprensione di sequenze video e multi-immagine.",
+        "synergy": ["imagebind:native"], "task": "Video Synthesis",
+        "ram": "8GB RAM", "vram": "4GB",
+        "capabilities": ["Video Action Recognition", "Event Sequencing", "Visual Storytelling", "Complex OCR"]
+    },
+    "llava:7b": {
+        "name": "LLaVA v1.6 (7B)", "size": "4.5GB", "category": "MULTIMODAL_SENSORY", 
+        "pros": "Standard Industry Vision", "cons": "Lento su hardware medio", 
+        "caveau": "Il ponte tra testo e immagine.", "forza": "Ragionamento astratto su scene complesse.",
+        "synergy": ["mistral:latest"], "task": "Visual Logic",
+        "ram": "12GB RAM", "vram": "8GB",
+        "capabilities": ["Deep Visual Analysis", "Chart Reading", "Document Parsing", "Common Sense Vision"]
+    },
+    "imagebind:native": {
+        "name": "Meta ImageBind (Lib)", "size": "2.1GB", "category": "MULTIMODAL_SENSORY", 
+        "pros": "Audio/Video/Thermal/Depth in un unico spazio", "cons": "Sola Ingestione (No Chat)", 
+        "caveau": "Il Sistema Nervoso Centrale.", "forza": "Creazione di vettori 1024D cross-modali.",
+        "synergy": ["whisper:native"], "task": "Neural Ingestion",
+        "ram": "8GB RAM", "vram": "4GB (MPS Opt)",
+        "capabilities": ["Cross-Modal Search", "Audio-to-Image", "Video-to-Text Alignment", "Thermal Data Sync"]
+    },
+    "internvl2:latest": {
+        "name": "InternVL 2 (VLM)", "size": "12GB", "category": "MULTIMODAL_SENSORY", 
+        "pros": "Stato dell'arte nella visione open source", "cons": "Esigente in termini di VRAM", 
+        "caveau": "L'Occhio di Falco del Lab.", "forza": "Riconoscimento di pattern visivi complessi e OCR estremo.",
+        "synergy": ["qwen2-vl:2b"], "task": "Advanced Vision",
+        "ram": "16GB RAM", "vram": "12GB",
+        "capabilities": ["High-Res Visual Q&A", "Document Understanding", "Action Recognition", "Multi-Image Reasoning"]
+    },
+    "openvla:latest": {
+        "name": "OpenVLA (Robotica)", "size": "7.5GB", "category": "MULTIMODAL_SENSORY", 
+        "pros": "Modello Vision-Language-Action nativo", "cons": "Specializzato in robotica/azione", 
+        "caveau": "Il Pilota Robotico.", "forza": "Traduzione di istruzioni visive in coordinate e comandi.",
+        "synergy": ["internvl2:latest"], "task": "Visual Grounding",
+        "ram": "12GB RAM", "vram": "8GB",
+        "capabilities": ["Spatial Reasoning", "Instruction Following", "Object Grounding", "Robotic Control Simulation"]
+    },
+    "openvl:latest": {
+        "name": "OpenVL (General)", "size": "4.2GB", "category": "MULTIMODAL_SENSORY", 
+        "pros": "Efficienza bilanciata tra analisi e velocità", "cons": "Meno dettagliato di InternVL", 
+        "caveau": "Il Sensore Ambientale.", "forza": "Analisi rapida di scene e tagging automatico.",
+        "synergy": ["moondream:latest"], "task": "Scene Intelligence",
+        "ram": "8GB RAM", "vram": "4GB",
+        "capabilities": ["Fast Captioning", "Tagging", "Environmental Analysis", "Basic OCR"]
+    },
+
+    # ── CATEGORIA: [SOVEREIGN_MID_CORE] - Prestazioni PC Fascia Media (4-12GB) ─────────
+    "mistral:latest": {
+        "name": "Mistral 7B v0.3", "size": "4.1GB", "category": "SOVEREIGN_MID_CORE", 
+        "pros": "Affidabilità granitica, finestra 32k", "cons": "No native CoT", 
+        "caveau": "Il Motore primario del Vault.", "forza": "Sintesi di documenti e stabilità logica.",
+        "synergy": ["deepseek-r1:7b"], "task": "General Knowledge",
+        "ram": "8GB RAM", "vram": "6GB",
+        "capabilities": ["Document Synthesis", "Code Writing", "Email Drafting", "Knowledge Retrieval"]
+    },
+    "llama3.1:8b": {
+        "name": "Llama 3.1 (8B)", "size": "4.7GB", "category": "SOVEREIGN_MID_CORE", 
+        "pros": "Ecosistema vastissimo, ottimo italiano", "cons": "Censura occasionale", 
+        "caveau": "Il Console del Dialogo.", "forza": "Capacità conversazionale e sfumature linguistiche.",
+        "synergy": ["gemma2:9b"], "task": "Advanced Chat",
+        "ram": "10GB RAM", "vram": "8GB",
+        "capabilities": ["Nuanced Conversation", "Creative Writing", "Roleplay", "Tool Calling"]
+    },
+    "deepseek-r1:7b": {
+        "name": "DeepSeek R1 (7B Distill)", "size": "4.7GB", "category": "SOVEREIGN_MID_CORE", 
+        "pros": "Ragionamento matematico d'élite", "cons": "Uscite in cinese rari", 
+        "caveau": "Il Matematico del Lab.", "forza": "Chain of Thought (CoT) per risolvere enigmi logici.",
+        "synergy": ["mistral:latest"], "task": "Problem Solving",
+        "ram": "8GB RAM", "vram": "6GB",
+        "capabilities": ["Mathematical Reasoning", "Logic Puzzles", "Code Debugging", "Step-by-step Planning"]
+    },
+    "phi3.5:latest": {
+        "name": "Phi-3.5 Mini (3.8B)", "size": "2.2GB", "category": "SOVEREIGN_MID_CORE", 
+        "pros": "Incredibile densità di intelligenza", "cons": "Finestra contesto corta", 
+        "caveau": "Il piccolo genio di Microsoft.", "forza": "Logica da 7B in meno di 3GB di RAM.",
+        "synergy": ["qwen2.5:1.5b"], "task": "Logical Verification",
+        "ram": "4GB RAM", "vram": "2GB",
+        "capabilities": ["Fact Checking", "Logic Validation", "Brief Summaries", "Data Extraction"]
+    },
+
+    # ── CATEGORIA: [ELITE_HEAVY_WEIGHT] - Massima Potenza & Conoscenza (15GB+) ──────────
+    "gemma2:27b": {
+        "name": "Gemma 2 (27B)", "size": "16GB", "category": "ELITE_HEAVY_WEIGHT", 
+        "pros": "Prestazioni da 70B in taglia ridotta", "cons": "Molto pesante su 16GB Mac", 
+        "caveau": "L'Oracolo della Verità.", "forza": "Comprensione enciclopedica e zero allucinazioni.",
+        "synergy": ["deepseek-r1:14b"], "task": "Scientific Research",
+        "ram": "32GB RAM", "vram": "16GB",
+        "capabilities": ["Scientific Analysis", "Philosophical Discourse", "Cross-Domain Synthesis", "Truth Verification"]
+    },
+    "hermes3:latest": {
+        "name": "Hermes 3 (8B - Llama 3.1)", "size": "4.7GB", "category": "SOVEREIGN_MID_CORE", 
+        "pros": "Incredibile naturalezza e aderenza alle istruzioni", "cons": "Meno focalizzato sulla sicurezza (uncensored)", 
+        "caveau": "Il Console Sovrano.", "forza": "Dialoghi complessi, roleplay tecnico e creatività senza vincoli.",
+        "synergy": ["llama3.1:8b"], "task": "Unconstrained Logic",
+        "ram": "10GB RAM", "vram": "8GB",
+        "capabilities": ["Instruction Following", "Creative Writing", "Technical Roleplay", "System Prompt Mastery"]
+    },
+    "deepseek-r1:14b": {
+        "name": "DeepSeek R1 (14B)", "size": "9.0GB", "category": "ELITE_HEAVY_WEIGHT", 
+        "pros": "Il miglior compromesso tra 7B e 32B", "cons": "Lentezza su CPU", 
+        "caveau": "L'Ingegnere Senior del Vault.", "forza": "Programmazione complessa e logica formale.",
+        "synergy": ["phi4:latest"], "task": "Engineering Task",
+        "ram": "16GB RAM", "vram": "10GB",
+        "capabilities": ["Full-Stack Coding", "Algorithmic Design", "Complex Planning", "Expert Critique"]
+    },
+    "nemotron:latest": {
+        "name": "NVIDIA Nemotron 70B", "size": "39GB", "category": "ELITE_HEAVY_WEIGHT", 
+        "pros": "Incredibile naturalezza, dati NVIDIA", "cons": "Richiede Mac Studio/Ultra", 
+        "caveau": "Il Titano del Dialogo.", "forza": "Dialoghi umani al 100% e analisi di mercato.",
+        "synergy": ["llama3.1:70b"], "task": "Enterprise Intelligence",
+        "ram": "64GB RAM", "vram": "40GB",
+        "capabilities": ["Human-like Interaction", "Strategic Consulting", "Market Simulation", "Extreme Context Synthesis"]
+    },
+    "qwen2.5:32b": {
+        "name": "Qwen 2.5 (32B)", "size": "18GB", "category": "ELITE_HEAVY_WEIGHT", 
+        "pros": "Logica di livello enterprise", "cons": "Richiede molta VRAM", 
+        "caveau": "Il Super-Cervello del Vault.", "forza": "Ragionamento astratto di livello superiore e multilinguismo perfetto.",
+        "synergy": ["gemma2:27b"], "task": "Strategic Intelligence",
+        "ram": "32GB RAM", "vram": "24GB",
+        "capabilities": ["Quantum Logic", "Strategic Planning", "Infinite Context", "Zero-Shot Synthesis"]
     }
 }
 
@@ -893,7 +1237,8 @@ async def get_models_status(api_key: str = Depends(get_api_key)):
     seen_in_api = set()
 
     # 1. Recupero Modelli INSTALLATI (Ollama)
-    ollama_urls = [os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434"), "http://localhost:11434"]
+    base_url = app.state.lab.settings.get("ollama_url") if hasattr(app.state, 'lab') else "http://127.0.0.1:11434"
+    ollama_urls = [os.environ.get("OLLAMA_HOST", base_url), base_url]
     for url in ollama_urls:
         if seen_in_api: break
         try:
@@ -909,10 +1254,14 @@ async def get_models_status(api_key: str = Depends(get_api_key)):
                             "name": name,
                             "status": "INSTALLED",
                             "size": f"{round(m.get('size', 0) / (1024**3), 2)}GB",
+                            "category": cat_info.get("category", "General"),
                             "pros": cat_info.get("pros", "Custom Node"),
                             "synergy": cat_info.get("synergy", ["None"]),
                             "task": cat_info.get("task", "General Reasoning"),
-                            "strengths": cat_info.get("forza", "Hardware-Attached Analysis")
+                            "strengths": cat_info.get("forza", "Hardware-Attached Analysis"),
+                            "capabilities": cat_info.get("capabilities", []),
+                            "ram": cat_info.get("ram", "N/D"),
+                            "vram": cat_info.get("vram", "N/D")
                         })
                         seen_in_api.add(name)
         except: continue
@@ -924,13 +1273,58 @@ async def get_models_status(api_key: str = Depends(get_api_key)):
                 "name": model_id,
                 "status": "AVAILABLE",
                 "size": info.get("size", "N/D"),
+                "category": info.get("category", "General"),
                 "pros": info.get("pros", "N/D"),
                 "synergy": info.get("synergy", ["None"]),
                 "task": info.get("task", "General Reasoning"),
-                "strengths": info.get("forza", "Elite Training")
+                "strengths": info.get("forza", "Elite Training"),
+                "capabilities": info.get("capabilities", []),
+                "ram": info.get("ram", "N/D"),
+                "vram": info.get("vram", "N/D")
             })
 
+    # 3. Recupero Modelli CUSTOM (Dalla Neural Forge)
+    custom_models = load_custom_models()
+    for name, info in custom_models.items():
+        # Se è un modello Ollama, verifichiamo se è già presente (magari con nome diverso)
+        # Ma in generale, li trattiamo come INSTALLED se il provider è 'ollama' o 'local'
+        full_list.append({
+            "name": f"{name} (Custom)",
+            "status": "INSTALLED",
+            "size": "N/D",
+            "category": "CUSTOM_FORGE",
+            "pros": f"User Integrated via {info.get('provider', 'Custom')}",
+            "synergy": ["User_Workflow"],
+            "task": "Specialized Purpose",
+            "strengths": f"Puntatore: {info.get('path')}",
+            "capabilities": ["Personal Training", "Custom Knowledge", "Private Core"],
+            "ram": "Varie",
+            "vram": "Varie"
+        })
+
     return {"installed": full_list, "total_detected": len(full_list)}
+
+@app.post("/api/lab/hub/custom/register")
+async def register_custom_model(req: Dict, api_key: str = Depends(get_api_key)):
+    """Registra un modello custom nel Vault."""
+    name = req.get("name")
+    provider = req.get("provider")
+    path = req.get("path")
+    
+    if not name or not path:
+        raise HTTPException(status_code=400, detail="Name and Path are required")
+    
+    custom = load_custom_models()
+    custom[name] = {
+        "provider": provider,
+        "path": path,
+        "registered_at": time.time()
+    }
+    save_custom_models(custom)
+    
+    # Se il provider è Ollama, possiamo anche tentare un 'ollama run' o simile per verificare
+    print(f"🛠️ [Neural Forge] Modello registrato: {name} ({provider}) -> {path}")
+    return {"status": "success", "model": name}
 
 @app.delete("/api/models/delete/{model_name:path}")
 async def delete_model(model_name: str, api_key: str = Depends(get_api_key)):
@@ -939,7 +1333,8 @@ async def delete_model(model_name: str, api_key: str = Depends(get_api_key)):
     model_name = model_name.strip()
     try:
         async with httpx.AsyncClient() as client:
-            r = await client.request("DELETE", "http://localhost:11434/api/delete", json={"name": model_name})
+            base_url = app.state.lab.settings.get("ollama_url") if hasattr(app.state, 'lab') else "http://127.0.0.1:11434"
+            r = await client.request("DELETE", f"{base_url}/api/delete", json={"name": model_name})
             if r.status_code == 200:
                 return {"status": "deleted", "model": model_name}
             else:
@@ -1211,7 +1606,6 @@ async def agent_task(agent_id: str, request: Request, api_key: str = Depends(get
     response = app.state.lab._call_ollama_for_agent(agent.identity["name"], prompt)
     
     # Log sulla blackboard
-    # Inoltriamo il task completato al blackboard
     sig = SynapticSignal(agent.identity["name"], agent.identity["role"], f"🎯 TASK COMPLETATO: {task_text[:30]}...", SignalType.SYSTEM_NOTIFICATION)
     app.state.lab.blackboard.post(sig)
     
@@ -1340,20 +1734,13 @@ async def _run_hybrid_evolution(limit=500, offset=0):
         # Determine how many batches to process
         max_iterations = max(1, limit // batch_size)
         
-        # Get settings
-        try:
-            storage_dir = Path(os.getenv("NEURALVAULT_DATA_DIR", "./vault_data"))
-            settings_file = storage_dir / "system_settings.json"
-            settings = {}
-            if settings_file.exists():
-                with open(settings_file, "r") as f: settings = json.load(f)
-            evol_model = settings.get("evolution_model", "llama3.2")
-        except: evol_model = "llama3.2"
+        # Get settings from Orchestrator
+        evol_model = app.state.lab.settings.get("evolution_model", "llama3.2")
 
         print(f"🧬 [Evolution] Batch active: {limit} nodes from {offset} using {evol_model}")
 
         for i in range(max_iterations):
-            res = engine.evolve_graph(dry_run=True, limit=batch_size, offset=current_offset)
+            res = await asyncio.to_thread(engine.evolve_graph, dry_run=True, limit=batch_size, offset=current_offset)
             candidates = res["candidates"]
             current_offset = res["next_offset"]
             
@@ -1362,7 +1749,7 @@ async def _run_hybrid_evolution(limit=500, offset=0):
             sig_audit = SynapticSignal("QA-101", AgentRole.ARCHITECT, f"🛡️ EVOLUZIONE [BATCH {i+1}]: Analisi {len(candidates)} sinapsi...", SignalType.MISSION_UPDATE)
             app.state.lab.blackboard.post(sig_audit)
             
-            approved = app.state.lab.quantum.audit_synapses(candidates, model=evol_model)
+            approved = await asyncio.to_thread(app.state.lab.quantum.audit_synapses, candidates, model=evol_model)
             batch_top = sorted(approved, key=lambda x: x[2], reverse=True)[:2]
             
             synapses_data = []
@@ -1470,8 +1857,9 @@ async def translate_text(request: Request, x_api_key: str = Header(None)):
         if target_lang == "IT":
             prompt = f"Traduci in Italiano il seguente contenuto. Rispondi SOLAMENTE con la traduzione.\n\nCONTENUTO: {text}"
         
+        base_url = app.state.lab.settings.get("ollama_url") if hasattr(app.state, 'lab') else "http://127.0.0.1:11434"
         async with httpx.AsyncClient(timeout=45.0) as client:
-            r = await client.post("http://localhost:11434/api/generate", json={
+            r = await client.post(f"{base_url}/api/generate", json={
                 "model": model, "prompt": prompt, "stream": False
             })
             translation = r.json().get("response", text)
@@ -1534,8 +1922,9 @@ async def neural_chat(request: QueryRequest, x_api_key: str = Header(None)):
                 res = await asyncio.to_thread(os.popen("ollama list").read)
                 installed = [line.split()[0] for line in res.splitlines()[1:] if line.strip()]
                 model = "mistral:latest" if "mistral:latest" in installed else (installed[0] if installed else "mistral")
+                base_url = app.state.lab.settings.get("ollama_url") if hasattr(app.state, 'lab') else "http://127.0.0.1:11434"
                 async with httpx.AsyncClient(timeout=45.0) as client:
-                    r = await client.post("http://127.0.0.1:11434/api/generate", json={
+                    r = await client.post(f"{base_url}/api/generate", json={
                         "model": model, "prompt": f"Contesto:\n{full_context}\n\nQ: {request.query}", "stream": False
                     })
                     answer = r.json().get("response", "No-Response")
@@ -1559,18 +1948,24 @@ async def neural_chat(request: QueryRequest, x_api_key: str = Header(None)):
 async def sse_stream(request: Request):
     """Il battito cardiaco della Dashboard: Telemetria Real-time."""
     # Helper per calcolare il peso del cervello digitale
+    _cached_size = {"val": 0, "time": 0}
     def get_dir_size(path):
-        """Versione ottimizzata (v2.9.9): Evita rglob ricorsivo bloccante su migliaia di file."""
+        """Versione ottimizzata (v3.0): Cache di 60s per evitare I/O costante in SSE."""
+        now = time.time()
+        if now - _cached_size["time"] < 60:
+            return _cached_size["val"]
+            
         total = 0
         try:
             p = Path(path)
             if not p.exists(): return 0
-            # Controlliamo solo i file principali per velocità
             for f in p.glob('*.db'): total += f.stat().st_size
             for f in p.glob('*.ael'): total += f.stat().st_size
-            # Aggiungiamo un placeholder se ci sono molti file
             if total == 0: total = 1024 * 1024 # 1MB fallback
         except: pass
+        
+        _cached_size["val"] = total
+        _cached_size["time"] = now
         return total
 
     v_initial = engine.data_dir if engine else Path("./data")
@@ -1594,7 +1989,7 @@ async def sse_stream(request: Request):
             }
             yield f"data: {json.dumps(initial_data, default=json_serializer)}\n\n"
             
-            while True:
+            while not _is_shutting_down:
                 if await request.is_disconnected():
                     break
 
@@ -1619,6 +2014,12 @@ async def sse_stream(request: Request):
                     # 4. Neural Lab & System Status
                     async with engine_lock:
                         lab_status = app.state.lab.get_status() if hasattr(app.state, 'lab') else {}
+                        
+                        # Hardware Telemetry Integration (v2.9)
+                        from utils.hardware import HardwareTuner
+                        tuner = HardwareTuner(data_dir=engine.data_dir if hasattr(engine, 'data_dir') else "./vault_data")
+                        hw_stats = tuner.get_telemetry()
+                        
                         cpu_percent = psutil.cpu_percent(percpu=True)
                         ram = psutil.virtual_memory()
 
@@ -1626,11 +2027,14 @@ async def sse_stream(request: Request):
                         a007_data = {"entities_count": 0, "relations_count": 0}
                         try:
                             if hasattr(engine, 'agent007') and engine.agent007:
-                                ent = engine.agent007.con.execute("SELECT count(*) FROM agent007_entities").fetchone()[0]
-                                rel = engine.agent007.con.execute("SELECT count(*) FROM agent007_relations").fetchone()[0]
+                                ent_res = engine.agent007.con.execute("SELECT count(*) FROM agent007_entities").fetchone()
+                                rel_res = engine.agent007.con.execute("SELECT count(*) FROM agent007_relations").fetchone()
+                                ent = ent_res[0] if ent_res else 0
+                                rel = rel_res[0] if rel_res else 0
                                 a007_data = {"entities_count": ent, "relations_count": rel}
                         except Exception as e:
-                            print(f"🕵️ [Agent007/DB] {e}")
+                            if "not subscriptable" not in str(e): # Silencing the common NoneType race condition
+                                print(f"🕵️ [Agent007/DB] {e}")
 
                         # 🧬 Global Cluster Detection (Vault Total)
                         try:
@@ -1644,19 +2048,27 @@ async def sse_stream(request: Request):
                                 session_fused = lab_status['agents']['QA-101'].get('fused_clusters', 0)
                             
                             # 3. Calculate Global Cumulative Total
-                            # We use max() because session_fused might represent new structures not yet committed or already counted in memory.
-                            mem_clusters = len(set(n.collection for n in engine._nodes.values() if n.collection and n.collection != 'default'))
+                            # We use source as a fallback for collection to handle existing nodes (v17.6 Fix)
+                            mem_clusters = len(set(
+                                n.collection if n.collection != 'default' else n.metadata.get('source', 'default') 
+                                for n in engine._nodes.values() 
+                                if (n.collection != 'default' or n.metadata.get('source', 'default') != 'default')
+                            ))
                             clusters_count = max(db_clusters, session_fused, mem_clusters)
                         except Exception as e:
-                            # Fallback if DB query fails during high load
-                            clusters_count = len(set(n.collection for n in engine._nodes.values() if n.collection and n.collection != 'default'))
+                            # Fallback if DB query fails
+                            clusters_count = len(set(
+                                n.collection if n.collection != 'default' else n.metadata.get('source', 'default') 
+                                for n in engine._nodes.values() 
+                                if (n.collection != 'default' or n.metadata.get('source', 'default') != 'default')
+                            ))
 
                         # 📏 Semantic Distance Calculation (Cohesion Metric)
                         try:
                             # We use the standard deviation of projections as a proxy for 'distance'
                             # Higher SD = nodes are more spread out (Semantic Diversity)
                             # Lower SD = nodes are clustered (Semantic Focus)
-                            if points_array := [p.get("pos", [0,0,0]) for p in stats.get("point_cloud", [])]:
+                            if points_array := [[p.get("x", 0), p.get("y", 0), p.get("z", 0)] for p in stats.get("point_cloud", [])]:
                                 p_arr = np.array(points_array)
                                 dist_val = float(np.std(p_arr)) / 500000.0 # Normalized for UI
                             else: dist_val = 0.84 # Baseline
@@ -1676,11 +2088,8 @@ async def sse_stream(request: Request):
                                 "cpu": {"cores": cpu_percent, "overall": sum(cpu_percent)/len(cpu_percent)},
                                 "ram": {"used": ram.percent, "total": ram.total},
                                 "hardware_dna": getattr(engine, "hardware_dna", f"GENERIC-{platform.machine()}"),
-                                "ai_intelligence": {
-                                    "model": "Llama 3.2 (Neural-8B)",
-                                    "quantization": "TurboQuant 4-bit",
-                                    "inference_speed": f"{round(random.uniform(15, 25), 1)} tok/s"
-                                }
+                                "active_engines": hw_stats["active_models"],
+                                "mps_pressure": hw_stats.get("mps_pressure", "0%")
                             },
                             "agent007": a007_data
                         }
@@ -1870,7 +2279,46 @@ async def consult_oracle(req: Dict[str, str], key: str = Depends(get_api_key)):
             "action": "HOLD",
             "verdict": "MANTIENI"
         }
+# 🏛️ [Phase 3] SUPREME COURT VERDICT REVIEW ENDPOINTS
+@app.get("/api/swarm/audit-queue")
+async def get_court_queue(api_key: str = Depends(get_api_key)):
+    """Espone la coda di arbitraggio della Corte Suprema (Supreme Court)."""
+    if not hasattr(app.state, 'lab'): return []
+    return app.state.lab.autonomous_audit_queue
+
+@app.post("/api/swarm/resolve-verdict")
+async def resolve_verdict(request: Request, api_key: str = Depends(get_api_key)):
+    """Risolve un verdetto pendente della Corte Suprema (Approvazione/Rifiuto manuale)."""
+    data = await request.json()
+    idx = data.get("index")
+    decision = data.get("decision")
+    
+    if not hasattr(app.state, 'lab'):
+        raise HTTPException(status_code=500, detail="Laboratory not active")
+    
+    queue = app.state.lab.autonomous_audit_queue
+    if idx is None or idx >= len(queue):
+        raise HTTPException(status_code=404, detail="Verdict not found in queue")
+    
+    # Preleviamo l'item dalla coda
+    audit_item = queue.pop(idx)
+    
+    if decision == 'approve':
+        src = audit_item.get("src")
+        dst = audit_item.get("dst")
+        if src in engine._nodes and dst in engine._nodes:
+            engine.add_relation(src, dst, type=9, weight=0.98) 
+            app.state.lab.blackboard.post(SynapticSignal("SUPREME_COURT", AgentRole.OPTIMIZER, 
+                f"✅ VERDICT_OVERRIDE: Synapse between {src[:8]} and {dst[:8]} approved by Sovereign.", 
+                SignalType.SYSTEM_HEALING))
+    else:
+        app.state.lab.blackboard.post(SynapticSignal("SUPREME_COURT", AgentRole.OPTIMIZER, 
+            f"❌ VERDICT_REJECTED: Synapse proposal dismissed by Sovereign decree.", 
+            SignalType.SYSTEM_NOTIFICATION))
+            
+    return {"status": "ok"}
 
 if __name__ == "__main__":
     print("🚀 [BOOT-TRACE-77i] CARICAMENTO CORE NEURALE v2.7.6...")
-    uvicorn.run(app, host="0.0.0.0", port=8001, log_level="warning")
+    # Avvio del server su 127.0.0.1 con LOG INFO per vedere lo stato
+    uvicorn.run(app, host="127.0.0.1", port=8001, log_level="info")

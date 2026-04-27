@@ -19,6 +19,26 @@ class MemoryTier(str, Enum):
     SEMANTIC = "semantic"
 
 
+class NodeLifecycleState(str, Enum):
+    """
+    🧬 [v1.1.0 Sovereign Lifecycle]
+    Definisce gli stati formali di un nodo nel sistema.
+    """
+    PENDING          = "pending"          # Appena ingerito, in periodo di grazia (30 min)
+    ORPHAN           = "orphan"           # Nodo isolato, in attesa di connessioni
+    POTENTIAL        = "potential"        # Nodo con alto potenziale semantico (Spark)
+    INDEXING         = "indexing"         # Archi semantici in costruzione
+    STABLE           = "stable"           # Validato e pronto per gli agenti
+    IN_JUDGEMENT     = "in_judgement"     # Sotto scrutinio della Supreme Court
+    WASTE_PENDING    = "waste_pending"    # Marcato per l'eliminazione dal Janitron
+    PROTECTED        = "protected"        # Memoria Episodica: Protetto permanentemente
+    TOMBSTONE        = "tombstone"        # Eliminato, rimane solo la lapide crittografica
+    ARCHIVED         = "archived"         # Memoria sbiadita (Ebbinghaus Decay)
+
+# Alias per compatibilità con il vecchio sistema (v17.0)
+NodeState = NodeLifecycleState
+
+
 class RelationType(str, Enum):
     CITES        = "cites"
     CONTRADICTS  = "contradicts"
@@ -79,6 +99,7 @@ class VaultNode:
     last_accessed:         float      = field(default_factory=time.time)
     created_at:            float      = field(default_factory=time.time)
     agent_relevance_score: float      = 0.0
+    ingestion_status:      str        = "STABLE" # Default per i nodi esistenti
 
     def __post_init__(self):
         if self.vector is not None and not isinstance(self.vector, np.ndarray):
@@ -164,19 +185,7 @@ class VaultNode:
             vector=vector,
             sparse_vector=sparse_vector,
             metadata=data.get("metadata", {}),
-            edges=[
-                SemanticEdge(
-                    target_id=e["target_id"],
-                    relation=RelationType(e["relation"]),
-                    weight=e["weight"],
-                    logic_weight=e.get("logic_weight", 1.0),
-                    emotional_weight=e.get("emotional_weight", 0.5),
-                    bidirectional=e.get("bidirectional", False),
-                    created_at=e.get("created_at", time.time()),
-                    source=e.get("source", "manual"),
-                )
-                for e in data.get("edges", [])
-            ],
+            edges=edges,
             tier=MemoryTier(data.get("tier", "semantic")),
             access_count=data.get("access_count", 0),
             last_accessed=data.get("last_accessed", time.time()),

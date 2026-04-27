@@ -20,7 +20,32 @@ body {
     overflow: hidden; height: 100vh;
     display: grid;
     grid-template-rows: 65vh 35vh; /* THE GOLDEN SPLIT */
-    transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s ease, color 0.5s ease;
+}
+
+body.light-theme {
+    background: radial-gradient(circle at center, #f0f9ff, #e2e8f0);
+    --bg-dark: #f8fafc;
+    --bg-card: rgba(255, 255, 255, 0.8);
+    --text-main: #0f172a;
+    --text-dim: #475569;
+    color: #0f172a;
+}
+
+body.light-theme #memory-graph-container {
+    background: radial-gradient(circle at center, #ffffff, #f1f5f9);
+    box-shadow: inset 0 0 100px rgba(0,0,0,0.05);
+}
+
+body.light-theme .glass-card, 
+body.light-theme .card, 
+body.light-theme .lab-header-glass {
+    background: rgba(255, 255, 255, 0.6);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme h1, body.light-theme h2, body.light-theme h3 {
+    color: #1e293b;
 }
 
 body.full-height-mode {
@@ -120,7 +145,7 @@ body.full-height-mode {
     flex-direction: column;
     gap: 1rem;
     padding: 1rem;
-    max-height: 400px; /* Limite per evitare clipping */
+    flex-grow: 1; /* Permette di occupare lo spazio disponibile */
     overflow-y: auto;
     scrollbar-width: none;
 }
@@ -657,4 +682,151 @@ body.full-height-mode {
     opacity: 1 !important;
     filter: none !important;
     transform: scale(1.02) !important;
+}
+
+/* ⚖️ iOS Switch Components (Supreme Court Upgrade) */
+.ios-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+.ios-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.ios-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #334155;
+  transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 34px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.ios-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px; width: 18px; left: 3px; bottom: 2px;
+  background-color: white;
+  transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+input:checked + .ios-slider {
+  background-color: #4ade80;
+  box-shadow: 0 0 15px rgba(74, 222, 128, 0.2);
+}
+input:checked + .ios-slider:before {
+  transform: translateX(20px);
+}
+
+.triple-judge-select {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(250, 204, 21, 0.2);
+    color: #facc15;
+    font-size: 0.6rem;
+    padding: 6px;
+    border-radius: 8px;
+    outline: none;
+    width: 100%;
+    font-family: 'JetBrains Mono';
+}
+.triple-judge-select:focus {
+    border-color: #facc15;
+}
+/* 🧠 NEURAL MODEL HUB V4.0 PREMIUM STYLES */
+.capability-badge {
+    font-size: 0.55rem;
+    font-weight: 800;
+    color: #fff;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.hub-category-header {
+    pointer-events: none;
+}
+
+.hub-action-btn {
+    padding: 8px 18px;
+    border-radius: 10px;
+    font-size: 0.65rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    outline: none;
+}
+
+.delete-btn {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+}
+
+.delete-btn:hover {
+    background: #ef4444;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+.deploy-btn {
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.4);
+    color: #4ade80;
+}
+
+.deploy-btn:hover {
+    background: #4ade80;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(74, 222, 128, 0.3);
+}
+
+.hub-model-row:hover .capability-badge {
+    border-color: var(--accent-purple);
+    background: rgba(168, 85, 247, 0.1);
+}
+/* --- MULTIMODAL BRIDGE (v4.0 Premium) --- */
+.drop-zone {
+    border: 2px dashed rgba(168, 85, 247, 0.4);
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.drop-zone.drag-over {
+    border-color: #a855f7;
+    background: rgba(168, 85, 247, 0.1);
+    box-shadow: inset 0 0 50px rgba(168, 85, 247, 0.2);
+}
+
+.drop-zone::after {
+    content: '🚀 DROP MULTIMODAL SYNAPSE';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.7rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #a855f7;
+    opacity: 0;
+    transition: 0.3s;
+    pointer-events: none;
+}
+
+.drop-zone.drag-over::after {
+    opacity: 1;
+}
+
+/* Multimodal Icons in 3D Nebula */
+.mm-icon {
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
 }

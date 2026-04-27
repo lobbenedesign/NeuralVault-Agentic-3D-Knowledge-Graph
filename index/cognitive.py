@@ -15,26 +15,38 @@ from typing import List, Dict, Optional
 from index.node import VaultNode
 
 class CognitiveDecayEngine:
-    """Implementa la curva dell'oblio biologica (Ebbinghaus) con rinforzo."""
+    """Implementa la curva dell'oblio biologica (Ebbinghaus) con rinforzo (v1.1.0)."""
     
+    OPACITY_CEILING = 1.0        # 100% opacity (recent)
+    OPACITY_FLOOR = 0.15         # 15% opacity (minimum visible)
+    OPACITY_HIDE_THRESHOLD = 0.1 # < 10% -> stop rendering
+
     def __init__(self, half_life_hours: float = 168): # Default: 1 settimana
         self.half_life_sec = half_life_hours * 3600
-        self.decay_lambda = math.log(2) / self.half_life_sec
-        self.decay_rate = self.decay_lambda * 3600
         self.reinforce_factor = 1.8
 
     def calculate_strength(self, last_access: float, importance: float, access_count: int, emotional_weight: float = 0.5) -> float:
         """
-        [v3.0 Synaptic] Calcola la forza del ricordo.
-        Ora influenzata dal peso emotivo: alta urgenza = decadimento rallentato.
+        [v1.1.0 Sovereign Ebbinghaus]
+        R(t) = e^(-t/S)
+        t = ore dall'ultimo accesso
+        S = stabilità (influenzata da importanza e ripetizione)
         """
-        elapsed = time.time() - last_access
-        # Rallentiamo il decadimento se l'emotional_weight è alto (0.5 è il default)
-        decay_constant = self.decay_rate / (0.5 + emotional_weight)
+        elapsed_hours = (time.time() - last_access) / 3600.0
         
-        strength = importance * np.exp(-decay_constant * (elapsed / 3600))
-        # Bonus per la frequenza d'uso (Rafforzamento sinaptico)
-        strength += min(access_count * 0.05, 0.4)
+        # Stabilità: Cresce con ogni accesso (Spaced Repetition)
+        # S base = 168h (1 settimana) per default
+        stability = (self.half_life_sec / 3600.0) * (self.reinforce_factor ** (access_count - 1))
+        
+        # Modulazione emotiva/importanza
+        stability *= (0.5 + emotional_weight + importance)
+        
+        # Calcolo Ritenzione (R)
+        retention = math.exp(-elapsed_hours / max(stability, 0.1))
+        
+        # Mappa R [0,1] -> [OPACITY_FLOOR, OPACITY_CEILING]
+        strength = self.OPACITY_FLOOR + retention * (self.OPACITY_CEILING - self.OPACITY_FLOOR)
+        
         return min(strength, 1.0)
 
 class WisdomSummarizer:
@@ -145,6 +157,9 @@ class CognitiveDecayDaemon:
             count = node.metadata.get("access_count", 1)
             
             strength = self.engine.cognitive.calculate_strength(l_acc, impact, count)
+            
+            # 💡 [Idea #3] Ebbinghaus Visual Decay: Imposta la trasparenza basata sulla forza
+            node.metadata["opacity"] = max(0.1, float(strength))
             
             if strength < 0.15: # Sotto il 15% di forza -> Candidato al consolidamento
                 to_consolidate.append(node.id)

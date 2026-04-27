@@ -88,8 +88,12 @@ class WisdomDistiller:
         prompt = f"Sei l'Archivista Prime. Sintetizza questi frammenti di memoria in un unico principio di saggezza coerente e denso. Sii tecnico e preciso.\n\nFRAMMENTI:\n{context}\n\nSINTESI FINALE:"
         
         try:
+            base_url = "http://localhost:11434"
+            if hasattr(self.engine, 'settings'):
+                base_url = self.engine.settings.get("ollama_url")
+                
             with httpx.Client(timeout=20.0) as client:
-                r = client.post("http://localhost:11434/api/generate", json={
+                r = client.post(f"{base_url}/api/generate", json={
                     "model": "mistral:latest",
                     "prompt": prompt,
                     "stream": False
