@@ -2319,6 +2319,6 @@ async def resolve_verdict(request: Request, api_key: str = Depends(get_api_key))
     return {"status": "ok"}
 
 if __name__ == "__main__":
-    print("🚀 [BOOT-TRACE-77i] CARICAMENTO CORE NEURALE v2.7.6...")
+    print("🚀 [BOOT-TRACE-77i] CARICAMENTO CORE NEURALE v3.5.0...")
     # Avvio del server su 127.0.0.1 con LOG INFO per vedere lo stato
     uvicorn.run(app, host="127.0.0.1", port=8001, log_level="info")

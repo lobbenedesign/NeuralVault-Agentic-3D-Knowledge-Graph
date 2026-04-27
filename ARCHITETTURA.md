@@ -224,12 +224,12 @@ Questa fase rappresenta la "nuova frontiera" richiesta, dove il Vault diventa un
 *Ultimo aggiornamento: 2026-04-26 — Fase Sovereign 1.1 Hardened (Persistent).*
 
 
-## 🏺 SEZIONE XI: HARDENING & INTELLIGENZA PERSISTENTE (v1.1.0)
-Le ottimizzazioni v1.1.0 hanno trasformato NeuralVault in un sistema "immortale", dove la conoscenza e le istruzioni dell'utente sopravvivono ai riavvii.
+## 🏺 SEZIONE XI: HARDENING & INTELLIGENZA PERSISTENTE (v3.5.0)
+Le ottimizzazioni v3.5.0 hanno trasformato NeuralVault in un sistema "immortale", dove la conoscenza e le istruzioni dell'utente sopravvivono ai riavvii.
 
-Ho completato l'implementazione delle funzionalità mancanti per rendere NeuralVault v1.1.0 "perfetto" sia dal punto di vista dell'interfaccia che della logica di controllo.
+Ho completato l'implementazione delle funzionalità mancanti per rendere NeuralVault v3.5.0 "perfetto" sia dal punto di vista dell'interfaccia che della logica di controllo.
 
-### 🎨 Frontend: Dashboard v1.1.0 Upgraded
+### 🎨 Frontend: Dashboard v3.5.0 Upgraded
 - **Vault Mood Indicator (Semaforo della Salute)**:
     - Aggiunto un indicatore visivo nel centro della telemetria (accanto ai contatori dei Nodi).
     - Il sistema ora mostra in tempo reale lo stato: 🟢 THRIVING, 🟡 STABLE, 🟠 STRESSED, 🔴 CRITICAL.
@@ -253,7 +253,7 @@ Ho completato l'implementazione delle funzionalità mancanti per rendere NeuralV
 - **neural_lab.py**: Inserito il filtro di intercettazione Trust nelle azioni degli agenti.
 - **agent/active_learning.py**: Integrato il sistema di reputazione nei feedback utente.
 
-*NeuralVault v1.1.0 è ora un sistema completamente persistente, autoriflessivo e visualmente trasparente.* 🏺🚀🦾
+*NeuralVault v3.5.0 è ora un sistema completamente persistente, autoriflessivo e visualmente trasparente.* 🏺🚀🦾
 
 ### 1. Macchina a Stati Formale (Node Lifecycle)
 Ogni nodo segue ora un percorso deterministico gestito da un Enum centrale:
@@ -273,7 +273,7 @@ Gli archi non sono più solo "linee", ma connessioni con un'anima energetica:
 - **Resonanza**: Calcolata in base alla frequenza di co-accesso e all'importanza dei nodi collegati.
 - **Auto-Rinforzo**: Le connessioni che usi spesso "brillano" di più e vengono protette dal decadimento.
 
-## 🚦 SEZIONE XII: AGENT TRUST & SYSTEM MOOD (v1.1.0)
+## 🚦 SEZIONE XII: AGENT TRUST & SYSTEM MOOD (v3.5.0)
 Il sistema ora monitora se stesso e i suoi agenti per garantire la massima affidabilità.
 
 ### 1. Agent Trust Network (Reputazione)
