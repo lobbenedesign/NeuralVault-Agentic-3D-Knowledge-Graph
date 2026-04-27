@@ -61,3 +61,16 @@ MATH_SPEC.md
 *copy.md
 *BACKUP*.md
 
+# Heavy Binaries & Database Artifacts
+*.zip
+*.tar.gz
+*.mdb
+*.wal
+*.jsonl
+logs/
+sessions/
+results/
+bench_py/
+bench_rs/
+benchmarks/ann-benchmarks-main/
+
