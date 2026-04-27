@@ -639,13 +639,13 @@ class JanitorAgent:
         # 3. Movement
         target = nodes[self.target_node]
         tx, ty, tz = self.get_xyz(target)
-        step = 0.2
+        step = 0.35 # Increased speed (v3.5.0)
         self.pos['x'] += (tx - self.pos['x']) * step
         self.pos['y'] += (ty - self.pos['y']) * step
         self.pos['z'] += (tz - self.pos['z']) * step
         
         dist = ((self.pos['x']-tx)**2 + (self.pos['y']-ty)**2 + (self.pos['z']-tz)**2)**0.5
-        if dist < 45000:
+        if dist < 65000: # Increased threshold for faster completion
             self.mode = "Eating"; self.last_eat_time = now
         else:
             self.status = f"Navigating to {self.target_node[:8]}"
@@ -701,14 +701,15 @@ class DistillerAgent:
 
         target = nodes[self._target]
         tx, ty, tz = self.get_xyz(target)
-        step = 0.15
+        # 🗺️ [Phase 3: Approach]
+        step = 0.4 # Hyper-speed (v3.5.0)
         self.pos['x'] += (tx - self.pos['x']) * step
         self.pos['y'] += (ty - self.pos['y']) * step
         self.pos['z'] += (tz - self.pos['z']) * step
         
         dist = ((self.pos['x']-tx)**2 + (self.pos['y']-ty)**2 + (self.pos['z']-tz)**2)**0.5
-        if dist < 35000:
-            if random.random() < 0.1:
+        if dist < 85000: # Larger completion radius
+            if random.random() < 0.3: # Higher probability
                 self.pruned_count += 1
                 report = {
                     "agent": "DI-007", 
@@ -794,13 +795,13 @@ class SnakeAgent:
                 ty = getattr(target_node, 'y', target_node.metadata.get('y', 0))
                 tz = getattr(target_node, 'z', target_node.metadata.get('z', 0))
                 
-                step = 0.1
+                step = 0.45 # Fast Gather
                 self.pos['x'] += (tx - self.pos['x']) * step
                 self.pos['y'] += (ty - self.pos['y']) * step
                 self.pos['z'] += (tz - self.pos['z']) * step
                 
                 dist = ((self.pos['x']-tx)**2 + (self.pos['y']-ty)**2 + (self.pos['z']-tz)**2)**0.5
-                if dist < 50000:
+                if dist < 120000: # Wide gather radius
                     self.attached_nodes.append(target_id)
                     self.found += 1
                     self.harvested += 1 # Crafted/Gathered
@@ -1010,7 +1011,7 @@ class SynthAgent:
             else:
                 return None
         
-        if random.random() < 0.05: # Occasional deep synthesis
+        if random.random() < 0.25: # Increased from 0.05
             self.sparks_generated += 1
             if not self.team: self.spawn_team() 
             
@@ -1258,12 +1259,13 @@ class SentinelAgent:
             tx = float(rad * np.cos(angle))
             ty = float(400000 * np.sin(now * 0.1))
             tz = float(rad * np.sin(angle))
+            step = 0.4 # Super fast Sentinel (v3.5.0)
             self.pos['x'] += (tx - self.pos['x']) * step
             self.pos['y'] += (ty - self.pos['y']) * step
             self.pos['z'] += (tz - self.pos['z']) * step
             self.status = "Monitoring Ingress..."
             
-            if random.random() < 0.03:
+            if random.random() < 0.15: # Increased from 0.03
                 # 🛡️ v17.5 Advanced Validation Gateway
                 if self.orch and self.orch.edge_validation_queue:
                     edge_data = self.orch.edge_validation_queue[0] # Take the oldest
@@ -1283,7 +1285,7 @@ class SentinelAgent:
                         self.target_node = random.choice(candidates)
                     
                     # 🌈 PROBABILITÀ SUPER-SINAPSI (Effetto RGB LED Aura)
-                    if random.random() < 0.15: # 15% di probabilità durante un audit
+                    if random.random() < 0.35: # Increased from 0.15
                         self.super_synapses += 1
                         return {
                             "agent": "SE-007", 
@@ -1296,7 +1298,7 @@ class SentinelAgent:
                     return {"agent": "SE-007", "action": "Cross-Reference Audit", "target_id": self.target_node}
             
             # --- Aggiornamento dei contatori interni durante il pattugliamento ---
-            if random.random() < 0.02: self.validated_count += 1 
+            if random.random() < 0.1: self.validated_count += 1 # Increased from 0.02
 
 
             # 🛑 [GAP_ANALYSIS_TRIGGER] Ogni 10 minuti di attività
@@ -1429,6 +1431,7 @@ class SkyWalkerAgent:
                         time.sleep(2) # Breath between URLs
                     except: pass
             self.status = "MISSION_COMPLETE: Intel Synchronized"
+            if self.orch: self.orch._process_agent_action({"agent": "FS-77", "action": "MISSION_COMPLETE", "motivation": f"Synchronized intel for '{query}'."})
             print(f"🚀 [FS-77] MISSION_COMPLETE: {len(urls)} sources ingested for '{query}'.")
         else:
             self.status = "MISSION_FAILED: No Intel Found"
@@ -1538,6 +1541,10 @@ class NeuralLabOrchestrator:
         self.node_states = {} 
         self._state_lock = threading.Lock()
         self.edge_validation_queue = [] # Pending synapses for Sentinel
+        self.evolution_active = False # [v3.5.0] Evolution Mode state
+        
+        # 📊 Load Persistent Telemetry (v3.5.0 Sovereign Bind)
+        self._load_persistent_stats()
         self.node_in_judgement_queue = [] # Pending decision for Cuore
         
         # 🛸 EXECUTOR INITIALIZATION (Sovereign Threading)
@@ -1770,6 +1777,7 @@ class NeuralLabOrchestrator:
     def _run_kinetic_engine(self):
         print("🛸 [Neural Lab] Kinetic Swarm v24.3.1 - Resilience Shield Active.")
         threading.Thread(target=self._process_supreme_court, daemon=True).start()
+        iteration = 0
         while not self._stop_event.is_set():
             if self.pause_agents:
                 time.sleep(0.5)
@@ -1803,6 +1811,12 @@ class NeuralLabOrchestrator:
                     
                     # 🛠️ [Fix #1] Promote PENDING nodes after grace period
                     self._promote_pending_nodes(nodes)
+                
+                # 💾 Periodic State Sync (v3.5.0 Persistence)
+                if iteration % 10 == 0:
+                    self._save_persistent_stats()
+                
+                iteration += 1
                 
                 # 🚀 [Fix #2] ADAPTIVE PACING (Critica #5)
                 cpu_load = psutil.cpu_percent()
@@ -1848,12 +1862,23 @@ class NeuralLabOrchestrator:
         if hasattr(self, 'janitor'):
             self.janitor.accuracy_stats["reversals"] += 1
 
-    def _run_evolution_advisor_loop(self):
+    def trigger_evolution_scan(self):
+        """[v3.5.0] Forza una scansione immediata degli advisor evolutivi."""
+        print("🌀 [Evolution] Manual Trigger: Forcing immediate neural scan...")
+        threading.Thread(target=self._run_evolution_advisor_loop, kwargs={"once": True}, daemon=True).start()
+
+    def _run_evolution_advisor_loop(self, once=False):
         """[CORE #1] Sovereign Advisor: Analisi autonoma proattiva per suggerimenti di crescita."""
-        print("🌀 [Evolution Advisor] Monitoring Vault for technical optimizations...")
+        if not once: print("🌀 [Evolution Advisor] Monitoring Vault for technical optimizations...")
+        
         while not self._stop_event.is_set():
+            # Se non siamo in Evolution Mode e non è un trigger manuale, saltiamo
+            if not self.evolution_active and not once:
+                time.sleep(10); continue
+
             if self.pause_agents or not self.vault._nodes:
-                time.sleep(60); continue
+                if once: return
+                time.sleep(30); continue
             
             try:
                 # 1. Campionamento nodi per analisi
@@ -1865,13 +1890,13 @@ class NeuralLabOrchestrator:
                 
                 # 2. Richiesta consiglio all'Evolution Model
                 evo_model = self.settings.get_model("evolution_model") or "llama3.2"
-                prompt = f"Analyze these nodes for gaps or technical bugs:\n{context}\nReturn a suggestion in JSON: {{'type': 'BUG|OPTIMIZATION|EXPANSION', 'file': 'N/A', 'line': 0, 'content': 'summary', 'impact': 'HIGH|MEDIUM'}}"
+                prompt = f"Analyze these nodes for gaps or technical bugs:\n{context}\nReturn a suggestion in JSON: {{'type': 'BUG|OPTIMIZATION|EXPANSION', 'file': 'NEBULA', 'line': 0, 'content': 'summary', 'impact': 'HIGH|MEDIUM'}}"
                 
                 base_url = self.settings.get("ollama_url")
                 with httpx.Client() as client:
                     resp = client.post(f"{base_url}/api/generate", json={
                         "model": evo_model, "prompt": prompt, "stream": False, "format": "json"
-                    }, timeout=20.0)
+                    }, timeout=30.0) # Increased timeout for slow models
                     if resp.status_code == 200:
                         advice = json.loads(resp.json().get("response", "{}"))
                         if advice and "content" in advice:
@@ -1886,8 +1911,11 @@ class NeuralLabOrchestrator:
                                 f"🌀 NEW ADVICE: {advice['content'][:50]}... [Impact: {advice['impact']}]", 
                                 SignalType.STRATEGIC_MISSION))
                 
-            except: pass
-            time.sleep(300) # Analisi ogni 5 minuti
+            except Exception as e:
+                print(f"⚠️ [Evolution Advisor Error] {e}")
+            
+            if once: break
+            time.sleep(300) # Analisi ogni 5 minuti in modalità continua
 
     def _process_supreme_court(self):
         """
@@ -1991,7 +2019,6 @@ class NeuralLabOrchestrator:
         aid = result.get("agent", "UNKNOWN")
         
         # 🛡️ [v1.1.0 Trust Validation]
-        # Se l'agente ha perso la nostra fiducia, le sue azioni critiche vengono messe in attesa di giudizio
         agent_trust = self.trust_network.trust_scores.get(aid, 0.7)
         if agent_trust < 0.5:
              critical_actions = ["Neural Pruning", "Creative Spark", "Semantic Fusion", "Tombstone Cleanup"]
@@ -2027,6 +2054,7 @@ class NeuralLabOrchestrator:
         # 📡 [STRATEGIC_MISSION] Sentinel -> SkyWalker Loop
         if result.get("action") == "Strategic Gap Identified":
             topic = result.get("topic")
+            self.sentinel.validated_count += 1
             if topic and self.skywalker:
                 self.skywalker.status = f"MISSION: {topic}"
                 self.blackboard.post(SynapticSignal("SE-007", AgentRole.GUARDIAN, 
@@ -2036,6 +2064,16 @@ class NeuralLabOrchestrator:
         # 🧹 [Janitron] Cleanup & Tombstones
         if result.get("action") in ["Tombstone Created", "Node Digestion"]:
             self.tombstone_registry.register(result.get("pos"))
+            if aid == "JA-001": self.janitor.eaten_count += 1
+        
+        if result.get("action") == "Cross-Reference Audit":
+            self.sentinel.validated_count += 1
+            
+        if result.get("action") == "Super-Synapse Forging":
+            self.sentinel.super_synapses += 1
+            
+        if result.get("action") == "MISSION_COMPLETE":
+            if self.skywalker: self.skywalker.web_hits += 1
         
         if "action" not in result: return # Movement-only update
         
@@ -2066,7 +2104,6 @@ class NeuralLabOrchestrator:
         
         # 🧴 Agent-Specific Processing
         if result["action"] == "Node Digestion" and tid in self.vault._nodes:
-            # Veto check
             is_protected = any(a.target_node == tid for a in self.agents.values() if a.identity["id"] != "JA-001" and hasattr(a, 'target_node'))
             if is_protected:
                 self.blackboard.post(SynapticSignal("JANITRON", AgentRole.ANALYST, f"🛑 VETO: Digestion aborted for {str(tid)[:8]}. Node is active in research.", SignalType.ALERT))
@@ -2096,7 +2133,6 @@ class NeuralLabOrchestrator:
                 self.blackboard.post(SynapticSignal("SENTINEL", AgentRole.GUARDIAN, f"🛡️ AUDIT: Node {str(tid)[:8]} validated as LIVE.", SignalType.KINETIC_EVENT, motivation=motivation, savings=savings))
         
         elif result["action"] == "Semantic Pruning" and tid in self.vault._nodes:
-            # [Phase 2 Hardening] Il Distiller non cancella, ma marca per il Janitor se confermato
             if self.transition_node(tid, NodeState.STABLE, NodeState.WASTE_PENDING, "DI-007"):
                 self.blackboard.post(SynapticSignal("DISTILLER", AgentRole.GUARDIAN, 
                     f"✂️ PRUNED: Node {str(tid)[:8]} marked for archiving (Low Density).", 
@@ -2135,7 +2171,6 @@ class NeuralLabOrchestrator:
             if tid in self.vault._nodes:
                 node = self.vault._nodes[tid]
                 source = node.metadata.get("source", "unknown")
-                # Increment validation counter for both actions
                 self.sentinel.validated_count += 1
                 
                 if result["action"] == "Source Validation" and node.metadata.get("agent") == "FS-77":
@@ -2305,13 +2340,70 @@ class NeuralLabOrchestrator:
                 "CB-003": {
                     "identity": {"id": "CB-003", "name": "Code-Doc-Bridger", "role": "Latent Bridge Creator", "archetype": "expert"},
                     "pos": {"x": self.bridger_agent.pos[0], "y": self.bridger_agent.pos[1], "z": self.bridger_agent.pos[2]},
-                    "status": "Synchronizing Code-Doc Bridge...",
+                    "status": self.bridger_agent.status,
                     "bridges": self.bridger_agent.bridges_total
                 }
             },
             "blackboard": self.blackboard.get_recent(12),
             "court_actions": self.archiver.history[:20]
         }
+
+    # --- Persistence Logic (v3.5.0) ---
+
+    def _load_persistent_stats(self):
+        """Loads agent counters from DuckDB to ensure continuity across sessions."""
+        try:
+            res = self.engine._prefilter.fetchdf("SELECT agent_id, counter_name, val FROM agent_telemetry")
+            if not res.empty:
+                for _, row in res.iterrows():
+                    aid = row['agent_id']
+                    cname = row['counter_name']
+                    val = row['val']
+                    
+                    if aid == "DI-007": self.distiller.pruned_count = int(val)
+                    elif aid == "JA-001": self.janitor.eaten_count = int(val)
+                    elif aid == "RP-001": self.reaper.processed = val
+                    elif aid == "SN-008":
+                        if cname == "found": self.snake.found = int(val)
+                        elif cname == "harvested": self.snake.harvested = int(val)
+                        elif cname == "processed": self.snake.processed = int(val)
+                    elif aid == "QA-101": self.quantum.clusters_fused = int(val)
+                    elif aid == "SE-007":
+                        if cname == "validated": self.sentinel.validated_count = int(val)
+                        elif cname == "synapses": self.sentinel.super_synapses = int(val)
+                    elif aid == "SY-009": self.synth.sparks_generated = int(val)
+                    elif aid == "CB-003": self.bridger_agent.bridges_total = int(val)
+                    elif aid == "FS-77": self.skywalker.web_hits = int(val)
+            print("📊 [Lab/Stats] Persistent counters hydrated successfully.")
+        except Exception as e:
+            print(f"⚠️ [Lab/Stats] Failed to load persistence: {e}")
+
+    def _save_persistent_stats(self):
+        """Saves current session counters to DuckDB for next boot."""
+        try:
+            stats = [
+                ("DI-007", "pruned", self.distiller.pruned_count),
+                ("JA-001", "purged", self.janitor.eaten_count),
+                ("RP-001", "processed", self.reaper.processed),
+                ("SN-008", "found", self.snake.found),
+                ("SN-008", "harvested", self.snake.harvested),
+                ("SN-008", "processed", self.snake.processed),
+                ("QA-101", "fused_clusters", getattr(self.quantum, 'clusters_fused', 0)),
+                ("SE-007", "validated", self.sentinel.validated_count),
+                ("SE-007", "synapses", self.sentinel.super_synapses),
+                ("SY-009", "sparks", self.synth.sparks_generated),
+                ("CB-003", "bridges", self.bridger_agent.bridges_total),
+                ("FS-77", "hits", self.skywalker.web_hits)
+            ]
+            
+            for aid, cname, val in stats:
+                query = """
+                    INSERT INTO agent_telemetry (agent_id, counter_name, val, last_updated)
+                    VALUES (?, ?, ?, now())
+                    ON CONFLICT (agent_id, counter_name) DO UPDATE SET val = EXCLUDED.val, last_updated = EXCLUDED.last_updated
+                """
+                self.engine._prefilter.execute(query, (aid, cname, float(val)))
+        except: pass
 
     def spawn_custom_agent(self, name: str, role: AgentRole, prompt: str, model: str = "llama3.2") -> str:
         agent = CustomAgent(name, role, prompt, model)

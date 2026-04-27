@@ -921,10 +921,12 @@ async def update_lab_settings(req: Dict, api_key: str = Depends(get_api_key)):
     # Note: frontend might send 'codebase_bridging' OR 'evolution_mode'
     is_evol = req.get("evolution_mode") or req.get("codebase_bridging")
     if is_evol is not None:
+        app.state.lab.evolution_active = is_evol
         if is_evol:
             # Activate Bridger with current working directory (v17.6: Access via .bridger.project_root)
             from pathlib import Path
             app.state.lab.bridger_agent.bridger.project_root = Path(os.getcwd())
+            app.state.lab.trigger_evolution_scan()
             msg = "🚀 EVOLUTION MODE ATTIVATA: Ibridazione codebase/web iniziata."
         else:
             app.state.lab.bridger_agent.bridger.project_root = None # Research mode
@@ -1976,7 +1978,7 @@ async def sse_stream(request: Request):
         try:
             # 1. KEEPALIVE / INITIAL SYNC
             loop = asyncio.get_event_loop()
-            stats = await loop.run_in_executor(None, engine.stats, 10000)
+            stats = await loop.run_in_executor(None, engine.stats, 30000)
             initial_data = {
                 "points": stats.get("point_cloud", []),
                 "links": stats.get("edge_sample", []),

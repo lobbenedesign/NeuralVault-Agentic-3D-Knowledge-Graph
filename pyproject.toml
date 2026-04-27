@@ -4,7 +4,7 @@ build-backend = "setuptools.backends.legacy:build"
 
 [project]
 name = "neuralvault"
-version = "0.1.0"
+version = "3.5.0"
 description = "Agent-native vector database with context graph and adaptive memory tiers"
 readme = "README.md"
 requires-python = ">=3.11"

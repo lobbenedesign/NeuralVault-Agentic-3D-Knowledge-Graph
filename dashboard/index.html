@@ -534,6 +534,7 @@
                                             <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px;">
                                                 <div id="snake-mission-found" class="stat-badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;"><span data-i18n="stat_found">Nodi Trovati</span>: <span id="val-snake-found">0</span></div>
                                                 <div id="snake-mission-stat" class="stat-badge" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;"><span data-i18n="stat_crafted">Nodi Creati</span>: <span id="val-snake-crafted">0</span></div>
+                                                <div id="snake-mission-deleted" class="stat-badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"><span data-i18n="stat_deleted">Eliminati</span>: <span id="val-snake-deleted">0</span></div>
                                             </div>
                                         </div>
                                     </div>
@@ -656,7 +657,7 @@
             </div> <!-- End overview-view -->
 
             <!-- 🔬 NEURAL LAB SECTION -->
-            <div id="lab-view" class="view-container" style="display: none; padding: 1.5rem; background: rgba(2, 6, 23, 0.95);">
+            <div id="lab-view" class="view-container" style="display: none; padding: 1.5rem; background: rgba(2, 6, 23, 0.95); overflow: hidden;">
                  <div class="lab-header-glass" style="flex-shrink: 0; z-index: 5000; margin-bottom: 0.5rem; background: rgba(15, 23, 42, 0.9); border-bottom: 2px solid #a855f7; padding: 1rem; border-radius: 12px;">
                     <div class="lab-title-group">
                         <h2 style="margin:0; font-size: 1.5rem; color: #a855f7; text-transform: uppercase;"><i class="fas fa-microscope"></i> <span data-i18n="nav_lab">LABORATORIO NEURALE</span> <span class="v-tag">v2.0</span></h2>
@@ -712,7 +713,7 @@
                     <!-- Middle Column: 🧪 LABORATORIO NEURALE v2.0 -->
                     <div class="lab-main-forge" style="display: flex; flex-direction: column; gap: 1rem; height: 100%; min-width: 0;">
                         <div class="glass-card" style="padding: 1.2rem; border-bottom: 2px solid #a855f7; background: rgba(15, 23, 42, 0.9); border-radius: 12px; flex-shrink: 0;">
-                             <h3 style="margin:0; font-size: 1.1rem; color: #a855f7; text-transform: uppercase; font-weight: 900;">🧪 LABORATORIO NEURALE <span class="v-tag" style="font-size: 0.6rem; vertical-align: middle;">v2.0</span></h3>
+                             <h3 style="margin:0; font-size: 0.9rem; color: #a855f7; text-transform: uppercase; font-weight: 900; letter-spacing: 2px;"><i class="fas fa-microchip"></i> <span data-i18n="title_swarm_ops">SWARM_OPERATIONS_CENTER</span></h3>
                         </div>
 
                         <!-- TAB SWITCHER -->
@@ -736,18 +737,7 @@
 
                             <div id="lab-tab-content-forge" class="glass-card" style="flex: 1; display: none; flex-direction: column; padding: 1.5rem; background: rgba(15, 23, 42, 0.8); border-radius: 20px; border: 1px solid #a855f7; overflow-y: auto;">
                                 <div style="font-size: 0.8rem; color: #a855f7; font-weight: 800; margin-bottom: 1.5rem;"><i class="fas fa-hammer"></i> <span data-i18n="tab_agent_forge">AGENT FORGE</span></div>
-                                
-                                <div>
-                                    <label class="setting-label" data-i18n="label_judge_3">Supreme Court Judge #3</label>
-                                    <select id="setting-court-judge-3" class="swarm-select" data-setting="court_judge_3"></select>
-                                </div>
-                                <div style="border-top: 1px solid rgba(168, 85, 247, 0.2); padding-top: 1.5rem; margin-top: 0.5rem;">
-                                    <label class="setting-label" style="color: #a855f7;" data-i18n="label_evolution_suggestion">Evolution Suggestion Brain</label>
-                                    <select id="setting-evolution-model" class="swarm-select" data-setting="evolution_suggestion_model"></select>
-                                    <p style="font-size: 0.55rem; color: #8b949e; margin-top: 5px;" data-i18n="label_evolution_suggestion_desc">Seleziona l'LLM dedicato alla generazione di suggerimenti tecnici e bug-hunting.</p>
-                                </div>
-                                
-                                <div style="display: flex; flex-direction: column; gap: 1.2rem; margin-top: 1.5rem;">
+                                <div style="display: flex; flex-direction: column; gap: 1.2rem; margin-top: 0.5rem;">
                                     <div>
                                         <label style="display:block; margin-bottom: 0.5rem; color: #8b949e; font-size: 0.6rem; text-transform: uppercase;" data-i18n="label_name">Nome Identificativo</label>
                                         <input type="text" id="lab-forge-name" placeholder="es. SY-009 SYNTH" style="width: 100%; background: #000; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.8rem; border-radius: 8px; font-size: 0.75rem; outline: none;">
@@ -1517,11 +1507,26 @@
             </div>
         </div>
 
+        <!-- COLUMN 4: GLOBAL SWARM SETTINGS (v4.0) -->
+        <div class="card" style="display: flex; flex-direction: column; gap: 0.8rem; overflow: visible;">
+            <div class="metric-title" data-i18n="title_swarm_settings"><i class="fas fa-sliders-h" style="color: #a855f7; margin-right: 5px;"></i> SWARM_GLOBAL_SETTINGS</div>
+            
+            <div>
+                <label class="setting-label" data-i18n="label_judge_3">Supreme Court Judge #3</label>
+                <select id="setting-court-judge-3" class="swarm-select" data-setting="court_judge_3"></select>
+            </div>
+            
+            <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.8rem;">
+                <label class="setting-label" data-i18n="label_evolution_suggestion">Evolution Suggestion Brain</label>
+                <select id="setting-evolution-model" class="swarm-select" data-setting="evolution_suggestion_model"></select>
+                <p style="font-size: 0.45rem; color: #8b949e; margin-top: 4px; line-height: 1.3;" data-i18n="label_evolution_suggestion_desc">Seleziona l'LLM dedicato alla generazione di suggerimenti tecnici e bug-hunting.</p>
+            </div>
+        </div>
 
         <!-- COLUMN 5: INGESTION PORTAL (TALL) -->
-        <div class="card" id="drop-zone" onclick="document.getElementById('file-input').click()" style="display: flex; flex-direction: column;">
+        <div class="card" id="ingestion-portal-card" onclick="document.getElementById('file-input').click()" style="display: flex; flex-direction: column; position: relative;">
             <div class="metric-title" id="title-portal" data-tooltip="Punto di singolarità per l'input dati. Gestisce il pre-processing multimodale: temporal chunking per i video, diarizzazione per l'audio e scraping selettivo per gli URL, pilotando il caricamento verso il processore ImageBind."><i class="fas fa-microchip" style="margin-right: 5px;"></i> <span data-i18n="title_ingestion">PORTALE INGESTIONE</span></div>
-            <div style="flex: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(168, 85, 247, 0.3); border-radius: 16px; transition: 0.3s; cursor: pointer; position: relative;" onmouseover="this.style.background='rgba(168,85,247,0.1)'" onmouseout="this.style.background='transparent'">
+            <div class="ingestion-portal-inner" style="flex: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(168, 85, 247, 0.3); border-radius: 16px; transition: 0.3s; cursor: pointer; position: relative;">
                 <div style="text-align: center; padding: 1rem;">
                     <i class="fas fa-file-export" style="font-size: 2rem; color: #a855f7; margin-bottom: 1rem; opacity: 0.6;"></i>
                     <span style="font-size: 0.65rem; color: var(--text-dim); font-weight: 800; display: block;" data-i18n="label_drop_to_synapse">DROP OR CLICK<br>TO SYNAPSE</span>

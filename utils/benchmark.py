@@ -17,7 +17,7 @@ class ModelBenchmarkTracker:
     def _init_db(self):
         try:
             # Upgrade table with deep telemetry columns
-            self.vault._prefilter.con.execute("""
+            self.vault._prefilter.execute("""
                 CREATE TABLE IF NOT EXISTS model_benchmarks (
                     model_name VARCHAR,
                     task_type VARCHAR,
@@ -40,7 +40,7 @@ class ModelBenchmarkTracker:
         cpu_json = json.dumps(cpu_cores) if cpu_cores else "[]"
         
         try:
-            self.vault._prefilter.con.execute(
+            self.vault._prefilter.execute(
                 "INSERT INTO model_benchmarks (model_name, task_type, duration_ms, token_count, tokens_per_sec, ram_usage_mb, cpu_cores_json, precision_score, gen_quality) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [model, task, duration_ms, token_count, tps, ram_mb, cpu_json, precision, quality]
             )
@@ -50,7 +50,7 @@ class ModelBenchmarkTracker:
     def get_stats(self) -> List[Dict]:
         try:
             # Enhanced stats for Recommendation Engine
-            res = self.vault._prefilter.con.execute("""
+            res = self.vault._prefilter.fetchdf("""
                 SELECT 
                     model_name, 
                     COUNT(*) as total_tasks,
@@ -62,7 +62,7 @@ class ModelBenchmarkTracker:
                 FROM model_benchmarks
                 GROUP BY model_name
                 ORDER BY score DESC, tps DESC
-            """).fetchdf()
+            """)
             return res.to_dict('records')
         except Exception as e:
             print(f"⚠️ [Benchmark] Stats error: {e}")
@@ -71,7 +71,7 @@ class ModelBenchmarkTracker:
     def get_task_recommendation(self, task: str) -> Optional[Dict]:
         """Returns the best model for a specific task based on historical score."""
         try:
-            res = self.vault._prefilter.con.execute("""
+            res = self.vault._prefilter.execute("""
                 SELECT model_name, AVG(gen_quality) as q
                 FROM model_benchmarks
                 WHERE task_type = ?
@@ -86,10 +86,10 @@ class ModelBenchmarkTracker:
     def get_latest(self, limit: int = 5) -> List[Dict]:
         """Returns the most recent N benchmark records."""
         try:
-            res = self.vault._prefilter.con.execute(
+            res = self.vault._prefilter.fetchdf(
                 "SELECT * FROM model_benchmarks ORDER BY timestamp DESC LIMIT ?",
                 [limit]
-            ).fetchdf()
+            )
             # Handle potential timestamp conversion issues if necessary, but DuckDB df usually works
             return res.to_dict('records')
         except Exception as e:
@@ -99,7 +99,7 @@ class ModelBenchmarkTracker:
     def get_full_history(self, limit: int = 100) -> List[Dict]:
         """[Phase 4] Recupera la cronologia completa delle missioni da DuckDB."""
         try:
-            res = self.vault._prefilter.con.execute("""
+            res = self.vault._prefilter.fetchdf("""
                 SELECT 
                     model_name, 
                     task_type as task, 
@@ -111,7 +111,7 @@ class ModelBenchmarkTracker:
                 FROM model_benchmarks 
                 ORDER BY timestamp DESC 
                 LIMIT ?
-            """, [limit]).fetchdf()
+            """, [limit])
             return res.to_dict('records')
         except Exception as e:
             print(f"⚠️ [Benchmark] History error: {e}")

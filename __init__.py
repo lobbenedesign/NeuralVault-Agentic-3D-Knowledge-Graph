@@ -228,8 +228,8 @@ class NeuralVaultEngine:
         
         # 4. Hot Hydration (Dati Nodi -> RAM)
         # v11.6.8: Carichiamo sempre i nodi per visibilità 3D.
-        # Con il backend Rust, possiamo gestire 50.000+ nodi senza rallentamenti.
-        limit = 50000 
+        # Con il backend Rust, possiamo gestire 30.000+ nodi senza rallentamenti.
+        limit = 30000 
         print(f"🕯️ [Boot] Avvio Hot Hydration (Limit: {limit})...")
         
         recent_nodes = self._tiers.get_all_recent(limit=limit)
@@ -821,7 +821,7 @@ class NeuralVaultEngine:
 
     _stats_cache = {"time": 0, "data": None}
 
-    def stats(self, limit: int = 25000) -> dict:
+    def stats(self, limit: int = 30000) -> dict:
         """Telemetria 3D ottimizzata: campionamento, proiezione e posizionamento (v14.0 APEX)."""
         now = time.time()
         if now - self._stats_cache["time"] < 1.0 and self._stats_cache["data"]:

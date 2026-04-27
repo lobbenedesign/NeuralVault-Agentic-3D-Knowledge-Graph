@@ -132,7 +132,7 @@ function init3D() {
     scene.add(clusterNodesGroup);
 
     window.is3DInitialized = true;
-    const MAX_POINTS = 50000;
+    const MAX_POINTS = 30000;
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAX_POINTS * 3), 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(MAX_POINTS * 3), 3));
@@ -947,7 +947,7 @@ function toggleHeatmap(enabled) {
 function updateThreeScene(points, links = []) {
     if (!pointsMesh || !neuralLinks) return;
     vaultPoints = points || [];
-    const count = Math.min(vaultPoints.length, 50000);
+    const count = Math.min(vaultPoints.length, 30000);
     const pos = pointsMesh.geometry.attributes.position.array;
     const col = pointsMesh.geometry.attributes.color.array;
     const pastelPalette = ["#FFB7B2", "#FFDAC1", "#E2F0CB", "#B5EAD7", "#C7CEEA", "#FF9AA2", "#B2E2F2", "#D5AAFF"];
@@ -3066,6 +3066,8 @@ const NEURAL_LANG_PACK = {
     "title_nav_guide": ["NAV-GUIDA: STATO", "NAV-GUIDE: STATUS"],
     "title_agent_bar": ["BARRA AGENTI", "AGENT BAR"],
     "title_integrated_chat": ["INTEGRATED_NEURAL_CHAT", "INTEGRATED_NEURAL_CHAT"],
+    "title_swarm_settings": ["IMPOSTAZIONI GLOBALI SCIAME", "SWARM_GLOBAL_SETTINGS"],
+    "title_swarm_ops": ["CENTRO OPERATIVO SCIAME", "SWARM_OPERATIONS_CENTER"],
     "research_mode": ["RESEARCH MODE (Default)", "RESEARCH MODE (Default)"],
     "evolution_mode": ["EVOLUTION MODE (Dev)", "EVOLUTION MODE (Dev)"],
     "oracle_thinking": ["Analisi in corso...", "Analyzing..."],
@@ -3736,6 +3738,7 @@ window.toggleEvolutionMode = async () => {
         descRes.style.opacity = "0.4";
         descEvo.style.opacity = "1";
         chatContainer.style.display = "block";
+        document.getElementById('evolution-chat-history').innerHTML = '<div style="text-align: center; color: #a855f7; font-size: 0.65rem; margin-top: 150px; animation: pulse 2s infinite;">🌀 Iniziando scansione neurale... attendere.</div>';
         refreshEvolutionChat();
     } else {
         label.innerText = NEURAL_LANG_PACK["research_mode"][isEn?1:0].replace(' (Default)', '');
