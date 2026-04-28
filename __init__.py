@@ -19,11 +19,13 @@ from index.node import VaultNode, QueryResult, RelationType, MemoryTier, Semanti
 from index.hnsw import AdaptiveHNSW
 from graph.graph import ContextGraph
 from graph.ingester import AutoKnowledgeLinker
-from index.turboquant import TurboQuantizer, TwoStageTurboSearch
+from index.turboquant import TwoStageTurboSearch
 from index.sparse import BM25SEncoder
 from retrieval.fusion import FusionRanker
 from agent.session import SessionManager
 from retrieval.prefilter import DuckDBPrefilter
+from retrieval.pollers import PollerManager
+from utils.mesh import MeshSyncManager
 from memory_tiers import MemoryTierManager
 from utils.logger import NeuralLogger
 from storage.snapshot import SnapshotEngine
@@ -36,6 +38,9 @@ from retrieval.parsers import extract_structural_chunks
 from network.consensus import SovereignConsensus
 from index.sharding import ShardManager
 from security.homomorphic import SovereignShield
+from security.mesh_crypto import SovereignMeshCrypto
+from network.discovery import SovereignDiscovery
+from security.oauth_manager import SovereignOAuthManager
 
 # v0.5.0 Synaptic Imports
 from index.cognitive import CognitiveDecayEngine, WisdomSummarizer, CognitiveDecayDaemon
@@ -141,7 +146,8 @@ class NeuralVaultEngine:
         self._graph = None
         self._tq_search = None
         if use_quantization:
-            self._tq_search = TwoStageTurboSearch(dim=dim, use_rust=use_rust)
+            # v3.7.0: TurboQuant v2 - Auto-Detect Hardware
+            self._tq_search = TwoStageTurboSearch(dim=dim)
             
         # v0.4.0 Pillars
         # --- [Persistence STABILIZATION] ---
@@ -197,11 +203,26 @@ class NeuralVaultEngine:
         self.lod = LODManager(self)
         self.timelapse = TimeLapseManager(self)
         
+        # v1.1.0 Mesh Hardening: Crypto & Discovery
+        self.crypto = SovereignMeshCrypto(self.data_dir)
+        self.oauth = SovereignOAuthManager(self.data_dir)
+        
         # v1.0.0 Enterprise: Gossip Mesh Initializer
-        self.gossip = GossipManager(local_node_id=self.node_id)
+        self.gossip = GossipManager(local_node_id=self.node_id, crypto=self.crypto)
+        
+        # v4.0.0 Discovery: ZeroConf/mDNS
+        # Il server porta verrà iniettato da api.py tramite l'handler di discovery
+        self.discovery = None 
         
         # v1.0.0 Enterprise: Ledger Initializer (Immutability)
         self.ledger = SovereignLedger()
+        
+        # v3.7.0: Sovereign Pollers Manager
+        self.pollers = PollerManager(self)
+        
+        # v3.8.0: Mesh Sync Engine
+        self.mesh = MeshSyncManager(self, local_node_id=str(uuid.uuid4()))
+        self.mesh.start()
         
         self._synaptic_cursor = 0; # v17.0: Global scan cursor
         print("🕵️ Agent007-march: Sovereign Intelligence Engine ONLINE.")
@@ -774,6 +795,32 @@ class NeuralVaultEngine:
             q_v = self.shield.shield_vector(q_v)
             
         intent = kwargs.pop('intent', None) or self._query_planner.plan(query_text)
+
+        # [v3.6.0] Advanced Scalar Filtering & Logical Namespacing
+        namespace = kwargs.pop('namespace', None)
+        file_type = kwargs.pop('file_type', None)
+        year = kwargs.pop('year', None)
+        month = kwargs.pop('month', None)
+        
+        sql_filters = []
+        if namespace:
+            sql_filters.append(f"namespace = '{namespace}'")
+        if file_type:
+            sql_filters.append(f"file_type = '{file_type}'")
+        if year:
+            sql_filters.append(f"EXTRACT(YEAR FROM created_at) = {year}")
+        if month:
+            sql_filters.append(f"EXTRACT(MONTH FROM created_at) = {month}")
+            
+        if sql_filters:
+            sql_where = " AND ".join(sql_filters)
+            allowed_ids = self._prefilter.filter(sql_where)
+            if not allowed_ids:
+                print(f"🏰 [Namespace Filter] No nodes found matching: {sql_where}. Returning empty.")
+                return []
+            kwargs['filter_ids'] = allowed_ids
+            print(f"🏰 [Namespace Filter] Found {len(allowed_ids)} nodes in '{namespace or 'any'}' matching filters.")
+
         results = self._query_internal(query_text, q_v, intent, **kwargs)
         
         # v0.5.0 Cognitive Scoring (Ebbinghaus Decay)
@@ -854,7 +901,7 @@ class NeuralVaultEngine:
                 _, _, vh = np.linalg.svd(v_centered, full_matrices=False)
                 proj = np.dot(v_centered, vh[:3].T)
                 p_min, p_max = proj.min(axis=0), proj.max(axis=0)
-                rng = (p_max - p_min) + 1e-9
+                rng = (p_max - p_min) + 1e-12
                 normed = 2 * (proj - p_min) / rng - 1
                 for i, n in enumerate(nodes_with_vectors):
                     norm_projections[n.id] = normed[i]
@@ -873,13 +920,19 @@ class NeuralVaultEngine:
 
                 if n.id in norm_projections:
                     p_vec = norm_projections[n.id]
-                    # 💡 [Idea #3] Use Ebbinghaus Opacity
-                    node_opacity = float(n.metadata.get("opacity", 1.0))
+                    # 🧬 [v4.8] Dynamic Ebbinghaus Decay Calculation
+                    # Calcoliamo l'opacità in tempo reale invece di usare quella statica del daemon
+                    l_acc = n.metadata.get("last_access", n.created_at)
+                    impact = n.metadata.get("importance", 0.5)
+                    count = n.metadata.get("access_count", 1)
+                    
+                    # Calcolo forza del ricordo (0.15 - 1.0)
+                    node_opacity = self.cognitive.calculate_strength(l_acc, impact, count)
                     node_color = color1
                 else:
                     seed = int(hashlib.md5(str(n.id).encode()).hexdigest()[:8], 16)
                     p_vec = np.random.RandomState(seed).uniform(-1, 1, 3)
-                    node_opacity = 0.5
+                    node_opacity = 0.2
                     node_color = "#475569"
 
                 if color1 not in color_zones:
@@ -1049,7 +1102,7 @@ class NeuralVaultEngine:
                 
                 if node_b.vector is not None:
                     # Cosine Similarity
-                    sim = np.dot(node_a.vector, node_b.vector) / (np.linalg.norm(node_a.vector) * np.linalg.norm(node_b.vector) + 1e-9)
+                    sim = np.dot(node_a.vector, node_b.vector) / (np.linalg.norm(node_a.vector) * np.linalg.norm(node_b.vector) + 1e-12)
                     if sim > threshold:
                         node_a.add_edge(node_b.id, RelationType.SYNAPSE, weight=float(sim))
                         # Bidirectional reinforcement
@@ -1063,10 +1116,16 @@ class NeuralVaultEngine:
         k = kwargs.get('k', 10)
         ef = kwargs.get('ef', 50)
         allowed_ids = kwargs.get('filter_ids')
+        if allowed_ids is not None and not isinstance(allowed_ids, set):
+            allowed_ids = set(allowed_ids)
+
         if self._tq_search and not kwargs.get('use_progressive', True):
+            # v3.7.0: TurboQuant v2 Stage 1 + 2
             dense_res = self._tq_search.search(query_vector, k=k*3, filter_ids=allowed_ids)
         else:
             dense_res = self._hnsw.search(query_vector, k=k*2, ef=ef)
+            if allowed_ids:
+                dense_res = [r for r in dense_res if r[0] in allowed_ids]
         graph_res = []
         if intent == QueryIntent.RELATIONAL and dense_res:
             seed_ids = [r[0] for r in dense_res]

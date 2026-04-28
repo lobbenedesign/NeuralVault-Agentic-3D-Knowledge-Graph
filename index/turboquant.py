@@ -1,216 +1,147 @@
 """
 neuralvault.core.turboquant
 ────────────────────────────
-Implementazione di TurboQuant per NeuralVault.
-Fase 15: DABA EMA Feedback Loop.
+TurboQuant v2 (Universal Performance Edition)
+Optimized for Apple Silicon (M1-M5), Intel AVX, and NVIDIA CUDA.
 """
 
-from __future__ import annotations
-import math
-from collections import OrderedDict
-from dataclasses import dataclass, field
+import torch
 import numpy as np
+from typing import List, Dict, Optional, Tuple, Any
+from pathlib import Path
 
-
-@dataclass
-class TurboQuantRepr:
-    final_radius:  float
-    angle_indices: list
-    qjl_bits:      np.ndarray
-    dim:           int
-    num_levels:    int
-
-    def nbytes(self) -> int:
-        radius_b = 2
-        angle_b  = sum(len(a) for a in self.angle_indices)
-        qjl_b    = math.ceil(self.dim / 8)
-        return radius_b + angle_b + qjl_b
-
-    def compression_ratio(self) -> float:
-        return (self.dim * 4) / self.nbytes()
-
-
-def build_codebook(num_bits: int, level: int) -> np.ndarray:
-    n = 1 << num_bits
-    if level == 0:
-        return np.linspace(0, 2 * np.pi, n + 1)[:-1].astype(np.float32)
-    else:
-        center = np.pi / 4.0
-        sigma  = np.pi / (2.0 * math.sqrt(2 ** level))
-        return np.linspace(center - 2.5*sigma, center + 2.5*sigma, n).astype(np.float32)
-
-
-class TurboQuantizer:
-    def __init__(self, dim: int = 1024, bits_main: int = 3, bits_l0: int = 4, seed: int = 42, ema_alpha: float = 0.15):
-        assert dim > 0 and (dim & (dim - 1)) == 0
-        self.dim        = dim
-        self.bits_main  = bits_main
-        self.bits_l0    = bits_l0
-        self.seed       = seed
-        self.ema_alpha  = ema_alpha  # Fase 15: Smoothing
-        self.num_levels = int(math.log2(dim))
+class TurboQuantizerV2:
+    """
+    Motore di Quantizzazione Ibrida Auto-Ottimizzante (v2.0).
+    Sceglie la precisione in base all'hardware rilevato.
+    """
+    def __init__(self, dim: int = 1024, device: str = "cpu"):
+        self.dim = dim
+        self.device = device
         
-        self.bit_resolutions = np.full(dim, bits_main, dtype=np.uint8)
-        self._importance_history = np.zeros(dim, dtype=np.float32)
+        # Selezione Precisione Ottimale
+        if device == "cuda":
+            self.compute_dtype = torch.float16
+        elif device == "mps":
+            self.compute_dtype = torch.float16
+        else:
+            self.compute_dtype = torch.float32 # Fallback sicuro per Intel/AMD
+            
+        # Matrice di Proiezione Casuale per Binary Quantization (Sovereign Hashing)
+        # Usiamo un seed fisso per coerenza tra sessioni
+        torch.manual_seed(42)
+        self.proj_matrix = torch.randn(dim, dim, device=device, dtype=self.compute_dtype)
+        self.proj_matrix /= torch.norm(self.proj_matrix, dim=0)
 
-        rng = np.random.RandomState(seed)
-        G   = rng.randn(dim, dim).astype(np.float32)
-        Q, R = np.linalg.qr(G)
-        self._rotation = Q * np.sign(np.diag(R))
+    @torch.no_grad()
+    def encode_binary(self, vectors: torch.Tensor) -> torch.Tensor:
+        """Trasforma i vettori in codici binari (1 bit per dimensione) per ricerca ultra-veloce."""
+        # Proiezione nello spazio di hashing
+        projected = torch.matmul(vectors.to(self.compute_dtype), self.proj_matrix)
+        # Thresholding (Sgn function)
+        binary = (projected > 0).to(torch.uint8)
+        return binary
 
-        rng2 = np.random.RandomState(seed + 1)
-        S    = rng2.randn(dim, dim).astype(np.float32)
-        self._qjl_proj = S / (np.linalg.norm(S, axis=0, keepdims=True) + 1e-8)
+    @torch.no_grad()
+    def encode_int8(self, vectors: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Quantizzazione INT8 con scaling factor per mantenere l'accuratezza."""
+        max_vals = torch.max(torch.abs(vectors), dim=1, keepdim=True)[0]
+        scales = max_vals / 127.0
+        quantized = (vectors / (scales + 1e-8)).to(torch.int8)
+        return quantized, scales
 
-        self._daba_codebooks = {
-            b: [build_codebook(b, lv) for lv in range(self.num_levels)]
-            for b in range(1, 9)
-        }
-        self._codebooks = self._daba_codebooks[bits_main]
-
-    def encode(self, x: np.ndarray) -> TurboQuantRepr:
-        x = x.astype(np.float32)
-        norm = float(np.linalg.norm(x))
-        if norm < 1e-8:
-            return TurboQuantRepr(0.0, [np.zeros(self.dim >> (lv+1), dtype=np.uint8) for lv in range(self.num_levels)], np.ones(self.dim, dtype=np.int8), self.dim, self.num_levels)
-
-        x_unit = x / norm
-        y      = self._rotation @ x_unit
-        current = y.copy()
-        angle_indices = []
-        for lv in range(self.num_levels):
-            r1, r2 = current[0::2], current[1::2]
-            angles = np.arctan2(r2, r1)
-            if lv == 0: angles = angles % (2 * np.pi)
-            res_avg = int(np.mean(self.bit_resolutions[::(1<<lv)]))
-            cb = self._daba_codebooks.get(res_avg, self._codebooks)[lv]
-            indices = np.abs(angles[:, None] - cb).argmin(axis=1).astype(np.uint8)
-            angle_indices.append(indices)
-            current = np.sqrt(r1**2 + r2**2)
-
-        final_r = float(current[0]) if len(current) == 1 else float(np.linalg.norm(current))
-        x_recon = self._polar_decode(final_r, angle_indices)
-        residual = y - (self._rotation @ x_recon)
-        qjl = np.sign(self._qjl_proj.T @ residual).astype(np.int8)
-        qjl[qjl == 0] = 1
-        return TurboQuantRepr(norm, angle_indices, qjl, self.dim, self.num_levels)
-
-    def update_daba_resolutions(self, weights: np.ndarray, max_avg_bits: float = 3.5):
-        """Aggiornamento evolutivo con EMA Feedback (Fase 15)."""
-        w = np.clip(weights, 0, 2)
-        self._importance_history = (1.0 - self.ema_alpha) * self._importance_history + self.ema_alpha * w
-        ideal = 1.0 + (self._importance_history**2 * 4.0)
-        c_avg = np.mean(ideal)
-        if c_avg > max_avg_bits:
-            ideal *= (max_avg_bits / c_avg)
-        self.bit_resolutions = np.clip(np.round(ideal), 1, 8).astype(np.uint8)
-        print(f"📦 TurboQuant DABA (v0.3.0 EMA): Avg Bits: {np.mean(self.bit_resolutions):.2f}")
-
-    def decode(self, repr_: TurboQuantRepr) -> np.ndarray:
-        current = np.array([repr_.final_radius], dtype=np.float32)
-        for lv in range(self.num_levels - 1, -1, -1):
-            res_avg = int(np.mean(self.bit_resolutions[::(1<<lv)]))
-            cb = self._daba_codebooks.get(res_avg, self._codebooks)[lv]
-            theta = cb[repr_.angle_indices[lv]]
-            r1, r2 = current * np.cos(theta), current * np.sin(theta)
-            current = np.empty(len(r1) * 2, dtype=np.float32)
-            current[0::2], current[1::2] = r1, r2
-        return current @ self._rotation.T
-
-    def _polar_decode(self, final_r: float, angle_indices: list) -> np.ndarray:
-        current = np.array([final_r], dtype=np.float32)
-        for lv in range(self.num_levels - 1, -1, -1):
-            res_avg = int(np.mean(self.bit_resolutions[::(1<<lv)]))
-            cb = self._daba_codebooks.get(res_avg, self._codebooks)[lv]
-            theta = cb[angle_indices[lv]]
-            r1, r2 = current * np.cos(theta), current * np.sin(theta)
-            new = np.empty(len(r1) * 2, dtype=np.float32)
-            new[0::2], new[1::2] = r1, r2
-            current = new
-        return self._rotation.T @ current
-
-    def unbiased_dot(self, query: np.ndarray, repr_: TurboQuantRepr, weights: np.ndarray | None = None) -> float:
-        x_mse = self.decode(repr_)
-        ip_base = float(np.dot(query * weights, x_mse)) if weights is not None else float(np.dot(query, x_mse))
-        p_query = self._qjl_proj.T @ query
-        correction = float(np.dot(p_query, repr_.qjl_bits)) / self.dim
-        return ip_base + correction
-
-    def unbiased_cosine_distance(self, query: np.ndarray, repr_: TurboQuantRepr, weights: np.ndarray | None = None) -> float:
-        qn = np.linalg.norm(query)
-        if qn < 1e-8: return 1.0
-        dot = self.unbiased_dot(query / qn, repr_, weights=weights)
-        dot_n = dot / (repr_.final_radius + 1e-8)
-        return float(np.clip(1.0 - dot_n, 0.0, 2.0))
-
-    def binary_encode(self, x: np.ndarray) -> np.ndarray:
-        xn = x / (np.linalg.norm(x) + 1e-8)
-        y = self._rotation @ xn.astype(np.float32)
-        return np.packbits((y > 0.0).astype(np.uint8))
-
-    def hamming_batch(self, q_bin: np.ndarray, corpus_bin: np.ndarray) -> np.ndarray:
-        xor = q_bin ^ corpus_bin
-        return np.unpackbits(xor, axis=1).sum(axis=1).astype(np.float32)
-
+    def decode_int8(self, quantized: torch.Tensor, scales: torch.Tensor) -> torch.Tensor:
+        """Ripristina i vettori quantizzati."""
+        return quantized.to(torch.float32) * scales
 
 class TwoStageTurboSearch:
-    def __init__(self, dim: int = 1024, candidate_k: int = 100, cache_size: int = 1000, use_rust: bool = True):
+    """
+    Ricerca a due stadi:
+    1. Screening Binario (Hamming Distance) -> Velocità Massima.
+    2. Refinement INT8/FP16 -> Precisione Massima.
+    """
+    def __init__(self, dim: int = 1024, candidate_k: int = 250):
         self.dim = dim
-        self.quantizer = TurboQuantizer(dim=dim)
         self.candidate_k = candidate_k
-        self._reprs: dict[str, TurboQuantRepr] = {}
-        self._ids: list[str] = []
-        self._bin_corpus: np.ndarray | None = None
-        self._fp32_cache: OrderedDict[str, np.ndarray] = OrderedDict()
-        self.cache_size = cache_size
-        self._rust_tq = None
-        if use_rust:
-            try:
-                from neuralvault_rs import RustTurboQuant
-                self._rust_tq = RustTurboQuant(dim, self.quantizer.bits_main)
-                print("🦀 NeuralVault: Rust TurboQuant backend activated.")
-            except ImportError:
-                print("🐍 NeuralVault: Rust backend not found, falling back to Python.")
+        
+        # Rilevamento Hardware via Torch
+        self.device = "cpu"
+        if torch.cuda.is_available(): self.device = "cuda"
+        elif torch.backends.mps.is_available(): self.device = "mps"
+        
+        self.tq = TurboQuantizerV2(dim=dim, device=self.device)
+        
+        # Archivi In-Memory
+        self.ids = []
+        self.binary_store: Optional[torch.Tensor] = None
+        self.int8_store: Optional[torch.Tensor] = None
+        self.scales_store: Optional[torch.Tensor] = None
+        
+        print(f"🚀 TurboQuant v2: Engine ACTIVE on {self.device.upper()}")
 
-    def add(self, node_id: str, vector: np.ndarray) -> None:
-        self._reprs[node_id] = self.quantizer.encode(vector)
-        if node_id not in self._ids:
-            self._ids.append(node_id)
-            b_vec = self.quantizer.binary_encode(vector)
-            self._bin_corpus = b_vec[None, :] if self._bin_corpus is None else np.vstack([self._bin_corpus, b_vec])
-        self._fp32_cache[node_id] = vector.copy()
-        if len(self._fp32_cache) > self.cache_size: self._fp32_cache.popitem(last=False)
-
-    def remove(self, node_id: str) -> None:
-        if node_id in self._reprs:
-            idx = self._ids.index(node_id)
-            self._ids.pop(idx)
-            self._bin_corpus = np.delete(self._bin_corpus, idx, axis=0)
-            self._reprs.pop(node_id)
-            self._fp32_cache.pop(node_id, None)
-
-    def search(self, query: np.ndarray, k: int, filter_ids: set[str] | None = None, domain_weights: np.ndarray | None = None) -> list[tuple[str, float]]:
-        if not self._reprs or self._bin_corpus is None: return []
-        q_bin = self.quantizer.binary_encode(query)
-        h_dists = self.quantizer.hamming_batch(q_bin, self._bin_corpus)
-        if filter_ids is not None:
-            for i, nid in enumerate(self._ids):
-                if nid not in filter_ids: h_dists[i] += 9999.0
-        n_cand = min(self.candidate_k, len(self._ids))
-        top_idx = np.argpartition(h_dists, n_cand - 1)[:n_cand]
-        candidates = [(self._ids[i], h_dists[i]) for i in top_idx]
-        if filter_ids is not None: candidates = [c for c in candidates if c[0] in filter_ids]
-        q_unit = query / (np.linalg.norm(query) + 1e-8)
-        rescored = []
-        for cid, _ in candidates:
-            if cid in self._fp32_cache and domain_weights is None:
-                v = self._fp32_cache[cid]
-                d = 1.0 - float(np.dot(q_unit, v / (np.linalg.norm(v) + 1e-8)))
-            elif self._rust_tq and domain_weights is None:
-                repr_ = self._reprs[cid]
-                d = 1.0 - (self._rust_tq.unbiased_dot(query.tolist(), repr_.final_radius, repr_.angle_indices) / (repr_.final_radius + 1e-8))
+    @torch.no_grad()
+    def add(self, node_id: str, vector: np.ndarray):
+        """Aggiunge un vettore quantizzandolo in entrambi i formati."""
+        v_torch = torch.from_numpy(vector).to(self.device).view(1, -1)
+        
+        # 1. Binary Encoding (1 bit/dim -> 128 byte per 1024D)
+        b_code = self.tq.encode_binary(v_torch)
+        
+        # 2. INT8 Encoding (1 byte/dim -> 1024 byte per 1024D)
+        i_code, scale = self.tq.encode_int8(v_torch)
+        
+        if node_id not in self.ids:
+            self.ids.append(node_id)
+            if self.binary_store is None:
+                self.binary_store = b_code
+                self.int8_store = i_code
+                self.scales_store = scale
             else:
-                d = self.quantizer.unbiased_cosine_distance(query, self._reprs[cid], weights=domain_weights)
-            rescored.append((cid, d))
-        rescored.sort(key=lambda x: x[1])
-        return rescored[:k]
+                self.binary_store = torch.cat([self.binary_store, b_code], dim=0)
+                self.int8_store = torch.cat([self.int8_store, i_code], dim=0)
+                self.scales_store = torch.cat([self.scales_store, scale], dim=0)
+
+    @torch.no_grad()
+    def search(self, query: np.ndarray, k: int, filter_ids: Optional[set] = None) -> List[Tuple[str, float]]:
+        if not self.ids: return []
+        
+        q_torch = torch.from_numpy(query).to(self.device).view(1, -1).to(self.tq.compute_dtype)
+        
+        # --- STAGE 1: BINARY HAMMING SCAN ---
+        q_bin = self.tq.encode_binary(q_torch)
+        # Distanza di Hamming accelerata: XOR + Popcount
+        # In torch, (a != b).sum() simula Hamming per bit unpackati
+        hamming_dists = (self.binary_store != q_bin).sum(dim=1).to(torch.float32)
+        
+        # Applicazione filtro ID (Soft-Masking)
+        if filter_ids is not None:
+            mask = torch.tensor([1.0 if nid in filter_ids else 1e9 for nid in self.ids], device=self.device)
+            hamming_dists *= mask
+
+        # Selezione dei top candidati
+        n_cand = min(self.candidate_k, len(self.ids))
+        _, top_cand_idx = torch.topk(hamming_dists, n_cand, largest=False)
+        
+        # --- STAGE 2: INT8 RE-SCORING ---
+        cand_int8 = self.int8_store[top_cand_idx]
+        cand_scales = self.scales_store[top_cand_idx]
+        
+        # De-quantizzazione veloce per i soli candidati
+        cand_vectors = cand_int8.to(torch.float32) * cand_scales
+        
+        # Calcolo Cosine Similarity reale
+        q_norm = q_torch / torch.norm(q_torch)
+        c_norms = cand_vectors / torch.norm(cand_vectors, dim=1, keepdim=True)
+        similarities = torch.matmul(c_norms, q_norm.T).squeeze()
+        
+        distances = 1.0 - similarities
+        
+        # Ordinamento Finale
+        final_scores, final_idx = torch.topk(distances, min(k, n_cand), largest=False)
+        
+        results = []
+        for i in range(len(final_idx)):
+            idx_in_store = top_cand_idx[final_idx[i]]
+            results.append((self.ids[idx_in_store], float(final_scores[i])))
+            
+        return results

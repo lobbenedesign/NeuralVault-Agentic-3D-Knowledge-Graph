@@ -1,76 +1,28 @@
-# NeuralVault - Sovereign Gitignore
+# [NEURAL VAULT - SOVEREIGN IGNORE]
+
+# Python / Ambiente
+venv/
 .venv/
 env/
-venv/
-ENV/
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-env.bak/
-venv.bak/
-target/
-neuralvault_rs/target/
-dist/
-build/
-*.egg-info/
+*.py[cod]
+*$py.class
+.pytest_cache/
 
-# Project Specific Data
-vault_data/
-*/vault_data/
-*.ael
+# Database & Persistenza (Heavy Files)
 *.db
+*.duckdb
+*.parquet
+*.pickle
 *.log
-backup/
-Dashboard-BACKUP/
-Dashboard_BACKUP/
-.checkpoints/
-.snapshots/
-.backup_hub/
-scratch/
+history/
+backups/
 
-# LLM & Large Binary Models
-models/
-**/*.bin
-**/*.gguf
-**/*.onnx
-**/*.pt
-**/*.h5
-**/*.joblib
-**/*.model
+# Dashboard & Web
 node_modules/
-
-# System Files
 .DS_Store
-Thumbs.db
 
-# Secrets & Local Config
+# Sensibile
 .env
-api_key.txt
-*.pem
-*.key
-
-# Specific excludes (Keep main READMEs)
-IA_CONSULTATION_MASTER.md
-SUPERPROMPT.md
-PROJECT_AUDIT_REPORT.md
-V0.3.0_FINAL_AUDIT.md
-MULTIMODAL_FUTURE_IDEAS.md
-MATH_SPEC.md
-*copy.md
-*BACKUP*.md
-
-# Heavy Binaries & Database Artifacts
-*.zip
-*.tar.gz
-*.mdb
-*.wal
-*.jsonl
-logs/
-sessions/
-results/
-bench_py/
-bench_rs/
-benchmarks/ann-benchmarks-main/
-
+swarm_settings.json
+vault_key.bin

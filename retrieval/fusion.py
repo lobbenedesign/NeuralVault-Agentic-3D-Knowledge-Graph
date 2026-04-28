@@ -15,6 +15,7 @@ logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
 
 from sentence_transformers import CrossEncoder
 from index.node import QueryResult, VaultNode
+from retrieval.adaptive_alpha import AdaptiveAlphaComputer
 
 def reciprocal_rank_fusion(ranked_lists: list[list[str]], k: int = 60, weights: list[float] | None = None) -> dict[str, float]:
     if weights is None:
@@ -32,6 +33,7 @@ class FusionRanker:
     def __init__(self, alpha: float = 0.7, use_reranker: bool = True):
         self.alpha = alpha
         self.use_reranker = use_reranker
+        self.alpha_computer = AdaptiveAlphaComputer()
         self.rrf_k = 60
         self._ce_model = None
         if use_reranker:
@@ -68,8 +70,25 @@ class FusionRanker:
         sparse_ranked = [nid for nid, _ in sorted(sparse_results, key=lambda x: x[1], reverse=True)]
         graph_ranked = [nid for nid, _ in sorted(graph_results, key=lambda x: x[1], reverse=True)]
         
+        # [v4.1.0] Adaptive Alpha Calculation
+        dynamic_alpha = self.alpha
+        if query_text:
+            sparse_scores = [s for _, s in sorted(sparse_results, key=lambda x: x[1], reverse=True)]
+            metrics = self.alpha_computer.compute(query_text, sparse_scores)
+            dynamic_alpha = metrics.final_alpha
+            # print(f"🔍 [Adaptive Search] Alpha: {dynamic_alpha:.2f} (Gap: {metrics.gap_signal:.2f}, Lex: {metrics.lexical_signal:.2f})")
+
         ranked_lists = [l for l in [dense_ranked, sparse_ranked, graph_ranked] if l]
-        weights = [self.alpha if l is dense_ranked else (1.0-self.alpha) for l in ranked_lists]
+        # Ponderazione basata sull'Alpha Adattativo
+        # Dense (HNSW) riceve dynamic_alpha, Sparse/Graph ricevono il resto
+        weights = []
+        for l in ranked_lists:
+            if l is dense_ranked:
+                weights.append(dynamic_alpha)
+            else:
+                # Se abbiamo sia Sparse che Graph, dividiamo il budget rimanente
+                other_count = len(ranked_lists) - (1 if dense_ranked in ranked_lists else 0)
+                weights.append((1.0 - dynamic_alpha) / (other_count if other_count > 0 else 1))
         
         rrf_scores = reciprocal_rank_fusion(ranked_lists, k=self.rrf_k, weights=weights)
 

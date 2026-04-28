@@ -105,6 +105,7 @@ class MultimodalSynapseProcessor:
             CREATE TABLE IF NOT EXISTS multimodal_synapses (
                 id VARCHAR PRIMARY KEY,
                 media_type VARCHAR,
+                namespace VARCHAR DEFAULT 'default',
                 source_uri VARCHAR,
                 content_hash VARCHAR,
                 t_start_ms DOUBLE,
@@ -237,7 +238,7 @@ class MultimodalSynapseProcessor:
                 sha256_hash.update(byte_block)
         return sha256_hash.hexdigest()
 
-    async def ingest(self, file_path: Union[str, Path], source_uri: Optional[str] = None) -> List[str]:
+    async def ingest(self, file_path: Union[str, Path], source_uri: Optional[str] = None, namespace: str = "default") -> List[str]:
         """Ingestione Multimodale Sovereign: Triage & Processing Reale."""
         p = Path(file_path)
         if not p.exists():
@@ -258,11 +259,11 @@ class MultimodalSynapseProcessor:
         logger.info(f"🛰️ [Multimodal] Real Ingestion: {p.name} (MIME: {mime})")
 
         if mime.startswith("video/"):
-            return self._process_video(p, source_uri, content_hash)
+            return self._process_video(p, source_uri, content_hash, namespace=namespace)
         elif mime.startswith("audio/"):
-            return self._process_audio(p, source_uri, content_hash)
+            return self._process_audio(p, source_uri, content_hash, namespace=namespace)
         elif mime.startswith("image/"):
-            return self._process_image(p, source_uri, content_hash)
+            return self._process_image(p, source_uri, content_hash, namespace=namespace)
         else:
             logger.warning(f"❌ [Multimodal] MIME non supportato: {mime}")
             return []
@@ -298,7 +299,7 @@ class MultimodalSynapseProcessor:
         self._save_profiles()
         return new_id
 
-    def _process_video(self, path: Path, uri: str, h: str) -> List[str]:
+    def _process_video(self, path: Path, uri: str, h: str, namespace: str = "default") -> List[str]:
         """Pipeline Video Reale: Saliency-Based Event Detection + Speaker Diarization."""
         logger.info(f"🎞️ [Video] High-Fidelity Forensics: {path.name}")
         
@@ -352,6 +353,7 @@ class MultimodalSynapseProcessor:
             synapse = {
                 "id": node_id,
                 "media_type": "video",
+                "namespace": namespace,
                 "source_uri": uri,
                 "content_hash": h,
                 "t_start_ms": t_start,
@@ -407,7 +409,7 @@ class MultimodalSynapseProcessor:
         except Exception as e:
             return f"[Vision Error: {str(e)}]"
 
-    def _process_audio(self, path: Path, uri: str, h: str) -> List[str]:
+    def _process_audio(self, path: Path, uri: str, h: str, namespace: str = "default") -> List[str]:
         """Pipeline Audio: Whisper Transcription + ImageBind Acoustic Embedding."""
         logger.info(f"🎙️ [Audio] Acoustic Forensics for {path.name}")
         
@@ -429,6 +431,7 @@ class MultimodalSynapseProcessor:
         synapse = {
             "id": node_id,
             "media_type": "audio",
+            "namespace": namespace,
             "source_uri": uri,
             "content_hash": h,
             "t_start_ms": 0.0,
@@ -442,7 +445,7 @@ class MultimodalSynapseProcessor:
         self._cleanup_memory()
         return [node_id]
 
-    def _process_image(self, path: Path, uri: str, h: str) -> List[str]:
+    def _process_image(self, path: Path, uri: str, h: str, namespace: str = "default") -> List[str]:
         """Pipeline Immagine: ImageBind Visual Embedding (Unified 1024D)."""
         logger.info(f"🖼️ [Image] Capturing Visual Synapse for {path.name}")
         
@@ -458,6 +461,7 @@ class MultimodalSynapseProcessor:
         synapse = {
             "id": node_id,
             "media_type": "image",
+            "namespace": namespace,
             "source_uri": uri,
             "content_hash": h,
             "t_start_ms": 0.0,
@@ -475,16 +479,16 @@ class MultimodalSynapseProcessor:
         conn = duckdb.connect(self.db_path)
         conn.execute("""
             INSERT INTO multimodal_synapses 
-            (id, media_type, source_uri, content_hash, t_start_ms, t_end_ms, transcript, speaker, vector, metadata)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (id, media_type, namespace, source_uri, content_hash, t_start_ms, t_end_ms, transcript, speaker, vector, metadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, [
-            data["id"], data["media_type"], data["source_uri"], data["content_hash"],
+            data["id"], data["media_type"], data.get("namespace", "default"), data["source_uri"], data["content_hash"],
             data["t_start_ms"], data["t_end_ms"], data["transcript"], data["speaker"],
             data["vector"], data["metadata"]
         ])
         conn.close()
 
-    def query(self, text: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def query(self, text: str, top_k: int = 5, namespace: Optional[str] = None) -> List[Dict[str, Any]]:
         """Query Multimodale Reale (Unified Semantic Search)."""
         logger.info(f"🔮 [Oracle] Searching Unified Vector Space for: {text}")
         
@@ -498,12 +502,19 @@ class MultimodalSynapseProcessor:
             query_vector = (vec / np.linalg.norm(vec)).tolist()
         
         conn = duckdb.connect(self.db_path)
-        results = conn.execute("""
+        where_clause = ""
+        params = [query_vector, top_k]
+        if namespace:
+            where_clause = "WHERE namespace = ?"
+            params = [namespace, query_vector, top_k]
+
+        results = conn.execute(f"""
             SELECT id, media_type, t_start_ms, transcript, metadata 
             FROM multimodal_synapses 
+            {where_clause}
             ORDER BY list_dot_product(vector, ?) DESC
             LIMIT ?
-        """, [query_vector, top_k]).fetchall()
+        """, params).fetchall()
         conn.close()
         
         return [{"id": r[0], "type": r[1], "t_start": r[2], "content": r[3], "meta": json.loads(r[4])} for r in results]

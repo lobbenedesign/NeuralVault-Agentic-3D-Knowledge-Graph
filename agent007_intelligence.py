@@ -122,9 +122,32 @@ class Agent007Intelligence:
                             clean_resp = raw_resp.strip()
                             if clean_resp.startswith("```json"): clean_resp = clean_resp[7:-3]
                             elif clean_resp.startswith("```"): clean_resp = clean_resp[3:-3]
-                            data = json.loads(clean_resp.strip())
+                            
+                            try:
+                                data = json.loads(clean_resp.strip())
+                            except json.JSONDecodeError:
+                                # Tentativo di riparazione per JSON troncati (tipico di modelli piccoli)
+                                print(f"🔧 [Agent007] Riparazione JSON in corso...")
+                                repaired = clean_resp.strip()
+                                
+                                # Se termina con una virgola o una stringa aperta, chiudiamola
+                                if repaired.endswith(','): repaired = repaired[:-1]
+                                
+                                # Conta parentesi e virgolette per bilanciare
+                                open_braces = repaired.count('{') - repaired.count('}')
+                                open_brackets = repaired.count('[') - repaired.count(']')
+                                
+                                # Se c'è una virgoletta spaiata alla fine, chiudiamola
+                                if repaired.count('"') % 2 != 0:
+                                    repaired += '"'
+                                
+                                # Chiudi array e oggetti
+                                repaired += ']' * max(0, open_brackets)
+                                repaired += '}' * max(0, open_braces)
+                                
+                                data = json.loads(repaired)
                         except Exception as je:
-                            print(f"⚠️ [Agent007] JSON Parse Error: {je}. Raw: {raw_resp[:100]}...")
+                            print(f"⚠️ [Agent007] JSON Parse Error irrecuperabile: {je}. Raw: {raw_resp[:100]}...")
                             data = {}
 
                         entities = data.get("entities", [])

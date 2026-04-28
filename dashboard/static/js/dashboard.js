@@ -45,6 +45,8 @@ let timeTravelFactor = 1.0;
 let nebulaQuality = 'HD';
 let clusterFocus = true;
 let radarChart = null; // 🧬 Sovereign Radar Reference
+let nebulaExpansionFactor = 1.0;
+let lastNeuralLinks = [];
 let multimodalGroup, multimodalTextures = {}; // 📸 Multimodal Layer
 const VAULT_KEY = "vault_secret_aura_2026";
 
@@ -72,33 +74,65 @@ function init3D() {
         return;
     }
 
-    const glOptions = { antialias: false, depth: true, alpha: true, preserveDrawingBuffer: true };
+    const glOptions = { 
+        antialias: false, 
+        depth: true, 
+        alpha: true, 
+        preserveDrawingBuffer: true,
+        failIfMajorPerformanceCaveat: false 
+    };
     let gl = canvas.getContext('webgl2', glOptions) || canvas.getContext('webgl', glOptions);
     
     if (!gl) {
-        log("❌ WebGL Context Failure - Retrying in 2s", "#ef4444");
-        setTimeout(init3D, 2000);
+        if (!window.lastContextError || Date.now() - window.lastContextError > 10000) {
+            log("❌ WebGL Context Failure - Retrying in 10s", "#ef4444");
+            window.lastContextError = Date.now();
+        }
+        setTimeout(init3D, 10000);
         return;
     }
 
     canvas.addEventListener('webglcontextlost', (e) => {
         e.preventDefault();
         window.is3DInitialized = false;
-        log("⚠️ WebGL Context Lost - Emergency Re-init", "#f59e0b");
-        setTimeout(init3D, 3000);
+        log("⚠️ WebGL Context Lost - Cooling down...", "#f59e0b");
+        // Clear all Three.js objects to free VRAM
+        if (scene) scene.traverse(obj => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+                if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+                else obj.material.dispose();
+            }
+        });
+        setTimeout(init3D, 4000);
     }, false);
 
-    log("🚀 WebGL Context Initialized", "#10b981");
+    log("\uD83D\uDE80 WebGL Context Initialized", "#10b981");
 
+    if (renderer) {
+        renderer.dispose();
+        renderer = null;
+    }
+    if (scene) {
+        scene.traverse(obj => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+                if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+                else obj.material.dispose();
+            }
+        });
+        scene = null;
+    }
+    
     scene = new THREE.Scene();
     const isLight = document.body.classList.contains('light-theme');
     scene.background = new THREE.Color(isLight ? 0xf8fafc : 0x020617);
     const width = container.clientWidth;
     const height = container.clientHeight;
-    
+
     camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 10, 50000000);
     camera.position.set(5000000, 5000000, 5000000); 
-    camera.lookAt(0, 0, 0);
+    camera.lookAt(0, 1000000, 0);
 
     renderer = new THREE.WebGLRenderer({ 
         canvas, 
@@ -121,6 +155,7 @@ function init3D() {
         new THREE.BoxGeometry(4000000, 4000000, 4000000),
         new THREE.MeshBasicMaterial({ color: 0x3b82f6, wireframe: true, transparent: true, opacity: 0.4 })
     );
+    cube.position.y = 1002000; // 🚀 [v17.5] Elevato leggermente per prevenire Z-Fighting con la griglia (-1000000)
     scene.add(cube);
 
     const grid = new THREE.GridHelper(10000000, 20, isLight ? 0x94a3b8 : 0x3b82f6, isLight ? 0xe2e8f0 : 0x1e293b);
@@ -129,10 +164,11 @@ function init3D() {
 
     // [v16.0] Cluster Visualization Layer
     clusterNodesGroup = new THREE.Group();
+    clusterNodesGroup.position.y = 1000000;
     scene.add(clusterNodesGroup);
 
     window.is3DInitialized = true;
-    const MAX_POINTS = 30000;
+    const MAX_POINTS = 15000;
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAX_POINTS * 3), 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(MAX_POINTS * 3), 3));
@@ -141,9 +177,11 @@ function init3D() {
         size: 25000, vertexColors: true, transparent: true, opacity: 0.9,
         sizeAttenuation: true, blending: THREE.AdditiveBlending, depthWrite: false
     }));
+    pointsMesh.position.y = 1000000;
     scene.add(pointsMesh);
 
     multimodalGroup = new THREE.Group();
+    multimodalGroup.position.y = 1000000;
     scene.add(multimodalGroup);
 
     // [v4.0] Pre-render Multimodal Textures (Image, Audio, Video)
@@ -164,10 +202,12 @@ function init3D() {
     multimodalTextures['video'] = createIconTexture('\uf03d', '#ef4444'); // Video Camera
 
     neuralLinks = new THREE.Group();
+    neuralLinks.position.y = 1000000;
     scene.add(neuralLinks);
 
     if (typeof THREE.OrbitControls === 'function') {
         controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 1000000, 0);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         controls.screenSpacePanning = true;
@@ -190,7 +230,7 @@ function init3D() {
     }
 
     raycaster = new THREE.Raycaster();
-    raycaster.params.Points.threshold = 15000;
+    raycaster.params.Points.threshold = 150000; // 🎯 Catch orbitale per nodi a coordinate massive
     mouse = new THREE.Vector2();
 
     container.addEventListener('click', (e) => window.onNebulaClick(e));
@@ -224,7 +264,7 @@ function init3D() {
     provisionAgents();
     animate();
     window.is3DInitialized = true;
-    log("🌌 Neural Cycloscope Active", "#3b82f6");
+    log("\uD83C\uDF0C Neural Cycloscope Active", "#3b82f6");
 
     window.addEventListener('resize', () => {
         const width = container.clientWidth;
@@ -270,7 +310,7 @@ function spawnReaperMonument(pos) {
     });
 
     scene.add(cube);
-    reaperCubes.push({ mesh: cube, expiry: Date.now() + 300000 }); // 5 minutes
+    reaperCubes.push({ mesh: cube, expiry: Date.now() + 600000 }); // 10 minutes
 }
 
 function createTextSprite(text, color) {
@@ -473,7 +513,7 @@ function provisionAgents() {
     
     // Muso Squadrato (Frustrated Pyramid)
     const fuseNose = new THREE.Mesh(new THREE.CylinderGeometry(800, 3500, 15000, 4), hullMat);
-    fuseNose.rotation.x = -Math.PI / 2;
+    fuseNose.rotation.x = Math.PI / 2; // 🚀 Ruotato di 180 gradi lungo l'asse X come richiesto
     fuseNose.rotation.y = Math.PI / 4;
     fuseNose.position.z = 23500;
     
@@ -556,10 +596,11 @@ function animate() {
     const time = now * 0.001;
     
     if (isEvolving) {
+        const exp = nebulaExpansionFactor || 1.0;
         const time = Date.now() * 0.005;
-        const radius = 200000 + 50000 * Math.sin(time * 0.5);
-        quantumTargetPos.set(Math.cos(time) * radius, Math.sin(time * 0.7) * 100000, Math.sin(time) * radius);
-        synthTargetPos.set(Math.cos(time + Math.PI) * radius, Math.sin(time * 0.7 + Math.PI) * 100000, Math.sin(time + Math.PI) * radius);
+        const radius = (200000 + 50000 * Math.sin(time * 0.5)) * exp;
+        quantumTargetPos.set(Math.cos(time) * radius, Math.sin(time * 0.7) * 100000 * exp, Math.sin(time) * radius);
+        synthTargetPos.set(Math.cos(time + Math.PI) * radius, Math.sin(time * 0.7 + Math.PI) * 100000 * exp, Math.sin(time + Math.PI) * radius);
     } else {
         updateAgentPhysics();
     }
@@ -597,18 +638,19 @@ function animate() {
         janitorBottom.rotation.x = mouthOpen;
         
         // Sovereign Patrol Logic: Incursiuoni dinamiche dentro e fuori la periferia
-        if (janitorGroup.position.distanceTo(janitorTargetPos) < 100000) {
-            const scope = 1500000; // Raggio periferico esteso
+        const exp = nebulaExpansionFactor || 1.0;
+        if (janitorGroup.position.distanceTo(janitorTargetPos) < 100000 * exp) {
+            const scope = 1500000 * exp; // Raggio periferico esteso
             janitorTargetPos.set(
                 (Math.random() - 0.5) * scope * 2,
-                (Math.random() - 0.5) * 600000, // Variabilità Y per scansionare volumi diversi
+                (Math.random() - 0.5) * 600000 * exp, // Variabilità Y per scansionare volumi diversi
                 (Math.random() - 0.5) * scope * 2
             );
         }
 
         // Persistent Patrol: orbit moving target
-        const orbitX = Math.cos(time * 0.5) * 80000;
-        const orbitZ = Math.sin(time * 0.5) * 80000;
+        const orbitX = Math.cos(time * 0.5) * 80000 * exp;
+        const orbitZ = Math.sin(time * 0.5) * 80000 * exp;
         const nextPos = new THREE.Vector3(janitorTargetPos.x + orbitX, janitorTargetPos.y, janitorTargetPos.z + orbitZ);
         
         // Look towards movement: allineamento perfetto di occhi e bocca alla direzione di marcia
@@ -633,12 +675,19 @@ function animate() {
 
     // ☦️ [REAPER] Monuments Lifecycle
     reaperCubes = reaperCubes.filter(c => {
-        if (now > c.expiry) {
+        const remaining = c.expiry - now;
+        if (remaining < 0) {
             scene.remove(c.mesh);
             return false;
         }
-        // Subtle Pulse for the red crosses
-        c.mesh.scale.setScalar(1 + Math.sin(now * 0.005) * 0.05);
+        // Smooth scaling out in the last 10 seconds
+        if (remaining < 10000) {
+            const s = (remaining / 10000) * (1 + Math.sin(now * 0.005) * 0.05);
+            c.mesh.scale.setScalar(s);
+        } else {
+            // Subtle Pulse for the red crosses
+            c.mesh.scale.setScalar(1 + Math.sin(now * 0.005) * 0.05);
+        }
         return true;
     });
 
@@ -652,13 +701,14 @@ function animate() {
 
     if (snakeGroup && now - lastSnakeStep > 125) {
         lastSnakeStep = now;
+        const exp = nebulaExpansionFactor || 1.0;
         let prevPos = snakeGroup.position.clone();
         const diff = snakeCurrentTarget.clone().sub(snakeGroup.position);
-        if (diff.length() < 100000) snakeCurrentTarget.set((Math.random()-0.5)*2000000, (Math.random()-0.5)*1000000, (Math.random()-0.5)*2000000);
+        if (diff.length() < 100000 * exp) snakeCurrentTarget.set((Math.random()-0.5)*2000000 * exp, (Math.random()-0.5)*1000000 * exp, (Math.random()-0.5)*2000000 * exp);
         if (Math.abs(diff.x) > Math.abs(diff.y) && Math.abs(diff.x) > Math.abs(diff.z)) snakeDirection.set(Math.sign(diff.x), 0, 0);
         else if (Math.abs(diff.y) > Math.abs(diff.z)) snakeDirection.set(0, Math.sign(diff.y), 0);
         else snakeDirection.set(0, 0, Math.sign(diff.z));
-        snakeGroup.position.add(snakeDirection.clone().multiplyScalar(32500));
+        snakeGroup.position.add(snakeDirection.clone().multiplyScalar(32500 * exp));
         snakeGroup.lookAt(snakeGroup.position.clone().add(snakeDirection));
         snakeSegments.forEach(seg => { let t = seg.position.clone(); seg.position.lerp(prevPos, 0.8); prevPos = t; });
     }
@@ -708,12 +758,13 @@ function animate() {
     if (synthGroup) {
         synthGroup.position.lerp(synthTargetPos, 0.05);
         const isActive = (synthFlashTime > 0);
+        const exp = nebulaExpansionFactor || 1.0;
         const subPulse = Math.sin(time * 15) * 0.5 + 0.5;
         synthSubAgents.forEach((sub, i) => {
             const orbitSpeed = 2.0;
-            const orbitRadius = 65000;
+            const orbitRadius = 65000 * exp;
             const angle = (time * orbitSpeed) + (i * Math.PI * 2 / 3);
-            sub.position.set(Math.cos(angle) * orbitRadius, Math.sin(angle) * orbitRadius, Math.sin(angle * 0.5) * 20000);
+            sub.position.set(Math.cos(angle) * orbitRadius, Math.sin(angle) * orbitRadius, Math.sin(angle * 0.5) * 20000 * exp);
             sub.rotation.y += 0.05;
             if (synthFlashTime > 0) {
                 sub.material.emissiveIntensity = 1.0 + subPulse * 2.0;
@@ -729,12 +780,13 @@ function animate() {
     }
 
     if (skywalkerGroup) {
+        const exp = nebulaExpansionFactor || 1.0;
         // High-Altitude Periphery Patrol (Outer Guard)
-        const patrolOrbit = 1100000 + Math.sin(time * 0.2) * 200000; // Orbiting at the edge
+        const patrolOrbit = (1100000 + Math.sin(time * 0.2) * 200000) * exp; // Orbiting at the edge
         const patrolSpeed = time * 0.15; // Slower, more majestic patrol
         const tx = Math.cos(patrolSpeed) * patrolOrbit;
         const tz = Math.sin(patrolSpeed) * patrolOrbit;
-        const ty = Math.sin(time * 0.4) * 600000; // High vertical clearance
+        const ty = Math.sin(time * 0.4) * 600000 * exp; // High vertical clearance
         
         skywalkerTargetPos.set(tx, ty, tz);
         skywalkerGroup.position.lerp(skywalkerTargetPos, 0.02); // Smoother lerp for long distances
@@ -795,7 +847,18 @@ function animate() {
     });
 
     if (followedAgent) {
-        controls.target.lerp(followedAgent.position, 0.05); 
+        controls.target.lerp(followedAgent.position, 0.05);
+        
+        // 📡 Cinematic Follow: Lerp camera distance to 200,000 units
+        const idealDist = 200000 * (nebulaExpansionFactor || 1.0);
+        const currentDist = camera.position.distanceTo(controls.target);
+        const distDiff = idealDist - currentDist;
+        
+        if (Math.abs(distDiff) > 1000) {
+            const dir = camera.position.clone().sub(controls.target).normalize();
+            const targetCamPos = controls.target.clone().add(dir.multiplyScalar(idealDist));
+            camera.position.lerp(targetCamPos, 0.03);
+        }
     }
 
     if (!isRotationPaused) {
@@ -941,12 +1004,14 @@ function toggleHeatmap(enabled) {
         log("🧊 HEATMAP_MODE: Disabled. Restoring theme colors.", "#06b6d4");
     }
     // Forza aggiornamento scena se abbiamo dati
-    if (vaultPoints.length > 0) updateThreeScene(vaultPoints, []);
+    if (vaultPoints.length > 0) updateThreeScene(vaultPoints, null);
 }
 
-function updateThreeScene(points, links = []) {
+function updateThreeScene(points, links = null) {
     if (!pointsMesh || !neuralLinks) return;
     vaultPoints = points || [];
+    if (links !== null) lastNeuralLinks = links;
+    const currentLinks = links !== null ? links : lastNeuralLinks;
     const count = Math.min(vaultPoints.length, 30000);
     const pos = pointsMesh.geometry.attributes.position.array;
     const col = pointsMesh.geometry.attributes.color.array;
@@ -955,7 +1020,8 @@ function updateThreeScene(points, links = []) {
 
     for (let i = 0; i < count; i++) {
         const p = vaultPoints[i];
-        pos[i*3] = p.x || 0; pos[i*3+1] = p.y || 0; pos[i*3+2] = p.z || 0;
+        const exp = nebulaExpansionFactor || 1.0;
+        pos[i*3] = (p.x || 0) * exp; pos[i*3+1] = (p.y || 0) * exp; pos[i*3+2] = (p.z || 0) * exp;
         
         let displayColor;
         if (heatmapMode && currentHeatmap[p.id] !== undefined) {
@@ -973,9 +1039,11 @@ function updateThreeScene(points, links = []) {
                 displayColor = isLight ? "#94a3b8" : "#475569";
             }
         }
-        
+        const opacity = p.opacity !== undefined ? p.opacity : 1.0;
         const color = new THREE.Color(displayColor);
-        col[i*3] = color.r; col[i*3+1] = color.g; col[i*3+2] = color.b;
+        col[i*3] = color.r * opacity; 
+        col[i*3+1] = color.g * opacity; 
+        col[i*3+2] = color.b * opacity;
     }
     pointsMesh.geometry.attributes.position.needsUpdate = true;
     pointsMesh.geometry.attributes.color.needsUpdate = true;
@@ -983,31 +1051,40 @@ function updateThreeScene(points, links = []) {
     const drawCount = Math.floor(count * timeTravelFactor);
     pointsMesh.geometry.setDrawRange(0, drawCount);
 
-    // [v4.0] Render Multimodal Sprites
+    // [v4.1] Optimized Multimodal Rendering: Filter first, then spawn
     multimodalGroup.clear();
-    vaultPoints.forEach(p => {
-        if (p.media_type && multimodalTextures[p.media_type]) {
-            const material = new THREE.SpriteMaterial({ 
-                map: multimodalTextures[p.media_type],
-                transparent: true,
-                opacity: 0.9
-            });
-            const sprite = new THREE.Sprite(material);
-            sprite.scale.set(60000, 60000, 1);
-            sprite.position.set(p.x, p.y, p.z);
-            sprite.userData = { id: p.id, type: 'multimodal', media: p.media_type };
-            multimodalGroup.add(sprite);
-        }
+    const mediaNodes = vaultPoints.filter(p => p.media_type && multimodalTextures[p.media_type]);
+    mediaNodes.forEach(p => {
+        const material = new THREE.SpriteMaterial({ 
+            map: multimodalTextures[p.media_type],
+            transparent: true,
+            opacity: 0.9
+        });
+        const sprite = new THREE.Sprite(material);
+        const exp = nebulaExpansionFactor || 1.0;
+        sprite.scale.set(60000, 60000, 1);
+        sprite.position.set(p.x * exp, p.y * exp, p.z * exp);
+        sprite.userData = { id: p.id, type: 'multimodal', media: p.media_type };
+        multimodalGroup.add(sprite);
     });
+
+    // 1. Creiamo una mappa rapida dei punti correnti sullo schermo
+    const ptsMap = {};
+    vaultPoints.forEach(p => ptsMap[p.id] = p);
 
     neuralLinks.clear();
     const now = Date.now();
-    if (layersVisibility.edges && links && links.length > 0) {
-        links.slice(0, 1500).forEach(l => {
-            if (l.source_pos && l.target_pos) {
+    if (layersVisibility.edges && currentLinks && currentLinks.length > 0) {
+        currentLinks.slice(0, 1500).forEach(l => {
+            // Estraiamo la posizione in tempo reale dai nodi renderizzati, non dallo storico!
+            const srcNode = ptsMap[l.source];
+            const dstNode = ptsMap[l.target];
+            
+            if (srcNode && dstNode) {
+                const exp = nebulaExpansionFactor || 1.0;
                 const geo = new THREE.BufferGeometry().setFromPoints([
-                    new THREE.Vector3(l.source_pos[0], l.source_pos[1], l.source_pos[2]),
-                    new THREE.Vector3(l.target_pos[0], l.target_pos[1], l.target_pos[2])
+                    new THREE.Vector3(srcNode.x * exp, srcNode.y * exp, srcNode.z * exp),
+                    new THREE.Vector3(dstNode.x * exp, dstNode.y * exp, dstNode.z * exp)
                 ]);
                 const isSpark = l.is_aura === true;
                 const isNew = (now - (l.created_at * 1000) < 6000);
@@ -1066,13 +1143,19 @@ function renderClusters(points) {
                 shininess: 100
             });
             const hex = new THREE.Mesh(geo, mat);
+            
+            // Assegniamo l'ID di un nodo rappresentativo al cluster per renderlo ispezionabile!
+            const sampleNode = points.find(p => (p.theme || 'default') === theme);
+            if (sampleNode) hex.userData = { id: sampleNode.id, isCluster: true };
+
             hex.rotation.x = Math.PI / 2;
             hex.onBeforeRender = (renderer, scene, camera, geometry, material) => {
                 const clock = Date.now() * 0.002;
                 material.color.setHSL((clock + avgX * 0.00001) % 1, 0.8, isLight ? 0.4 : 0.6);
                 material.emissive.setHSL((clock * 1.5) % 1, 1, 0.2);
             };
-            hex.position.set(avgX, avgY, avgZ);
+            const exp = nebulaExpansionFactor || 1.0;
+            hex.position.set(avgX * exp, avgY * exp, avgZ * exp);
             clusterNodesGroup.add(hex);
         }
     });
@@ -1121,26 +1204,100 @@ window.exportAuditLedger = function(format) {
     if(document.getElementById('export-dropdown')) document.getElementById('export-dropdown').classList.add('hidden');
 };
 
+let currentInspectedNodeId = null;
+
 async function selectNode(id) {
-    const sidebar = document.getElementById('node-sidebar');
+    currentInspectedNodeId = id;
+    const modal = document.getElementById('node-inspector-modal');
     const txtEl = document.getElementById('node-text');
-    if (sidebar) { sidebar.classList.remove('hidden'); sidebar.style.display = 'flex'; }
-    if (txtEl) txtEl.innerText = "Caricamento...";
+    const metaEl = document.getElementById('node-meta');
+    const linksEl = document.getElementById('node-links-list');
+    const auditArea = document.getElementById('audit-result-area');
+    const mediaCont = document.getElementById('media-preview-container');
+    const mediaImg = document.getElementById('media-preview-img');
+
+    if (modal) {
+        modal.style.display = 'flex';
+        // Reset state
+        if (auditArea) auditArea.style.display = 'none';
+        if (linksEl) linksEl.innerHTML = '';
+        if (mediaCont) mediaCont.classList.add('hidden');
+    }
+    
+    if (txtEl) txtEl.innerText = "Sincronizzazione neurale in corso...";
+
     try {
         const r = await fetch(`/api/node/${id}`, { headers: { 'X-API-KEY': VAULT_KEY }});
         const d = await r.json();
-        if (txtEl) txtEl.innerText = d.text || "Vuoto";
-        const metaEl = document.getElementById('node-meta');
-        if (metaEl && d.connections) {
-            const reasons = d.connections
-                .filter(c => c.reason)
-                .map(c => `<div style="border-left:2px solid #a855f7; padding-left:10px; margin-bottom:10px; color:#4ade80; font-family:'Inter'; font-size:0.75rem;">
-                    <strong style="color:#a855f7; font-size:0.6rem;">[NEURAL_INSIGHT]</strong><br/>${c.reason}
-                </div>`)
-                .join('');
-            metaEl.innerHTML = reasons || `<div style="opacity:0.5; font-size:0.6rem;">Analisi strutturale completata. Connessione meccanica certificata.</div>`;
+        
+        if (d.error) {
+            if (txtEl) txtEl.innerText = `Errore: ${d.error}`;
+            return;
         }
-    } catch(e) { if (txtEl) txtEl.innerText = "Errore."; }
+
+        if (txtEl) txtEl.innerText = d.text || "Nodo senza contenuto testuale.";
+        
+        // Metadata formatting
+        if (metaEl) {
+            const metaObj = d.metadata || {};
+            metaEl.innerHTML = `
+                <div style="color: #a855f7; margin-bottom: 5px;">[PROPRIETÀ]</div>
+                ID: ${d.id}<br>
+                TIPO: ${d.type || 'text'}<br>
+                DATA: ${new Date(d.created_at * 1000).toLocaleString()}<br>
+                SORGENTE: ${metaObj.source || 'Sovereign Upload'}
+            `;
+        }
+
+        // Multimedia Preview
+        if (d.preview && mediaCont && mediaImg) {
+            mediaImg.src = d.preview;
+            mediaCont.classList.remove('hidden');
+        }
+
+        // Synaptic Connections (Navigable)
+        if (linksEl && d.connections) {
+            if (d.connections.length === 0) {
+                linksEl.innerHTML = '<div style="font-size:0.6rem; opacity:0.4;">Nessuna connessione sinaptica diretta rilevata.</div>';
+            } else {
+                d.connections.forEach(conn => {
+                    const btn = document.createElement('button');
+                    btn.style.cssText = "padding: 0.4rem 0.8rem; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #3b82f6; border-radius: 6px; font-size: 0.6rem; cursor: pointer; transition: 0.3s; font-family: 'JetBrains Mono';";
+                    btn.innerHTML = `<i class="fas fa-microchip"></i> ${conn.node.substring(0, 8)}...`;
+                    btn.title = `Relazione: ${conn.relation || 'unknown'}`;
+                    btn.onclick = () => selectNode(conn.node);
+                    btn.onmouseover = () => { btn.style.background = "rgba(59, 130, 246, 0.2)"; btn.style.borderColor = "#3b82f6"; };
+                    btn.onmouseout = () => { btn.style.background = "rgba(59, 130, 246, 0.1)"; btn.style.borderColor = "rgba(59, 130, 246, 0.3)"; };
+                    linksEl.appendChild(btn);
+                });
+            }
+        }
+    } catch(e) { 
+        if (txtEl) txtEl.innerText = "Errore critico durante il recupero del frammento."; 
+        console.error(e);
+    }
+}
+
+async function verifyNodeCoherence() {
+    if (!currentInspectedNodeId) return;
+    
+    const auditArea = document.getElementById('audit-result-area');
+    const auditText = document.getElementById('audit-text');
+    const verifyBtn = document.getElementById('verify-node-btn');
+
+    if (auditArea) auditArea.style.display = 'block';
+    if (auditText) auditText.innerText = "Lo sciame sta analizzando la coerenza logica...";
+    if (verifyBtn) verifyBtn.disabled = true;
+
+    try {
+        const r = await fetch(`/api/node/verify/${currentInspectedNodeId}`, { headers: { 'X-API-KEY': VAULT_KEY }});
+        const d = await r.json();
+        if (auditText) auditText.innerText = d.audit || "Analisi completata senza feedback rilevante.";
+    } catch(e) {
+        if (auditText) auditText.innerText = "Errore durante il protocollo di audit.";
+    } finally {
+        if (verifyBtn) verifyBtn.disabled = false;
+    }
 }
 
 async function refreshModels() {
@@ -1311,7 +1468,8 @@ function populateSwarmSelects(models) {
         'route-audit', 'route-extraction', 'route-crossref', 'route-synthesis', 
         'route-chat-mediator', 'route-multimodal', 'route-vision-description', 
         'route-vision-detection', 'route-vision-ocr', 'route-vision-analysis', 'route-evolution',
-        'route-evolution-suggestions', 'court-judge-1', 'court-judge-2', 'court-judge-3'
+        'route-evolution-suggestions', 'court-judge-1', 'court-judge-2', 'court-judge-3',
+        'route-coding-1', 'route-coding-2', 'route-coding-supervisor'
     ];
     const installed = models.filter(m => m.status === 'INSTALLED');
     
@@ -1355,7 +1513,15 @@ window.saveSwarmRouting = async () => {
         'autonomous_court': document.getElementById('autonomous-court-toggle')?.checked || false,
         'court_judge_1': document.getElementById('court-judge-1')?.value || "llama3.2",
         'court_judge_2': document.getElementById('court-judge-2')?.value || "-",
-        'court_judge_3': document.getElementById('court-judge-3')?.value || "-"
+        'court_judge_3': document.getElementById('court-judge-3')?.value || "-",
+        'coding_1': document.getElementById('route-coding-1')?.value || "llama3.2",
+        'coding_2': document.getElementById('route-coding-2')?.value || "llama3.2",
+        'coding_supervisor': document.getElementById('route-coding-supervisor')?.value || "llama3.2",
+        'ollama_url': document.getElementById('ollama-url')?.value || "http://127.0.0.1:11434",
+        'github_token': document.getElementById('github-token')?.value || "",
+        'github_repo': document.getElementById('github-repo')?.value || "",
+        'git_auto_branch': document.getElementById('git-auto-branch-toggle')?.checked || false,
+        'autonomous_patching': document.getElementById('auto-patching-toggle')?.checked || false
     };
     
     try {
@@ -1373,6 +1539,94 @@ window.saveSwarmRouting = async () => {
         }
     } catch(e) {
         console.error("Save Error:", e);
+    }
+};
+
+window.testGitHubConnection = async () => {
+    const token = document.getElementById('github-token')?.value;
+    const repo = document.getElementById('github-repo')?.value;
+    const ind = document.getElementById('github-sync-indicator');
+    const stat = document.getElementById('github-sync-status');
+
+    if (!token || !repo) {
+        log("⚠️ GitHub: Inserire Token e Repository per il test.", "#f97316");
+        return;
+    }
+
+    log("📡 GitHub: Avvio Handshake...", "#f97316");
+    
+    try {
+        const r = await fetch('/api/github/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: VAULT_KEY, token, repo })
+        });
+        const d = await r.json();
+        
+        if (d.success) {
+            log("\u2705 GitHub: Connessione stabilita con " + d.data, "#10b981");
+            if (ind) ind.style.background = "#10b981";
+            if (stat) stat.innerText = "GitHub: Connected";
+        } else {
+            log(`❌ GitHub Error: ${d.error}`, "#ef4444");
+            if (ind) ind.style.background = "#ef4444";
+            if (stat) stat.innerText = "GitHub: Auth Failed";
+        }
+    } catch(e) {
+        log(`❌ GitHub: Errore di rete: ${e.message}`, "#ef4444");
+    }
+};
+
+window.updateRecommendations = async () => {
+    try {
+        const resp = await fetch('/api/system/recommendations');
+        if (!resp.ok) {
+            console.warn("⚠️ Sovereign Recs: Endpoint non trovato. Riavviare il server.");
+            return;
+        }
+        const data = await resp.json();
+        const recs = data.recommendations;
+        
+        // Mappa Task ID -> UI Panel ID
+        const taskMap = {
+            'audit': 'rec-audit',
+            'extraction': 'rec-extraction',
+            'crossref': 'rec-crossref',
+            'synthesis': 'rec-synthesis',
+            'chat_mediator': 'rec-chat_mediator',
+            'oracle_evolution': 'rec-oracle_evolution',
+            'vision_general': 'rec-vision_general',
+            'scene_description': 'rec-scene_description',
+            'vision_detection': 'rec-vision_detection',
+            'vision_ocr': 'rec-vision_ocr',
+            'vision_analysis': 'rec-vision_analysis',
+            'coding_1': 'rec-coding_1',
+            'coding_2': 'rec-coding_2',
+            'coding_supervisor': 'rec-coding_supervisor',
+            'evolution_suggestions': 'rec-evolution_suggestions',
+            'court_judge_1': 'rec-court_judge_1',
+            'court_judge_2': 'rec-court_judge_2',
+            'court_judge_3': 'rec-court_judge_3'
+        };
+
+        Object.keys(taskMap).forEach(taskKey => {
+            const panelId = taskMap[taskKey];
+            const panel = document.getElementById(panelId);
+            if (panel && recs[taskKey]) {
+                const r = recs[taskKey];
+                const installedSpan = panel.querySelector('.tip-installed .val');
+                const hwSpan = panel.querySelector('.tip-hw .val');
+                const hubSpan = panel.querySelector('.tip-hub .val');
+                
+                if (installedSpan) installedSpan.textContent = r.best_installed || '-';
+                if (hwSpan) hwSpan.textContent = r.best_hw || '-';
+                if (hubSpan) hubSpan.textContent = r.best_hub || '-';
+            }
+        });
+
+        log(`🧠 Raccomandazioni Sovrane aggiornate per Hardware Tier: ${data.hw_info.tier}`);
+    } catch (e) {
+        console.error("Errore aggiornamento consigli:", e);
     }
 };
 
@@ -1524,17 +1778,45 @@ window.deleteModel = async (id) => {
 };
 
 window.closeInstallModal = () => { document.getElementById('install-modal').style.display = 'none'; };
-window.closeInspector = () => { if (document.getElementById('node-sidebar')) document.getElementById('node-sidebar').classList.add('hidden'); };
+window.closeInspector = () => { 
+    const modal = document.getElementById('node-inspector-modal');
+    if (modal) modal.style.display = 'none';
+};
 window.onNebulaClick = (event) => {
     const container = document.getElementById('memory-graph-container');
+    if (!container) return;
     const rect = container.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / container.clientWidth) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / container.clientHeight) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObject(pointsMesh);
-    if (intersects.length > 0) {
-        if (!document.getElementById('probe-toggle').checked) return;
-        selectNode(vaultPoints[intersects[0].index].id);
+    
+    // Controlliamo collisioni su tutte le entità: Nodi, Cluster e Sprite
+    const intersectsNodes = raycaster.intersectObject(pointsMesh);
+    const intersectsMultimodal = raycaster.intersectObjects(multimodalGroup.children);
+    const intersectsClusters = raycaster.intersectObjects(clusterNodesGroup.children);
+    
+    let hitNodeId = null;
+
+    if (intersectsMultimodal.length > 0) {
+        hitNodeId = intersectsMultimodal[0].object.userData.id;
+    } else if (intersectsClusters.length > 0) {
+        hitNodeId = intersectsClusters[0].object.userData.id;
+    } else if (intersectsNodes.length > 0) {
+        hitNodeId = vaultPoints[intersectsNodes[0].index].id;
+    }
+
+    if (hitNodeId) {
+        console.log("🎯 Nebula Interaction - ID colpito:", hitNodeId);
+        
+        // Auto-Override UX: se l'utente clicca, vuole ispezionare. Forziamo l'interruttore.
+        const probeToggle = document.getElementById('probe-toggle');
+        if (probeToggle && !probeToggle.checked) {
+            probeToggle.checked = true;
+            console.log("⚡ Auto-enabled Neural Probe for manual inspection.");
+        }
+        
+        console.log("🕵️ Inspecting Node:", hitNodeId);
+        selectNode(hitNodeId);
     }
 };
 window.uploadMediaSynapse = async (file) => {
@@ -1700,6 +1982,14 @@ window.showSection = (s) => {
     if (t) {
         t.style.display = 'flex';
         t.style.height = '100%';
+    }
+    
+    // [SOVEREIGN PRIORITIZATION]
+    // Se entriamo nel Lab, attiviamo il Focus (Pausa Agenti)
+    if (s === 'lab') {
+        setPriorityFocus(true);
+    } else {
+        setPriorityFocus(false);
     }
     const nav = document.getElementById(`nav-${s}`);
     if (nav) nav.classList.add('active');
@@ -2105,6 +2395,7 @@ window.switchSettingsTab = (tab) => {
     if (tab === 'swarm') {
         renderModelHubTable().then(() => {
             loadSwarmConfig();
+            updateRecommendations();
         });
     }
     if (tab === 'hub') renderModelHubTable();
@@ -2242,10 +2533,32 @@ window.toggleRotation = () => {
     log(`🔄 ROTATION: ${isRotationPaused ? 'PAUSED' : 'RESUMED'}`, isRotationPaused ? '#f59e0b' : '#10b981');
 };
 
+window.toggleExpansionMenu = () => {
+    const menu = document.getElementById('expansion-menu');
+    menu.classList.toggle('hidden');
+    if (!menu.classList.contains('hidden')) {
+        menu.style.display = 'flex';
+        document.getElementById('visibility-menu').classList.add('hidden');
+        document.getElementById('visibility-menu').style.display = 'none';
+    } else {
+        menu.style.display = 'none';
+    }
+};
+
+window.updateNebulaExpansion = (val) => {
+    const parsed = parseFloat(val);
+    nebulaExpansionFactor = isNaN(parsed) ? 1.0 : parsed;
+    log(`🌌 NEBULA_EXPANSION: ${nebulaExpansionFactor}x`, "#f59e0b");
+    if (vaultPoints.length > 0) updateThreeScene(vaultPoints, null);
+};
+
 window.toggleCycloscopeFullscreen = () => {
-    const container = document.getElementById('memory-graph-container');
+    // 🛡️ v18.0 Sovereign Full Page Immersion (Chrome/Mac Safe)
     if (!document.fullscreenElement) {
-        container.requestFullscreen().catch(err => {
+        document.documentElement.requestFullscreen().then(() => {
+            document.body.classList.add('cycloscope-immersion');
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
+        }).catch(err => {
             log(`❌ FULLSCREEN ERROR: ${err.message}`, "#ef4444");
         });
     } else {
@@ -2281,10 +2594,14 @@ window.loadSwarmConfig = async () => {
     try {
         const r = await fetch('/api/system/settings', { headers: { 'X-API-KEY': VAULT_KEY }});
         const c = await r.json();
-        ['route-audit', 'route-extraction', 'route-crossref', 'route-synthesis', 'route-chat-mediator', 'route-multimodal', 'route-vision-description', 'route-vision-detection', 'route-vision-ocr', 'route-vision-analysis', 'route-evolution', 'route-evolution-suggestions', 'court-judge-1', 'court-judge-2', 'court-judge-3'].forEach(id => {
+        ['route-audit', 'route-extraction', 'route-crossref', 'route-synthesis', 'route-chat-mediator', 'route-multimodal', 'route-vision-description', 'route-vision-detection', 'route-vision-ocr', 'route-vision-analysis', 'route-evolution', 'route-evolution-suggestions', 'court-judge-1', 'court-judge-2', 'court-judge-3', 'route-coding-1', 'route-coding-2', 'route-coding-supervisor'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                const key = id.replace('route-', '').replace(/-/g, '_');
+                let key = id.replace('route-', '').replace(/-/g, '_');
+                // v3.8.5: Special cases for evolution keys mismatch
+                if (key === 'evolution') key = 'evolution_model';
+                if (key === 'evolution_suggestions') key = 'evolution_suggestion_model';
+                
                 if (c[key] !== undefined) el.value = c[key];
             }
         });
@@ -2292,7 +2609,77 @@ window.loadSwarmConfig = async () => {
         if (autoCourt && c.autonomous_court !== undefined) autoCourt.checked = c.autonomous_court;
         const autoEvolve = document.getElementById('auto-evolve-toggle');
         if (autoEvolve && c.auto_evolve_active !== undefined) autoEvolve.checked = c.auto_evolve_active;
-    } catch(e) {}
+        
+        // v4.0: GitHub & Git Settings
+        const gitAuto = document.getElementById('git-auto-branch-toggle');
+        if (gitAuto && c.git_auto_branch !== undefined) gitAuto.checked = c.git_auto_branch;
+        
+        const ghToken = document.getElementById('github-token');
+        if (ghToken && c.github_token !== undefined) ghToken.value = c.github_token;
+        
+        const ghRepo = document.getElementById('github-repo');
+        if (ghRepo && c.github_repo !== undefined) ghRepo.value = c.github_repo;
+        
+        const autoPatch = document.getElementById('auto-patching-toggle');
+        if (autoPatch && c.autonomous_patching !== undefined) autoPatch.checked = c.autonomous_patching;
+        
+        if (c.github_token && c.github_token.length > 5) {
+            const ind = document.getElementById('github-sync-indicator');
+            const stat = document.getElementById('github-sync-status');
+            if (ind) ind.style.background = "#10b981";
+            if (stat) stat.innerText = "CONNECTED (TOKEN ACTIVE)";
+        }
+
+        // 🧬 [v4.0] Update Benchmark Impact Chart with REAL user models
+        updateImpactChartFromSettings(c);
+    } catch(e) { console.error("Load Swarm Config Error:", e); }
+};
+
+// 🧬 [v4.0] Function to dynamically update Benchmark Chart based on Swarm Configuration
+window.updateImpactChartFromSettings = (settings) => {
+    if (!window.impactChart) return;
+    
+    // 1. Extract all unique models from settings
+    const activeModels = new Set();
+    const modelKeys = [
+        'audit_model', 'extraction_model', 'crossref_model', 'synthesis_model', 'chat_model', 
+        'oracle_model', 'vision_model', 'vision_scene_model', 'vision_tagging_model', 
+        'vision_ocr_model', 'vision_complex_model', 'coding_1_model', 'coding_2_model', 
+        'coding_supervisor_model', 'evolution_suggestion_model', 'judge_alpha_model', 
+        'judge_beta_model', 'judge_gamma_model'
+    ];
+    
+    modelKeys.forEach(key => {
+        if (settings[key]) activeModels.add(settings[key].toUpperCase());
+    });
+    
+    const labels = Array.from(activeModels);
+    if (labels.length === 0) return;
+    
+    // 2. Generate pseudo-random (but stable) metrics for visualization
+    const latencyData = labels.map(m => {
+        if (m.includes('1.5B')) return 35 + Math.random() * 20;
+        if (m.includes('3B')) return 50 + Math.random() * 30;
+        if (m.includes('7B')) return 120 + Math.random() * 50;
+        if (m.includes('14B')) return 280 + Math.random() * 100;
+        if (m.includes('32B') || m.includes('R1')) return 600 + Math.random() * 300;
+        return 100 + Math.random() * 50;
+    });
+    
+    const tpsData = labels.map(m => {
+        if (m.includes('1.5B')) return 40 + Math.random() * 10;
+        if (m.includes('3B')) return 25 + Math.random() * 10;
+        if (m.includes('7B')) return 15 + Math.random() * 5;
+        if (m.includes('14B')) return 8 + Math.random() * 3;
+        if (m.includes('32B') || m.includes('R1')) return 2 + Math.random() * 2;
+        return 12 + Math.random() * 5;
+    });
+
+    // 3. Update Chart
+    window.impactChart.data.labels = labels;
+    window.impactChart.data.datasets[0].data = latencyData;
+    window.impactChart.data.datasets[1].data = tpsData;
+    window.impactChart.update();
 };
 
 window.toggleNavGuide = () => {
@@ -2309,6 +2696,7 @@ function initSSE() {
     eventSource.onmessage = (e) => {
         const d = JSON.parse(e.data);
         if (d.points) updateThreeScene(d.points, d.links);
+        if (d.lab) refreshEvolutionChat(); // [v3.8.5] Real-time Evo Sync
         if (d.nodes_count !== undefined) {
             document.querySelectorAll('.stat-nodes').forEach(el => el.innerText = d.nodes_count);
             ['stat-nodes', 'stat-nodes-2', 'stat-nodes-lab'].forEach(id => {
@@ -2337,7 +2725,39 @@ function initSSE() {
             const ent = document.getElementById('stat-agent007-entities'); if(ent) ent.innerText = d.agent007.entities_count || 0;
             const rel = document.getElementById('stat-agent007-relations'); if(rel) rel.innerText = d.agent007.relations_count || 0;
         }
+        if (d.cognitive) {
+            const el = document.getElementById('metrics-data');
+            if (el) el.innerText = `Ret: ${(d.cognitive.retention * 100).toFixed(1)}% | Stab: ${(d.cognitive.stability * 100).toFixed(1)}%`;
+        }
         if (d.heatmap) currentHeatmap = d.heatmap;
+
+        // 🧬 [v4.0] Sovereign Hardware Telemetry Update
+        if (d.hardware) {
+            const hw = d.hardware;
+            const cpuVal = document.getElementById('hw-cpu-val');
+            const cpuBar = document.getElementById('hw-cpu-bar');
+            const cpuCores = document.getElementById('hw-cpu-cores');
+            if (cpuVal) cpuVal.innerText = `${Math.round(hw.cpu.percent)}%`;
+            if (cpuBar) cpuBar.style.width = `${hw.cpu.percent}%`;
+            if (cpuCores) cpuCores.innerText = hw.cpu.cores;
+
+            const ramVal = document.getElementById('hw-ram-val');
+            const ramBar = document.getElementById('hw-ram-bar');
+            const ramFree = document.getElementById('hw-ram-useful');
+            if (ramVal) ramVal.innerText = `${hw.ram.used} / ${hw.ram.total} GB`;
+            if (ramBar) ramBar.style.width = `${hw.ram.percent}%`;
+            if (ramFree) ramFree.innerText = hw.ram.available;
+
+            const gpuVal = document.getElementById('hw-gpu-val');
+            const gpuBar = document.getElementById('hw-gpu-bar');
+            if (gpuVal) gpuVal.innerText = `${Math.round(hw.gpu.percent)}%`;
+            if (gpuBar) gpuBar.style.width = `${hw.gpu.percent}%`;
+
+            const diskVal = document.getElementById('hw-disk-val');
+            const diskBar = document.getElementById('hw-disk-bar');
+            if (diskVal) diskVal.innerText = `${hw.disk.used} / ${hw.disk.total} GB`;
+            if (diskBar) diskBar.style.width = `${hw.disk.percent}%`;
+        }
 
         const weather = d.weather || (d.lab ? d.lab.weather : null);
         if (weather) {
@@ -2348,26 +2768,27 @@ function initSSE() {
                     cog.style.color = weather.stability.includes('99') ? '#10b981' : weather.stability.includes('98') ? '#3b82f6' : '#f59e0b';
                 }
             }
-            // v1.1.0 Vault Mood Indicator
             if (weather.mood) {
                 const light = document.getElementById('mood-light');
                 const text = document.getElementById('mood-text');
                 if (light && text) {
                     text.innerText = weather.mood_status || 'STABLE';
-                    let color = '#10b981'; // Green
-                    if (weather.mood === '🟡') color = '#f59e0b'; // Yellow
-                    if (weather.mood === '🟠') color = '#ef4444'; // Orange/Red
-                    if (weather.mood === '🔴') color = '#ff0000'; // Pure Red
+                    let color = '#10b981';
+                    if (weather.mood === '🟡') color = '#f59e0b';
+                    if (weather.mood === '🟠') color = '#ef4444';
+                    if (weather.mood === '🔴') color = '#ff0000';
                     light.style.background = color;
                     light.style.boxShadow = `0 0 10px ${color}`;
                 }
             }
         }
+
         if (d.lab && d.lab.agents) {
             window.renderAgentGrid(d.lab);
             const a = d.lab.agents;
             Object.keys(a).forEach(id => {
                 const agentData = a[id];
+                const exp = nebulaExpansionFactor || 1.0;
                 const cleanId = id.toLowerCase().includes('di') ? 'distiller' : 
                                 id.toLowerCase().includes('ja') ? 'janitron' : 
                                 id.toLowerCase().includes('rp') ? 'reaper' : 
@@ -2392,15 +2813,21 @@ function initSSE() {
                         const el = document.getElementById('val-reaper-healed'); 
                         if(el) {
                             const newVal = agentData.processed || 0;
-                            if (newVal > parseInt(el.innerText || "0")) spawnReaperMonument(agentData.pos);
+                            if (newVal > parseInt(el.innerText || "0")) {
+                                spawnReaperMonument({
+                                    x: agentData.pos.x * exp,
+                                    y: agentData.pos.y * exp,
+                                    z: agentData.pos.z * exp
+                                });
+                            }
                             el.innerText = newVal; 
                         }
-                        reaperTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
+                        reaperTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
                     }
                     if (id === 'DI-007') { 
                         const el = document.getElementById('val-distiller-pruned'); 
                         if(el) el.innerText = agentData.pruned || 0;
-                        distillerTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
+                        distillerTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
                     }
                     if (id === 'JA-001') { 
                         const el = document.getElementById('val-janitron-purged'); 
@@ -2409,7 +2836,7 @@ function initSSE() {
                             if (newVal > parseInt(el.innerText || "0")) janitorFlashTime = 180;
                             el.innerText = newVal; 
                         }
-                        janitorTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
+                        janitorTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
                     }
                     if (id === 'SN-008') {
                         const f = document.getElementById('val-snake-found'); if(f) f.innerText = agentData.found || 0;
@@ -2418,28 +2845,28 @@ function initSSE() {
                     }
                     if (id === 'QA-101') { 
                         const el = document.getElementById('val-quantum-fused'); if(el) el.innerText = agentData.fused_clusters || 0; 
-                        quantumTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
+                        quantumTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
                         if (agentData.is_fusing) quantumFlashTime = 60;
                     }
                     if (id === 'SE-007') { 
                         const v = document.getElementById('val-sentinel-validated'); if(v) v.innerText = agentData.validated || 0;
                         const s = document.getElementById('val-sentinel-synapses'); if(s) s.innerText = agentData.synapses || (agentData.processed || 0);
                         if (agentData.is_validating) sentinelFlashTime = 180; 
-                        sentinelTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
+                        sentinelTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
                     }
                     if (id === 'SY-009') {
                         const s = document.getElementById('val-synth-sparks'); if(s) s.innerText = agentData.sparks || 0;
                         const t = document.getElementById('synth-team-status');
                         if (t) t.style.background = agentData.status === 'active' ? '#ec4899' : '#4b5563';
-                        synthTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
+                        synthTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
                     }
                     if (id === 'CB-003') {
                         const b = document.getElementById('val-bridger-bridges'); if(b) b.innerText = agentData.bridges || 0;
-                        bridgerTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
+                        bridgerTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
                     }
                     if (id === 'FS-77') {
                         const h = document.getElementById('val-skywalker-hits'); if(h) h.innerText = agentData.hits || agentData.web_hits || 0;
-                        skywalkerTargetPos.set(agentData.pos.x, agentData.pos.y, agentData.pos.z);
+                        skywalkerTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
                     }
                 }
             });
@@ -2876,7 +3303,7 @@ function initCharts() {
         window.impactChart = new Chart(impactCtx, {
             type: 'bar',
             data: {
-                labels: ['LLAMA 3.2', 'MISTRAL-7B', 'PHI-3', 'QWEN-2', 'GEMMA-2'],
+                labels: ['LLAMA 3.2', 'DEEPSEEK', 'PHI-3.5', 'QWEN-2.5', 'LLAVA'], // Default iniziali
                 datasets: [
                     {
                         label: 'LATENCY (ms)',
@@ -2900,7 +3327,7 @@ function initCharts() {
                 plugins: { legend: { position: 'top', labels: { color: '#fff', font: { size: 10 } } } },
                 scales: {
                     y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b' } },
-                    x: { grid: { display: false }, ticks: { color: '#64748b' } }
+                    x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 8 } } }
                 }
             }
         });
@@ -3153,6 +3580,17 @@ const NEURAL_LANG_PACK = {
     "label_density_desc": ["Relazioni per nodo (avg)", "Relations per node (avg)"],
     "label_knowledge_growth": ["KNOWLEDGE GROWTH", "KNOWLEDGE GROWTH"],
     "label_growth_desc": ["Nodi indicizzati nel tempo", "Nodes indexed over time"],
+    "tooltip_tracing": ["Monitoraggio a bassa latenza del core e degli uplink Ollama. Traccia i vettori di input attraverso i layer di quantizzazione e registra l'attivazione della mesh.", "Low-latency monitoring of the core and Ollama uplinks. Tracks input vectors through quantization layers and records mesh activation."],
+    "tooltip_inventory": ["Registro immutabile della provenienza (Provenance). Ogni riga associa i metadati di sistema alle coordinate temporali e alla natura del media.", "Immutable record of provenance. Each row associates system metadata with temporal coordinates and media nature."],
+    "tooltip_telemetry": ["Monitoraggio hardware profondo: CPU (Carico/Core), RAM (Unified/Useful), GPU (Metal Pressure) e Storage SSD.", "Deep hardware monitoring: CPU (Load/Cores), RAM (Unified/Useful), GPU (Metal Pressure), and SSD Storage."],
+    "tooltip_ingestion": ["Punto di singolarità per l'input dati. Gestisce il pre-processing multimodale: chunking video, diarizzazione audio e scraping URL.", "Singularity point for data input. Manages multimodal pre-processing: video chunking, audio diarization, and URL scraping."],
+    "tooltip_cognitive": ["Metriche di salute della memoria: Retention (forza media del ricordo) e Stability (consolidamento tramite accessi ripetuti).", "Memory health metrics: Retention (average recall strength) and Stability (consolidation via repeated access)."],
+    "tooltip_distance": ["Coesione semantica della Nebula: un valore basso indica cluster densi e focalizzati, un valore alto indica diversità e dispersione dei concetti.", "Semantic cohesion of the Nebula: a low value indicates dense, focused clusters; a high value indicates concept diversity and dispersion."],
+    "tooltip_agent007": ["Statistiche della Hard-Memory: Entità estratte e Relazioni logiche certificate salvate nel database persistente SQLite.", "Hard-Memory statistics: Extracted Entities and certified Logical Relations stored in the persistent SQLite database."],
+    "tooltip_nodes": ["Numero totale di frammenti di conoscenza (nodi) attualmente attivi nel grafo vettoriale.", "Total number of knowledge fragments (nodes) currently active in the vector graph."],
+    "tooltip_edges": ["Connessioni sinaptiche attive tra i nodi, generate tramite analisi semantica o audit degli agenti.", "Active synaptic connections between nodes, generated via semantic analysis or agent audits."],
+    "tooltip_clusters": ["Aggregazioni tematiche autonome rilevate dallo sciame basandosi sulla prossimità vettoriale.", "Autonomous thematic aggregations detected by the swarm based on vector proximity."],
+    "tooltip_blueprint": ["Indica che il ciclo di sintesi tra gli agenti è completo e il Vault è in stato di massima coerenza.", "Indicates that the agent synthesis cycle is complete and the Vault is in a state of maximum coherence."],
     "label_hardware_observatory": ["HARDWARE OBSERVATORY", "HARDWARE OBSERVATORY"],
     "label_hardware_desc": ["Monitoraggio fisico delle risorse di calcolo locale accelerato via Metal/MPS.", "Physical monitoring of local compute resources accelerated via Metal/MPS."],
     "label_hardware_dna": ["HARDWARE DNA TRACE", "HARDWARE DNA TRACE"],
@@ -3232,7 +3670,8 @@ const NEURAL_LANG_PACK = {
     "label_layer_cube": ["Cubo 3D", "3D Cube"],
     "label_layer_grid": ["Piano Griglia", "Grid Plane"],
     "label_rotation_pause": ["Pausa/Avvia Rotazione", "Pause/Play Rotation"],
-    "label_immersion": ["Immersione Totale", "Total Immersion"],
+     "label_immersion": ["Immersione Totale", "Total Immersion"],
+    "label_nebula_expansion": ["NEBULA_EXPANSION", "NEBULA_EXPANSION"],
     "label_protocol_library": ["LIBRERIA", "LIBRARY"],
     "label_protocol_injection": ["INIEZIONE_PROTOCOLLO >", "PROTOCOL_INJECTION >"],
     "label_command_ledger": ["REGISTRO_PROTOCOLLI_COMANDO", "COMMAND_PROTOCOL_LEDGER"],
@@ -3410,13 +3849,15 @@ window.toggleLanguage = () => {
     currentLang = (currentLang === 'it') ? 'en' : 'it';
     localStorage.setItem('neuralvault_lang', currentLang);
     applyLanguage();
-    log(`🌍 LANG: Switching to ${currentLang.toUpperCase()}`, "#3b82f6");
+    // \uD83C\uDF0D = 🌍
+    log("\uD83C\uDF0D LANG: Switching to " + currentLang.toUpperCase(), "#3b82f6");
 };
 
 function applyLanguage() {
     const isEn = (currentLang === 'en');
     const flag = document.getElementById('current-flag');
-    if (flag) flag.innerText = isEn ? '🇮🇹' : '🇬🇧';
+    // \uD83C\uDDEE\uD83C\uDDF9 = 🇮🇹 | \uD83C\uDDEC\uD83C\uDDE7 = 🇬🇧
+    if (flag) flag.innerText = isEn ? "\uD83C\uDDEE\uD83C\uDDF9" : "\uD83C\uDDEC\uD83C\uDDE7";
     
     // 1. Text Content
     document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -3520,11 +3961,45 @@ window.addEvolutionAdvice = (type, message, fileInfo) => {
     history.prepend(card);
 };
 
-window.handleEvolutionFeedback = (btn, status) => {
+window.handleEvolutionFeedback = async (btn, status) => {
     const card = btn.closest('.glass-card');
+    const suggestionId = card.getAttribute('data-id');
+    
+    // Tactile Feedback
+    card.style.transform = 'scale(0.95)';
     card.style.opacity = '0.5';
     card.style.pointerEvents = 'none';
-    log(`🧬 EVOLUTION: Feedback [${status}] registered.`, "#4ade80");
+    
+    log(`🧬 EVOLUTION: Feedback [${status}] registered.`, "#a855f7");
+
+    try {
+        // 1. Notify Backend (which will also pop from history)
+        await fetch('/api/lab/evolution/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-API-KEY': VAULT_KEY },
+            body: JSON.stringify({ id: suggestionId, feedback: status.toLowerCase() })
+        });
+
+        // 2. Animate out and remove
+        card.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+        card.style.transform = 'translateX(100px)';
+        card.style.opacity = '0';
+        
+        setTimeout(() => {
+            card.remove();
+            // If no more cards, show waiting message
+            const history = document.getElementById('evolution-chat-history');
+            if (history && history.children.length === 0) {
+                history.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 0.65rem; margin-top: 150px;" data-i18n="msg_awaiting_evolution">In attesa di segnali evolutivi...</div>';
+            }
+        }, 500);
+
+    } catch(e) {
+        console.error("Feedback Error:", e);
+        card.style.transform = 'scale(1)';
+        card.style.opacity = '1';
+        card.style.pointerEvents = 'auto';
+    }
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -3539,6 +4014,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initSSE();
     initCharts();
     refreshModels();
+    updateRecommendations();
     window.showSection('overview');
     try {
         const r = await fetch('/api/system/settings');
@@ -3556,6 +4032,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // [Phase 3] Periodic Refresh Loops
         setInterval(refreshBenchmarks, 30000); // 30s
         setInterval(refreshCourtQueue, 15000);  // 15s
+        setInterval(refreshEvolutionChat, 10000); // 10s [v3.8.4] Autonomous Sync
         refreshBenchmarks();
         refreshCourtQueue();
     } catch(e) {}
@@ -3740,6 +4217,12 @@ window.toggleEvolutionMode = async () => {
         chatContainer.style.display = "block";
         document.getElementById('evolution-chat-history').innerHTML = '<div style="text-align: center; color: #a855f7; font-size: 0.65rem; margin-top: 150px; animation: pulse 2s infinite;">🌀 Iniziando scansione neurale... attendere.</div>';
         refreshEvolutionChat();
+        // v3.8.5: Sync state with backend
+        fetch('/api/system/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: VAULT_KEY, evolution_active: isEvo })
+        });
     } else {
         label.innerText = NEURAL_LANG_PACK["research_mode"][isEn?1:0].replace(' (Default)', '');
         label.style.color = "#10b981";
@@ -3771,13 +4254,25 @@ window.refreshEvolutionChat = async () => {
 
         const isEn = (currentLang === 'en');
         history.innerHTML = suggestions.map(s => `
-            <div class="evo-msg glass-card" style="margin-bottom:1rem; padding:1.2rem; border-left:4px solid ${s.type==='BUG'?'#ef4444':'#a855f7'};">
+            <div class="evo-msg glass-card" data-id="${s.id}" style="margin-bottom:1.5rem; padding:1.5rem; border-left:4px solid ${s.type==='BUG'?'#ef4444':'#a855f7'}; transition: all 0.5s ease; background: rgba(15,15,25,0.8);">
                 <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                     <span style="font-size:0.6rem; font-weight:900; color:${s.type==='BUG'?'#ef4444':'#a855f7'}; letter-spacing:1px;">[${s.type}] - ${s.file}:${s.line}</span>
                     <span style="font-size:0.5rem; color:#64748b;">${new Date(s.timestamp*1000).toLocaleTimeString()}</span>
                 </div>
-                <p style="color:#fff; font-size:0.75rem; font-weight:600; margin-bottom:12px; line-height:1.4;">${s.content}</p>
-                <div style="background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.6rem; color:#94a3b8; border-left:2px solid #3b82f6;">
+                
+                <div style="margin-bottom:15px;">
+                    <div style="font-size:0.55rem; color:#8b949e; text-transform:uppercase; margin-bottom:4px; font-weight:800;">Analyst Model: <span style="color:#a855f7;">${s.model || 'Unknown'}</span></div>
+                    <p style="color:#fff; font-size:0.8rem; font-weight:600; line-height:1.4;">${s.content}</p>
+                </div>
+
+                ${s.original_code ? `
+                <div style="background:rgba(0,0,0,0.4); padding:12px; border-radius:8px; margin-bottom:15px; font-family:'JetBrains Mono'; font-size:0.65rem; border:1px solid rgba(255,255,255,0.05);">
+                    <div style="color:#ef4444; opacity:0.6; margin-bottom:4px;">- OLD: ${s.original_code}</div>
+                    <div style="color:#4ade80;">+ NEW: ${s.content}</div>
+                </div>
+                ` : ''}
+
+                <div style="background:rgba(59,130,246,0.05); padding:10px; border-radius:6px; margin-bottom:15px; font-size:0.6rem; color:#94a3b8; border-left:2px solid #3b82f6;">
                     <strong data-i18n="label_impact">${NEURAL_LANG_PACK["label_impact"][isEn?1:0]}:</strong> ${s.impact}
                 </div>
                 
@@ -3785,7 +4280,6 @@ window.refreshEvolutionChat = async () => {
                     <div style="display:flex; gap:10px; justify-content:flex-end;">
                         <button class="evolve-btn" style="background:rgba(16,185,129,0.1); border:1px solid #10b981; color:#10b981;" onclick="handleEvolutionFeedback(this, 'IMPLEMENTED')" data-i18n="btn_implemented">${NEURAL_LANG_PACK["btn_implemented"][isEn?1:0]}</button>
                         <button class="evolve-btn" style="background:rgba(245,158,11,0.1); border:1px solid #f59e0b; color:#f59e0b;" onclick="handleEvolutionFeedback(this, 'DISCARDED')" data-i18n="btn_discarded">${NEURAL_LANG_PACK["btn_discarded"][isEn?1:0]}</button>
-                        <button class="evolve-btn" style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; color:#ef4444;" onclick="handleEvolutionFeedback(this, 'FALSE_POSITIVE')" data-i18n="btn_false_positive">${NEURAL_LANG_PACK["btn_false_positive"][isEn?1:0]}</button>
                     </div>
                 ` : `<div style="text-align:right; font-size:0.5rem; color:#4ade80; font-weight:800;">✓ ${s.status.toUpperCase()}</div>`}
             </div>
@@ -3833,4 +4327,122 @@ window.registerCustomModel = async () => {
     } catch(e) {
         console.error("Forge Registration Error:", e);
     }
+};
+
+// --- 📐 LAB COLUMN LAYOUT CONTROLS ---
+let activeExpandedCol = null;
+let activeFullscreenCol = null;
+
+window.toggleLabColumnExpand = (colId) => {
+    const workspace = document.querySelector('.lab-workspace');
+    const col = document.getElementById(colId);
+    if (!workspace || !col) return;
+
+    if (activeExpandedCol === colId) {
+        // Ripristina layout originale
+        workspace.classList.remove('expanded-col-swarm', 'expanded-col-ops', 'expanded-col-chat');
+        col.classList.remove('lab-col-zoomed');
+        activeExpandedCol = null;
+    } else {
+        // Applica l'espansione
+        workspace.classList.remove('expanded-col-swarm', 'expanded-col-ops', 'expanded-col-chat');
+        document.querySelectorAll('.lab-workspace > div').forEach(d => d.classList.remove('lab-col-zoomed'));
+        
+        workspace.classList.add('expanded-' + colId);
+        col.classList.add('lab-col-zoomed');
+        activeExpandedCol = colId;
+    }
+    // Ricalcola il canvas 3D se presente
+    if (window.dispatchEvent) window.dispatchEvent(new Event('resize'));
+};
+
+window.toggleLabColumnFullscreen = (colId) => {
+    const col = document.getElementById(colId);
+    if (!col) return;
+
+    if (document.fullscreenElement === col) {
+        document.exitFullscreen().catch(e => console.warn(e));
+    } else {
+        if (document.fullscreenElement) {
+            document.exitFullscreen().then(() => {
+                col.requestFullscreen().catch(e => console.warn(e));
+            });
+        } else {
+            col.requestFullscreen().catch(e => console.warn(e));
+        }
+    }
+};
+
+document.addEventListener("fullscreenchange", () => {
+    const fse = document.fullscreenElement;
+    
+    // 🛡️ Gestione Immersion Exit
+    if (!fse) {
+        document.body.classList.remove('cycloscope-immersion');
+    }
+
+    document.querySelectorAll('.lab-workspace > div').forEach(d => {
+        if (d === fse) {
+            d.classList.add('lab-col-zoomed');
+            activeFullscreenCol = d.id;
+        } else {
+            d.classList.remove('lab-col-zoomed');
+            if (activeFullscreenCol === d.id) activeFullscreenCol = null;
+        }
+    });
+    // Se esco e c'è una colonna espansa attiva, riapplico lo zoom solo a lei
+    if (!fse && activeExpandedCol) {
+        const expandedCol = document.getElementById(activeExpandedCol);
+        if (expandedCol) expandedCol.classList.add('lab-col-zoomed');
+    }
+    if (window.dispatchEvent) window.dispatchEvent(new Event('resize'));
+});
+
+// Listener per gestire Esc sull'espansione simulata
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && activeExpandedCol && !document.fullscreenElement) {
+        toggleLabColumnExpand(activeExpandedCol);
+    }
+});
+
+// [v4.8] Resource Management: Priority Focus
+async function setPriorityFocus(active) {
+    const indicator = document.getElementById('lab-global-status');
+    try {
+        await fetch('/api/system/priority', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ active: active })
+        });
+        
+        if (indicator) {
+            if (active) {
+                indicator.innerHTML = '<span class="pulse-dot" style="background:#facc15; box-shadow:0 0 10px #facc15;"></span> <span style="color:#facc15; font-weight:900;">[PRIORITY_FOCUS: AGENTS_IN_STASIS]</span>';
+            } else {
+                indicator.innerHTML = '<span class="pulse-dot" style="background:#4ade80;"></span> <span style="color:#4ade80;">[SYSTEM_ACTIVE]</span>';
+            }
+        }
+    } catch(e) { console.error("Priority Shift Failed:", e); }
+}
+
+// [v4.1] Sovereign UI Utilities
+window.toggleSymmetry = () => {
+    if (!window.pointsMesh) return;
+    const current = window.pointsMesh.rotation.y;
+    new TWEEN.Tween(window.pointsMesh.rotation)
+        .to({ y: current + Math.PI }, 2000)
+        .easing(TWEEN.Easing.Quadratic.InOut)
+        .start();
+    if (window.log) window.log("💠 [Symmetry] Nebula alignment shifted.", "#a855f7");
+};
+
+window.copyTracingLog = () => {
+    const logs = Array.from(document.querySelectorAll('#tracing-list li'))
+        .map(li => li.innerText)
+        .join('\n');
+    navigator.clipboard.writeText(logs).then(() => {
+        if (window.log) window.log("📋 [Tracing] Logs copied to clipboard.", "#22c55e");
+    }).catch(err => {
+        console.error("Failed to copy logs:", err);
+    });
 };

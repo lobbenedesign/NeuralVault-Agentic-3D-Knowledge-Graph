@@ -322,11 +322,19 @@ body.full-height-mode {
     transition: border-radius 0.3s ease;
 }
 
-#memory-graph-container:fullscreen {
-    border-radius: 0;
-    border: none;
-    width: 100vw;
-    height: 100vh;
+}
+
+/* 🛡️ Sovereign Fullscreen Immersion (v18.0) */
+body.cycloscope-immersion {
+    grid-template-rows: 100vh 0vh !important;
+}
+
+body.cycloscope-immersion .sidebar {
+    display: none !important;
+}
+
+body.cycloscope-immersion .bottom-section {
+    display: none !important;
 }
 
 /* 📊 BOTTOM SECTION (35%) - 5 Column Knowledge Hub */
@@ -393,7 +401,7 @@ body.full-height-mode {
     opacity: 0;
     pointer-events: none;
     transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-    z-index: 10000;
+    z-index: 99999;
     box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(168, 85, 247, 0.1);
     text-align: left;
 }
@@ -430,27 +438,13 @@ body.full-height-mode {
 }
 
 
-/* 🕵️‍♂️ NODE INSPECTOR MODAL (v3.2: Centered & Overflow Safe) */
-#node-sidebar {
-    position: absolute;
+/* 🕵️‍♂️ NODE INSPECTOR MODAL (v4.8: Centered & Fullscreen Safe) */
+#node-inspector-modal {
+    position: fixed !important;
     top: 50% !important; 
     left: 50% !important;
     transform: translate(-50%, -50%) !important;
-    width: 35%; /* 35% of Cycloscope width */
-    height: 220px; /* Fixed height for horizontal rectangle */
-    max-height: 35%; /* Never larger than 35% of height */
-    background: rgba(15, 23, 42, 0.98);
-    backdrop-filter: blur(45px);
-    border: 1px solid rgba(168, 85, 247, 0.4);
-    border-radius: 20px;
-    z-index: 20000;
-    transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
-    display: none; 
-    flex-direction: column;
-    box-shadow: 0 0 120px rgba(0,0,0,0.95), 0 0 40px rgba(168, 85, 247, 0.1);
-    overflow: hidden;
-    margin: 0 !important;
-    padding: 0 !important;
+    z-index: 99999 !important;
 }
 
 #node-sidebar.hidden {
@@ -501,6 +495,32 @@ body.full-height-mode {
     border-radius: 8px; transition: 0.3s; letter-spacing: 1px;
 }
 .lab-tab-btn.active-tab { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+
+/* 🛡️ Sovereign Fullscreen Overrides (v18.1) */
+body.cycloscope-immersion #cycloscope-hud {
+    position: fixed !important;
+    bottom: 30px !important;
+    left: 30px !important;
+    right: 30px !important;
+    z-index: 2147483647 !important;
+    display: flex !important;
+}
+
+body.cycloscope-immersion .super-metrics-hud,
+body.cycloscope-immersion #floating-command-bar {
+    position: relative !important;
+    z-index: 2147483647 !important;
+}
+
+body.cycloscope-immersion .top-section,
+body.cycloscope-immersion .main-content-top,
+body.cycloscope-immersion #overview-view,
+body.cycloscope-immersion #memory-graph-container {
+    height: 100vh !important;
+    min-height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+}
 
 /* 🚀 AGENT CONTROL BAR (Viewport-Fixed Anchor) */
 #mc-wrapper {

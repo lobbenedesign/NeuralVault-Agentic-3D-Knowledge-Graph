@@ -43,7 +43,13 @@ class SwarmSettingsManager:
             "codebase_bridging": False,
             "evolution_mode": False, # Unified Key
             "evolution_suggestion_model": "llama3.2",
-            "ollama_url": "http://127.0.0.1:11434"
+            "coding_1": "llama3.2",
+            "coding_2": "llama3.2",
+            "coding_supervisor": "llama3.2",
+            "ollama_url": "http://127.0.0.1:11434",
+            "github_token": "",
+            "github_repo": "",
+            "git_auto_branch": True
         }
         self.settings = self._load()
 
@@ -160,7 +166,9 @@ class ModelBenchmarkTracker:
     def _load(self):
         if self.data_path.exists():
             try:
-                with open(self.data_path, "r") as f: self.history = json.load(f)
+                with open(self.data_path, "r") as f: 
+                    raw = json.load(f)
+                    self.history = {k: v for k, v in raw.items() if k != "undefined" and k != "null"}
             except: pass
 
     def _save(self):
@@ -170,6 +178,7 @@ class ModelBenchmarkTracker:
             except: pass
 
     def record(self, model: str, task: str, duration: float, tokens: int, ram_mb: float, cpu_cores: list, precision: float, quality: float):
+        if not model or model == "undefined": return
         with self._lock:
             if model not in self.history: self.history[model] = []
             self.history[model].append({
@@ -186,19 +195,20 @@ class ModelBenchmarkTracker:
 
     def get_stats(self) -> List[Dict]:
         stats = []
-        for model, samples in self.history.items():
-            if not samples: continue
-            avg_tps = sum(s["tps"] for s in samples) / len(samples)
-            avg_lat = sum(s["latency"] for s in samples) / len(samples)
-            avg_ram = sum(s["ram"] for s in samples) / len(samples)
-            stability = sum(s["quality"] for s in samples) / len(samples)
-            stats.append({
-                "name": model,
-                "tps": round(avg_tps, 2),
-                "latency": round(avg_lat, 2),
-                "ram": round(avg_ram, 2),
-                "stability": round(stability * 100, 1)
-            })
+        with self._lock:
+            for model, samples in self.history.items():
+                if not samples or model in ["undefined", "null", "-", "None"]: continue
+                avg_tps = sum(s["tps"] for s in samples) / len(samples)
+                avg_lat = sum(s["latency"] for s in samples) / len(samples)
+                avg_ram = sum(s["ram"] for s in samples) / len(samples)
+                stability = sum(s.get("quality", 1.0) for s in samples) / len(samples)
+                stats.append({
+                    "name": model,
+                    "tps": round(avg_tps, 2),
+                    "latency": round(avg_lat, 2),
+                    "ram": round(avg_ram, 2),
+                    "stability": round(stability * 100, 1)
+                })
         return sorted(stats, key=lambda x: x["tps"], reverse=True)
 
     def get_full_history(self) -> List[Dict]:
@@ -206,6 +216,7 @@ class ModelBenchmarkTracker:
         all_events = []
         with self._lock:
             for model, samples in self.history.items():
+                if model in ["undefined", "null", "-", "None"]: continue
                 for s in samples:
                     all_events.append({
                         "model_name": model,
@@ -264,9 +275,10 @@ class CollectiveIntelligence:
 
 class EvolutionAdviseManager:
     """🧪 [Sovereign Evo] Gestisce i suggerimenti di ottimizzazione e il feedback di rinforzo."""
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, wisdom=None):
         self.path = Path(data_dir) / "evolution_advise.json"
         self.history = self._load()
+        self.wisdom = wisdom # CollectiveIntelligence link
         self._lock = threading.Lock()
 
     def _load(self):
@@ -282,7 +294,7 @@ class EvolutionAdviseManager:
                 with open(self.path, "w") as f: json.dump(self.history, f, indent=2)
             except: pass
 
-    def add_suggestion(self, msg_type: str, file: str, line: int, content: str, impact: str):
+    def add_suggestion(self, msg_type: str, file: str, line: int, content: str, impact: str, model: str = "Unknown", original_code: str = ""):
         """Aggiunge un suggerimento generato dall'agente Evolution."""
         suggestion = {
             "id": str(uuid.uuid4())[:8],
@@ -292,7 +304,9 @@ class EvolutionAdviseManager:
             "line": line,
             "content": content,
             "impact": impact,
-            "status": "pending" # 'implemented', 'discarded', 'false_positive'
+            "model": model, # [v4.0] Trasparenza LLM
+            "original_code": original_code, # [v4.0] Per confronto UI
+            "status": "pending" 
         }
         self.history.insert(0, suggestion)
         if len(self.history) > 50: self.history.pop()
@@ -300,10 +314,32 @@ class EvolutionAdviseManager:
         return suggestion
 
     def record_feedback(self, suggestion_id: str, feedback: str):
-        """Registra il feedback dell'utente (Implementato/Scartato/Falso Positivo)."""
-        for s in self.history:
-            if s["id"] == suggestion_id:
-                s["status"] = feedback
+        """Registra il feedback dell'utente (Implementato/Scartato/Falso Positivo) e pulisce la UI."""
+        with self._lock:
+            target = None
+            for i, s in enumerate(self.history):
+                if s["id"] == suggestion_id:
+                    target = self.history.pop(i)
+                    break
+            
+            if target:
+                # v3.9.0: Reinforcement Learning Integration
+                if self.wisdom and feedback in ["discarded", "false_positive"]:
+                    # Memorizziamo il pattern fallimentare per evitare di ripeterlo
+                    self.wisdom.add_lesson(
+                        agent_id="EvolutionAdvisor",
+                        success=False,
+                        text=target.get("content", ""),
+                        reason=f"User feedback: {feedback.upper()} for file {target.get('file')}"
+                    )
+                elif self.wisdom and feedback == "implemented":
+                    self.wisdom.add_lesson(
+                        agent_id="EvolutionAdvisor",
+                        success=True,
+                        text=target.get("content", ""),
+                        reason="Implemented successfully."
+                    )
+                
                 self._save()
                 return True
         return False
@@ -761,10 +797,10 @@ class SnakeAgent:
 
         # 🗺️ [Phase 2: Target Selection]
         # ADAPTIVE CONVOY: Scale capacity based on orphan density
-        orphan_ids = [nid for nid, node in nodes.items() if len(node.edges) == 0]
-        if len(orphan_ids) > 20: self.max_wagons = 15
-        elif len(orphan_ids) > 10: self.max_wagons = 10
-        else: self.max_wagons = 5
+        orphan_ids = [nid for nid, node in nodes.items() if len(node.edges) <= 1]
+        if len(orphan_ids) > 20: self.max_wagons = 20
+        elif len(orphan_ids) > 10: self.max_wagons = 12
+        else: self.max_wagons = 8
 
         if len(self.attached_nodes) >= self.max_wagons:
             self.is_returning = True
@@ -775,13 +811,11 @@ class SnakeAgent:
             self.pos['z'] -= (self.pos['z']) * 0.1
         else:
             # 🔍 Gather Orphans OR Proactive Audit
-            orphans = [nid for nid, node in nodes.items() if len(node.edges) == 0 and nid not in self.attached_nodes]
+            orphans = [nid for nid, node in nodes.items() if len(node.edges) <= 1 and nid not in self.attached_nodes]
             
-            # ⚡ [Proactive Spark] Se non ci sono orfani, campioniamo nodi a bassa connettività (1-2 archi)
-            # Questo assicura che lo sciame non ristagni mai.
-            # v17.5: Aumentata probabilità dal 10% al 40% se il vault è stagnante.
-            if not orphans and (random.random() < 0.4):
-                orphans = [nid for nid, node in nodes.items() if len(node.edges) <= 2 and nid not in self.attached_nodes]
+            # ⚡ [Proactive Spark] Se non ci sono orfani, campioniamo nodi a bassa connettività
+            if not orphans and (random.random() < 0.45):
+                orphans = [nid for nid, node in nodes.items() if len(node.edges) <= 3 and nid not in self.attached_nodes]
             
             if orphans:
                 target_id = random.choice(orphans)
@@ -1301,8 +1335,8 @@ class SentinelAgent:
             if random.random() < 0.1: self.validated_count += 1 # Increased from 0.02
 
 
-            # 🛑 [GAP_ANALYSIS_TRIGGER] Ogni 10 minuti di attività
-            if now - self.last_gap_analysis > 600:
+            # 🛑 [GAP_ANALYSIS_TRIGGER] Ogni 2 minuti di attività (Ridotto da 10m v17.5)
+            if now - self.last_gap_analysis > 120:
                 self.last_gap_analysis = now
                 gap = self.perform_gap_analysis()
                 if gap:
@@ -1321,6 +1355,7 @@ class BridgerAgent:
         self.pos = [0, 0, 0]; self.target_node = None
         self.status = "Idle"
         self.bridges_total = 0
+        self.is_syncing = False
     
     def calculate_movement(self, nodes: Dict) -> Optional[Dict]:
         """L'agente si muove verso i nodi che hanno appena ricevuto un bridge semantico."""
@@ -1351,12 +1386,29 @@ class BridgerAgent:
         return {"agent": "CB-003", "pos": self.pos}
 
     def sync_codebase(self):
-        if not self.bridger.project_root: return
-        self.bridger.ingest_codebase()
+        if not self.bridger.project_root:
+            self.status = "Idle - No Project Root"
+            return
+        self.is_syncing = True
+        self.status = "Syncing Codebase..."
+        try:
+            self.bridger.ingest_codebase()
+        finally:
+            self.is_syncing = False
+            self.status = "Syncing Complete"
     
     def discover_bridges(self) -> int:
+        self.status = "Discovering Bridges..."
         count = self.bridger.bridge_nodes()
-        self.bridges_total += count
+        
+        # 🧪 [v17.5 Telemetry Fix] Ignoriamo lo scan massivo iniziale per non sporcare la Agent Bar
+        if getattr(self, '_initial_scan_done', False):
+            self.bridges_total += count
+        else:
+            self._initial_scan_done = True
+            print(f"🧬 [Bridger] Initial sync completed: {count} legacy bridges found (telemetry silenced).")
+            
+        self.status = "Idle"
         return count
 
     async def bridge_specific_nodes(self, filter_query: str):
@@ -1472,12 +1524,23 @@ class SkyWalkerAgent:
 
 class NeuralLabOrchestrator:
     def __init__(self, engine):
-        self.engine = engine; self.vault = engine
+        self.engine = engine
+        self.vault = engine
+        self.version = "0.1.1" # [v4.0] Sovereign Versioning
+        
+        # 🧪 [Wisdom] Collective Intelligence
         self.settings = SwarmSettingsManager(engine.data_dir)
         self.blackboard = NeuralBlackboard(engine)
         self.wisdom = CollectiveIntelligence(engine.data_dir, self.settings)
         self.archiver = SovereignHistoryArchiver(engine.data_dir)
-        self.evolution_advise = EvolutionAdviseManager(engine.data_dir)
+        self.evolution_advise = EvolutionAdviseManager(engine.data_dir, wisdom=self.wisdom)
+        
+        from network.git_evolution import GitEvolutionBridge
+        self.git_bridge = GitEvolutionBridge(engine.data_dir.parent)
+        
+        from evolution.actuator import EvolutionActuator
+        self.actuator = EvolutionActuator(engine.data_dir.parent)
+        
         self.benchmarks = getattr(engine, 'benchmarks', None)
         
         # v1.1.0: Cognitive Hardening Modules
@@ -1490,6 +1553,7 @@ class NeuralLabOrchestrator:
         self.last_inference = {"model": "None", "tps": 0.0, "latency": 0.0, "timestamp": 0}
         self.pause_agents = False
         self.mission_history = []
+        self.legacy_stats = {} # 📊 [v17.5] Session-Incremental Registry
         self.tombstone_registry = SovereignTombstoneRegistry()
         
         from retrieval.bridge import LatentBridge
@@ -1543,6 +1607,19 @@ class NeuralLabOrchestrator:
         self.edge_validation_queue = [] # Pending synapses for Sentinel
         self.evolution_active = False # [v3.5.0] Evolution Mode state
         
+        # 🎭 v4.0: Agent Priority Hierarchy for Negotiation
+        self.agent_priorities = {
+            "SE-007": 100, # Sentinel (Massima Autorità)
+            "JA-001": 80,  # Janitor (Cleanup Critico)
+            "RP-001": 70,  # Reaper (Gestione Fisica)
+            "DI-007": 60,  # Distiller (Analisi)
+            "QA-101": 60,  # Quantum (Urbanistica)
+            "SY-009": 50,  # Synth (Creatività)
+            "CB-003": 50,  # Bridger (Connessioni)
+            "SN-008": 30,  # Snake (Trasporto)
+            "FS-77": 30    # SkyWalker (Ricerca Esterna)
+        }
+        
         # 📊 Load Persistent Telemetry (v3.5.0 Sovereign Bind)
         self._load_persistent_stats()
         self.node_in_judgement_queue = [] # Pending decision for Cuore
@@ -1551,11 +1628,16 @@ class NeuralLabOrchestrator:
         self._stop_event = threading.Event()
         self.last_printed_mode = None # Track mode for terminal reporting
         
-        # 🧪 HYDRATION: Map existing nodes to LIVE state to give agents work (v17.5.8 Fix)
         if hasattr(engine, '_nodes'):
             with self._state_lock:
                 for nid in engine._nodes.keys():
                     self.node_states[nid] = NodeState.STABLE
+        
+        # 🔗 [v4.0] Initialize GitHub Bridge with stored settings
+        gh_token = self.settings.get("github_token")
+        gh_repo = self.settings.get("github_repo")
+        if gh_token and gh_repo:
+            self.git_bridge.setup_github(gh_token, gh_repo)
         
         # 🌀 Start Evolution Advisor loop
         threading.Thread(target=self._run_evolution_advisor_loop, daemon=True).start()
@@ -1564,27 +1646,44 @@ class NeuralLabOrchestrator:
 
     def transition_node(self, node_id: str, from_state: NodeState, to_state: NodeState, agent_id: str) -> bool:
         """
-        [CRITICAL #5] Atomic State Transition.
-        Ensures that only one agent can manipulate a node's lifecycle at a time.
+        [v4.0] Atomic State Transition with Negotiation.
+        Ensures priority-based handling of node lifecycle conflicts.
         """
         with self._state_lock:
-            current = self.node_states.get(node_id, NodeState.ORPHAN)
-            
-            # If the node is unknown, we assume it's ORPHAN or LIVE based on presence in Vault
-            if node_id not in self.node_states:
-                if node_id in self.vault._nodes:
-                    current = NodeState.STABLE
-                else:
-                    current = NodeState.ORPHAN
+            current = self.node_states.get(node_id)
+            if current is None:
+                current = NodeState.STABLE if node_id in self.vault._nodes else NodeState.ORPHAN
+                self.node_states[node_id] = current
+
+            # 1. Identifica chi sta bloccando il nodo (se presente)
+            # In v4.0 aggiungeremo un lock_registry per sapere quale agente possiede il nodo
+            owner_id = getattr(self.vault._nodes.get(node_id), 'current_owner', None)
             
             if current != from_state:
-                # ❌ Conflict Detected
-                logger.warning(f"🛡️ [CONFLICT] {agent_id} attempted {from_state}→{to_state} for {node_id[:8]}, but state is {current}")
-                return False
+                # ⚖️ NEGOTIATION PHASE
+                if owner_id:
+                    prio_new = self.agent_priorities.get(agent_id, 0)
+                    prio_old = self.agent_priorities.get(owner_id, 0)
+                    
+                    if prio_new > prio_old:
+                        self.blackboard.post(SynapticSignal(agent_id, AgentRole.EXPERT, 
+                            f"⚖️ NEGOTIATION: {agent_id} overrides {owner_id} for node {node_id[:8]} (Higher Priority).", 
+                            SignalType.SYSTEM_HEALING))
+                    else:
+                        return False # Veto mantented by current owner
+                else:
+                    # Se lo stato è diverso ma non c'è owner, è un'incoerenza temporale
+                    return False
             
-            # ✅ Valid Transition
+            # ✅ Valid Transition or Successful Override
             self.node_states[node_id] = to_state
-            # Option to log transition to blackboard
+            node = self.vault._nodes.get(node_id)
+            if node:
+                setattr(node, 'current_owner', agent_id)
+                # Auto-release del lock se passiamo a uno stato stabile o terminale
+                if to_state in [NodeState.STABLE, NodeState.DELETED]:
+                    setattr(node, 'current_owner', None)
+            
             return True
 
     def _calculate_waste_score(self, node) -> float:
@@ -1660,6 +1759,26 @@ class NeuralLabOrchestrator:
             
         return len(waste), len(potential)
         
+    def _run_evolution_advisor_loop(self):
+        while not self._stop_event.is_set():
+            try:
+                if self.evolution_active:
+                    # 🛡️ [v4.0] Proactive GitHub Check
+                    if not self.git_bridge.github_token:
+                        self.blackboard.post(SynapticSignal("SYSTEM", AgentRole.ARCHITECT, 
+                            "⚠️ GITHUB DISCONNECTED: Auto-Evolution is active but remote backup is disabled. Configure GitHub Token in Settings for maximum safety.", 
+                            SignalType.SYSTEM_NOTIFICATION, urgency=0.5))
+                    
+                    files_to_audit = self._get_local_source_files()
+                    # Iniziamo l'analisi evolutiva (Pacing: 1 file ogni 5 minuti o su trigger)
+                    # Per ora limitiamo a un check periodico
+                    pass
+                
+                time.sleep(300) # Check ogni 5 minuti per non saturare gli LLM
+            except Exception as e:
+                print(f"⚠️ [Evolution Advisor Loop] {e}")
+                time.sleep(10)
+
     def _codebase_watcher_loop(self):
         """[Phase 1 Upgrade] Monitora i cambiamenti dei file locali per bridging proattivo."""
         print("🔭 [Watcher] Proactive Codebase Observer Active.")
@@ -1667,6 +1786,9 @@ class NeuralLabOrchestrator:
         while not self._stop_event.is_set():
             try:
                 changed = False
+                if not self.bridger.project_root:
+                    time.sleep(10)
+                    continue
                 for path in self.bridger.project_root.rglob("*.py"):
                     if any(x in str(path) for x in ['venv', '.git', '__pycache__']): continue
                     mtime = path.stat().st_mtime
@@ -1864,14 +1986,32 @@ class NeuralLabOrchestrator:
 
     def trigger_evolution_scan(self):
         """[v3.5.0] Forza una scansione immediata degli advisor evolutivi."""
+        if getattr(self, '_evolution_scan_lock', False):
+            print("🧬 [Evolution] Scan already in progress, skipping trigger...")
+            return
+        
         print("🌀 [Evolution] Manual Trigger: Forcing immediate neural scan...")
-        threading.Thread(target=self._run_evolution_advisor_loop, kwargs={"once": True}, daemon=True).start()
+        self._evolution_scan_lock = True
+        
+        def _run_once():
+            try:
+                self._run_evolution_advisor_loop(once=True)
+            finally:
+                self._evolution_scan_lock = False
+        
+        threading.Thread(target=_run_once, daemon=True).start()
 
     def _run_evolution_advisor_loop(self, once=False):
         """[CORE #1] Sovereign Advisor: Analisi autonoma proattiva per suggerimenti di crescita."""
         if not once: print("🌀 [Evolution Advisor] Monitoring Vault for technical optimizations...")
         
         while not self._stop_event.is_set():
+            # 🛡️ [v4.0] Proactive GitHub Check: Avvisa l'utente se manca il backup remoto
+            if self.evolution_active and not self.git_bridge.github_token:
+                self.blackboard.post(SynapticSignal("SYSTEM", AgentRole.ARCHITECT, 
+                    "⚠️ GITHUB DISCONNECTED: Evolution is ACTIVE but remote backup is disabled. Configure GitHub in Settings for safety.", 
+                    SignalType.SYSTEM_NOTIFICATION, urgency=0.5))
+            
             # Se non siamo in Evolution Mode e non è un trigger manuale, saltiamo
             if not self.evolution_active and not once:
                 time.sleep(10); continue
@@ -1881,35 +2021,129 @@ class NeuralLabOrchestrator:
                 time.sleep(30); continue
             
             try:
-                # 1. Campionamento nodi per analisi
-                sample_ids = random.sample(list(self.vault._nodes.keys()), min(len(self.vault._nodes), 5))
-                context = ""
-                for nid in sample_ids:
-                    node = self.vault._nodes[nid]
-                    context += f"Node {nid[:8]}: {node.text[:100]} | Edges: {len(node.edges)}\n"
+                nodes = list(self.vault._nodes.values())
+                # v3.9.0: Learning Context Integration
+                negative_samples = ""
+                if self.wisdom:
+                    rejected = self.wisdom.lessons.get("rejected", [])[-5:] # Ultime 5 lezioni negative
+                    if rejected:
+                        negative_samples = "NEGATIVE SAMPLES (Avoid these types of hallucinations):\n" + \
+                                          "\n".join([f"- {r['text']}" for r in rejected])
+
+                prompt = f"""[SOVEREIGN EVOLUTION ADVISOR v3.9]
+Sei un Architetto di Sistemi IA. Analizza i seguenti nodi dal Vault e suggerisci un'ottimizzazione tecnica REALE o rileva un BUG nel codice sorgente.
+
+IMPORTANTE: 
+1. Focalizzati ESCLUSIVAMENTE sul 'CODICE DEL MOTORE' (api.py, neural_lab.py, index/*.py, retrieval/*.py, graph/*.py).
+2. IGNORA i nodi che sembrano documentazione tecnica, manuali o testi ingeriti.
+3. Se il file non è uno dei file sorgente del progetto, NON generare il suggerimento.
+4. NON usare 'NEBULA' o 'NODE' come nome file. Sii specifico.
+
+{negative_samples}
+
+NODI DA ANALIZZARE:
+{chr(10).join([f"- {n.text[:1000]}" for n in random.sample(nodes, min(len(nodes), 5))])}
+
+Rispondi ESCLUSIVAMENTE in formato JSON:
+{{
+  "type": "BUG" | "OPTIMIZATION" | "EXPANSION",
+  "file": "nome_file.py",
+  "line": 0,
+  "content": "descrizione sintetica del suggerimento tecnico",
+  "impact": "LOW" | "MEDIUM" | "HIGH"
+}}
+"""
                 
                 # 2. Richiesta consiglio all'Evolution Model
-                evo_model = self.settings.get_model("evolution_model") or "llama3.2"
-                prompt = f"Analyze these nodes for gaps or technical bugs:\n{context}\nReturn a suggestion in JSON: {{'type': 'BUG|OPTIMIZATION|EXPANSION', 'file': 'NEBULA', 'line': 0, 'content': 'summary', 'impact': 'HIGH|MEDIUM'}}"
-                
+                evo_model = self.settings.get_model("evolution_suggestion_model") or self.settings.get_model("evolution_model") or "llama3.2"
                 base_url = self.settings.get("ollama_url")
+                print(f"🧬 [Evolution Advisor] Querying {evo_model} for insights...")
                 with httpx.Client() as client:
                     resp = client.post(f"{base_url}/api/generate", json={
                         "model": evo_model, "prompt": prompt, "stream": False, "format": "json"
-                    }, timeout=30.0) # Increased timeout for slow models
+                    }, timeout=180.0) 
+                    
                     if resp.status_code == 200:
-                        advice = json.loads(resp.json().get("response", "{}"))
-                        if advice and "content" in advice:
-                            self.evolution_advise.add_suggestion(
-                                advice.get("type", "OPTIMIZATION"),
-                                advice.get("file", "NEBULA"),
-                                advice.get("line", 0),
-                                advice.get("content", ""),
-                                advice.get("impact", "MEDIUM")
-                            )
-                            self.blackboard.post(SynapticSignal("EVOLUTION", AgentRole.ARCHITECT, 
-                                f"🌀 NEW ADVICE: {advice['content'][:50]}... [Impact: {advice['impact']}]", 
-                                SignalType.STRATEGIC_MISSION))
+                        print(f"🧬 [Evolution Advisor] Received response from {evo_model}")
+                        raw_response = resp.json().get("response", "{}")
+                        print(f"🧬 [Evolution Advisor] RAW CONTENT: {raw_response[:200]}...")
+                        # 🧬 Sovereign Extraction: Find JSON block even if LLM adds preambles
+                        import re
+                        json_match = re.search(r'\{.*\}', raw_response, re.DOTALL)
+                        advice = {}
+                        if json_match:
+                            try:
+                                advice = json.loads(json_match.group(0))
+                            except: pass
+                        
+                        # 🛡️ Hardening: Ensure all fields exist with fallbacks
+                        a_type = str(advice.get("type", "OPTIMIZATION")).upper()
+                        if "|" in a_type: a_type = a_type.split("|")[0]
+                        
+                        a_file = str(advice.get("file", "SYSTEM"))
+                        a_line = advice.get("line", 0)
+                        a_content = advice.get("content", "")
+                        
+                        # 🔍 Recupero codice originale per trasparenza UI
+                        original_snippet = ""
+                        try:
+                            full_path = self.engine.data_dir.parent / a_file
+                            if full_path.exists():
+                                with open(full_path, "r") as f:
+                                    f_lines = f.readlines()
+                                    if 0 < a_line <= len(f_lines):
+                                        original_snippet = f_lines[a_line-1].strip()
+                        except: pass
+
+                        a_impact = str(advice.get("impact", "MEDIUM")).upper()
+                        suggestion = self.evolution_advise.add_suggestion(
+                            msg_type=a_type,
+                            file=a_file,
+                            line=a_line,
+                            content=a_content,
+                            impact=a_impact,
+                            model=evo_model,
+                            original_code=original_snippet
+                        )
+                        
+                        # 🧬 [v4.0] Sovereign Checkpoint: Create branch if auto-branching is enabled
+                        if self.settings.get("git_auto_branch"):
+                            # 🛡️ [SAFE-GENESIS] Create verified backup on GitHub before branching
+                            if self.git_bridge.github_token:
+                                self.blackboard.post(SynapticSignal("EVOLUTION", AgentRole.ARCHITECT, 
+                                    f"🛡️ SAFE-GENESIS: Creating verified checkpoint {self.version} on GitHub...", 
+                                    SignalType.SYSTEM_NOTIFICATION))
+                                self.git_bridge.create_verified_checkpoint(self.version)
+
+                            branch = self.git_bridge.create_evolution_branch(str(uuid.uuid4()))
+                            if branch:
+                                self.blackboard.post(SynapticSignal("EVOLUTION", AgentRole.ARCHITECT, 
+                                    f"🌱 GIT BRANCH: Created '{branch}' for proactive fix isolation.", 
+                                    SignalType.SYSTEM_NOTIFICATION))
+                                
+                                # 🛠️ [v4.0] Physical Actuation: Check toggle before writing
+                                if self.settings.get("autonomous_patching"):
+                                    res = self.actuator.apply_fix(a_file, a_line, a_content)
+                                    if res["success"]:
+                                        self.git_bridge.commit_fix(branch, f"Autonomous Fix applied to {a_file}")
+                                        self.blackboard.post(SynapticSignal("EVOLUTION", AgentRole.GUARDIAN, 
+                                            f"🔧 CODE WRITTEN: {a_file} patched and committed to {branch}.", 
+                                            SignalType.SYSTEM_HEALING))
+                                    else:
+                                        self.git_bridge.rollback()
+                                        self.blackboard.post(SynapticSignal("EVOLUTION", AgentRole.ANALYST, 
+                                            f"⚠️ ACTUATION FAILED: {res.get('error')}. Rollback executed.", 
+                                            SignalType.SYSTEM_NOTIFICATION))
+                                else:
+                                    self.blackboard.post(SynapticSignal("EVOLUTION", AgentRole.ANALYST, 
+                                        f"💡 ADVICE PENDING: Autonomous Patching is OFF. Review and apply manually.", 
+                                        SignalType.SYSTEM_NOTIFICATION))
+                            
+                        self.blackboard.post(SynapticSignal("EVOLUTION", AgentRole.ARCHITECT, 
+                            f"🌀 NEW ADVICE: {a_content[:50]}... [Impact: {a_impact}]", 
+                            SignalType.STRATEGIC_MISSION))
+                        
+                        # 📡 [SSE Trigger] UI will pick this up via the lab_status in the main SSE pulse
                 
             except Exception as e:
                 print(f"⚠️ [Evolution Advisor Error] {e}")
@@ -1924,7 +2158,7 @@ class NeuralLabOrchestrator:
         Can operate in Autonomous Mode (LLM Majority Vote) or Human-over-Loop.
         """
         while not self._stop_event.is_set():
-            is_autonomous = self.settings.get_model("autonomous_court")
+            is_autonomous = self.settings.get("autonomous_court", False)
             if is_autonomous and self.autonomous_audit_queue:
                 try:
                     edge_task = self.autonomous_audit_queue.pop(0)
@@ -2072,6 +2306,17 @@ class NeuralLabOrchestrator:
         if result.get("action") == "Super-Synapse Forging":
             self.sentinel.super_synapses += 1
             
+        if result.get("action") == "Center Hand-off":
+            num_delivered = len(result.get("nodes_delivered", []))
+            self.snake.processed += num_delivered
+            self.snake.harvested += num_delivered
+            
+        if result.get("action") == "Semantic Fusion":
+            self.quantum.clusters_fused += 1
+            
+        if result.get("action") == "Gap Filling":
+            self.skywalker.web_hits += 1
+            
         if result.get("action") == "MISSION_COMPLETE":
             if self.skywalker: self.skywalker.web_hits += 1
         
@@ -2115,12 +2360,14 @@ class NeuralLabOrchestrator:
                 self.blackboard.post(SynapticSignal("JANITRON", AgentRole.ANALYST, f"🧬 DIGESTED: Node {str(tid)[:8]} archived.", SignalType.SYSTEM_NOTIFICATION, motivation=motivation, savings=savings))
         
         elif result["action"] == "Creative Spark":
-            if self.transition_node(tid, NodeState.POTENTIAL, NodeState.INDEXING, "SY-009"):
+            self.synth.sparks_generated += 1
+            if tid and self.transition_node(tid, NodeState.POTENTIAL, NodeState.INDEXING, "SY-009"):
                 sid2 = result.get("secondary_id", "")
                 self.blackboard.post(SynapticSignal("SYNTH", AgentRole.CREATIVE, f"✨ SPARK: Multi-modal fusion between {str(tid)[:8]} and {str(sid2)[:8]}.", SignalType.CREATIVE_SPARK, motivation=motivation, savings=savings))
         
         elif result["action"] == "Audit Complete":
-            if self.transition_node(tid, NodeState.INDEXING, NodeState.STABLE, "SE-007"):
+            self.sentinel.validated_count += 1
+            if tid and self.transition_node(tid, NodeState.INDEXING, NodeState.STABLE, "SE-007"):
                 if self.edge_validation_queue:
                     edge = self.edge_validation_queue.pop(0)
                     if result.get("confidence", 0.9) < 0.7:
@@ -2132,11 +2379,18 @@ class NeuralLabOrchestrator:
                 
                 self.blackboard.post(SynapticSignal("SENTINEL", AgentRole.GUARDIAN, f"🛡️ AUDIT: Node {str(tid)[:8]} validated as LIVE.", SignalType.KINETIC_EVENT, motivation=motivation, savings=savings))
         
-        elif result["action"] == "Semantic Pruning" and tid in self.vault._nodes:
-            if self.transition_node(tid, NodeState.STABLE, NodeState.WASTE_PENDING, "DI-007"):
+        elif result["action"] == "Semantic Pruning":
+            self.distiller.pruned_count += 1
+            if tid in self.vault._nodes and self.transition_node(tid, NodeState.STABLE, NodeState.WASTE_PENDING, "DI-007"):
                 self.blackboard.post(SynapticSignal("DISTILLER", AgentRole.GUARDIAN, 
                     f"✂️ PRUNED: Node {str(tid)[:8]} marked for archiving (Low Density).", 
                     SignalType.SYSTEM_HEALING, motivation=motivation, savings=savings))
+        
+        elif result["action"] in ["Semantic Fusion", "Semantic Centroiding"]:
+            self.quantum.clusters_fused += 1
+            self.blackboard.post(SynapticSignal("QUANTUM", AgentRole.ARCHITECT, 
+                f"🌐 FUSION: Optimized semantic centroiding on {str(tid)[:8] if tid else 'Nebula'}.", 
+                SignalType.KINETIC_EVENT, motivation=motivation, savings=savings))
         
         elif result["action"] == "Semantic Centroiding" and tid in self.vault._nodes:
             node = self.vault._nodes[tid]
@@ -2360,21 +2614,12 @@ class NeuralLabOrchestrator:
                     cname = row['counter_name']
                     val = row['val']
                     
-                    if aid == "DI-007": self.distiller.pruned_count = int(val)
-                    elif aid == "JA-001": self.janitor.eaten_count = int(val)
-                    elif aid == "RP-001": self.reaper.processed = val
-                    elif aid == "SN-008":
-                        if cname == "found": self.snake.found = int(val)
-                        elif cname == "harvested": self.snake.harvested = int(val)
-                        elif cname == "processed": self.snake.processed = int(val)
-                    elif aid == "QA-101": self.quantum.clusters_fused = int(val)
-                    elif aid == "SE-007":
-                        if cname == "validated": self.sentinel.validated_count = int(val)
-                        elif cname == "synapses": self.sentinel.super_synapses = int(val)
-                    elif aid == "SY-009": self.synth.sparks_generated = int(val)
-                    elif aid == "CB-003": self.bridger_agent.bridges_total = int(val)
-                    elif aid == "FS-77": self.skywalker.web_hits = int(val)
-            print("📊 [Lab/Stats] Persistent counters hydrated successfully.")
+                    # 📑 [v17.5 Session Reset] We keep the legacy values in a separate registry
+                    # but we start the UI counters from ZERO for the new session.
+                    if not hasattr(self, 'legacy_stats'): self.legacy_stats = {}
+                    self.legacy_stats[f"{aid}_{cname if 'cname' in locals() else 'total'}"] = float(val)
+            
+            print("📊 [Lab/Stats] Persistent history cached. Session counters starting at ZERO.")
         except Exception as e:
             print(f"⚠️ [Lab/Stats] Failed to load persistence: {e}")
 
@@ -2397,12 +2642,16 @@ class NeuralLabOrchestrator:
             ]
             
             for aid, cname, val in stats:
+                # ➕ Additive Save: Current Session + Legacy History
+                legacy_key = f"{aid}_{cname}"
+                total_val = float(val) + self.legacy_stats.get(legacy_key, 0.0)
+                
                 query = """
                     INSERT INTO agent_telemetry (agent_id, counter_name, val, last_updated)
                     VALUES (?, ?, ?, now())
                     ON CONFLICT (agent_id, counter_name) DO UPDATE SET val = EXCLUDED.val, last_updated = EXCLUDED.last_updated
                 """
-                self.engine._prefilter.execute(query, (aid, cname, float(val)))
+                self.engine._prefilter.execute(query, (aid, cname, total_val))
         except: pass
 
     def spawn_custom_agent(self, name: str, role: AgentRole, prompt: str, model: str = "llama3.2") -> str:
@@ -2575,7 +2824,7 @@ class NeuralLabOrchestrator:
             stdout, _ = await proc.communicate()
             installed = [line.split()[0] for line in stdout.decode().splitlines()[1:] if line.strip()]
             
-            jury = list(set([m for m in [self.settings.resolve_model("entity_extraction", installed), self.settings.resolve_model("general_purpose", installed)] if m]))
+            jury = list(set([m for m in [self.settings.resolve_model("extraction", installed), self.settings.resolve_model("chat_mediator", installed)] if m]))
             if not jury: return True 
             
             votes = []

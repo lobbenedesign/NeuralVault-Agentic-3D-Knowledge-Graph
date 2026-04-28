@@ -366,6 +366,47 @@
             to { opacity: 1; transform: translateX(0); }
         }
 
+        /* 🕹️ SOVEREIGN TACTILE BUTTONS */
+        .btn-push-sovereign {
+            transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+            position: relative;
+            top: 0;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-push-sovereign:active {
+            transform: scale(0.95) translateY(3px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4), inset 0 1px 5px rgba(0, 0, 0, 0.5);
+            filter: brightness(1.2);
+        }
+        .btn-push-sovereign:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        /* LAB COLUMN ACTIONS */
+        .lab-workspace.expanded-col-swarm { grid-template-columns: 1fr !important; gap: 0 !important; }
+        .lab-workspace.expanded-col-ops { grid-template-columns: 1fr !important; gap: 0 !important; }
+        .lab-workspace.expanded-col-chat { grid-template-columns: 1fr !important; gap: 0 !important; }
+
+        .lab-workspace.expanded-col-swarm > #col-ops, .lab-workspace.expanded-col-swarm > #col-chat { display: none !important; }
+        .lab-workspace.expanded-col-ops > #col-swarm, .lab-workspace.expanded-col-ops > #col-chat { display: none !important; }
+        .lab-workspace.expanded-col-chat > #col-swarm, .lab-workspace.expanded-col-chat > #col-ops { display: none !important; }
+
+        .lab-col-zoomed { zoom: 1.3; }
+
+        .lab-workspace > div:fullscreen {
+            background: rgba(2, 6, 23, 0.98) !important;
+            padding: 1.5rem !important;
+            overflow-y: auto !important;
+        }
+        
+        .lab-col-btn {
+            background: none; border: none; color: #8b949e; cursor: pointer; transition: 0.3s;
+        }
+        .lab-col-btn:hover { color: #fff; transform: scale(1.1); }
+
     </style>
 </head>
 <body>
@@ -474,7 +515,7 @@
                             <div class="mission-header" onclick="toggleNavGuide()">
                                 <div class="mission-log-title" style="color:#a855f7; font-weight:900; letter-spacing:2px; font-size:0.75rem;"><i class="fas fa-compass"></i> <span id="nav-title" data-i18n="title_nav_guide">NAV-GUIDA: STATO</span></div>
                                 <div style="display:flex; gap: 5px;">
-                                    <button onclick="event.stopPropagation(); toggleSymmetry()" style="background:rgba(59,130,246,0.3); border:1px solid #3b82f6; color:white; width:35px; height:35px; border-radius:8px; cursor:pointer; display: flex; align-items: center; justify-content: center;" title="Toggle UI Symmetry"><i class="fas fa-th-large"></i></button>
+                                    <button onclick="event.stopPropagation(); toggleSymmetry()" class="btn-push-sovereign" style="background:rgba(59,130,246,0.3); border:1px solid #3b82f6; color:white; width:35px; height:35px; border-radius:8px; cursor:pointer; display: flex; align-items: center; justify-content: center;" title="Toggle UI Symmetry"><i class="fas fa-th-large"></i></button>
                                 </div>
                             </div>
                             <div style="font-size: 0.55rem; color: #a855f7; font-weight: 900; letter-spacing: 1px; margin-bottom: 4px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;">KINETIC_GUIDE</div>
@@ -598,33 +639,61 @@
                             </div>
                         </div>
 
-                    <!-- 🕵️ NODE INSPECTOR MODAL (Re-Integrated for Fullscreen Visibility) -->
-                    <div id="node-sidebar" class="hidden">
-                        <div class="inspector-header" style="background: rgba(255,255,255,0.03); padding: 1rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center;">
-                            <div class="inspector-title" style="font-size: 0.6rem; color: #a855f7; font-weight: 900; letter-spacing: 2px; border:none; margin:0; padding:0;">NODE_INSPECTION</div>
-                            <button onclick="closeInspector()" class="close-btn-nebula">✖</button>
+                    <!-- 🕵️ NODE INSPECTOR MODAL (Sovereign Deep Inspection v4.8) -->
+                    <div id="node-inspector-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.85); backdrop-filter: blur(25px); z-index: 40000; display: none; align-items: center; justify-content: center; padding: 2rem;">
+                        <div class="glass-card" style="width: 100%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(40px); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 24px; box-shadow: 0 25px 80px rgba(0,0,0,0.8), 0 0 40px rgba(168, 85, 247, 0.1); overflow: hidden;">
+                            <div class="inspector-header" style="background: rgba(168, 85, 247, 0.1); padding: 1rem 1.5rem; border-bottom: 1px solid rgba(168, 85, 247, 0.2); display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div class="pulse-dot" style="background: #a855f7;"></div>
+                                    <div class="inspector-title" style="font-size: 0.7rem; color: #a855f7; font-weight: 900; letter-spacing: 3px;">NODE_INSPECTOR_v4.8</div>
+                                </div>
+                                <button onclick="closeInspector()" style="background: none; border: none; color: #fff; cursor: pointer; font-size: 1.2rem;">✖</button>
+                            </div>
+                            
+                            <div class="node-content-scroll" style="padding: 1.5rem; overflow-y: auto; flex-grow: 1;">
+                                <div id="node-text" class="node-text-display" style="font-size: 0.95rem; line-height: 1.7; color: #f1f5f9; background: rgba(0,0,0,0.5); padding: 1.5rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 1.5rem; white-space: pre-wrap;">Seleziona un punto...</div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                                    <div id="node-meta" style="font-family: 'JetBrains Mono'; font-size: 0.65rem; color: #4ade80; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px;">{}</div>
+                                    <div id="media-preview-container" class="hidden" style="background:rgba(0,0,0,0.4); padding:0.5rem; border-radius:8px; display: flex; align-items: center; justify-content: center;">
+                                        <img id="media-preview-img" src="" style="max-width:100%; max-height: 200px; border-radius:4px;">
+                                    </div>
+                                </div>
+
+                                <div style="margin-top: 1rem;">
+                                    <div style="font-size: 0.6rem; color: #a855f7; font-weight: 900; letter-spacing: 2px; margin-bottom: 0.8rem; text-transform: uppercase;">Synaptic Connections</div>
+                                    <div id="node-links-list" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                        <!-- Populated by JS -->
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="audit-result-area" style="display:none; padding: 1rem 1.5rem; background: rgba(16, 185, 129, 0.05); border-top: 1px solid rgba(16, 185, 129, 0.2); font-family: 'JetBrains Mono'; font-size: 0.7rem; color: #4ade80;">
+                                <div style="font-weight: 900; margin-bottom: 0.5rem;">[NEURAL_AUDIT_LOG]</div>
+                                <div id="audit-text"></div>
+                            </div>
+
+                            <div class="inspector-footer" style="padding: 1rem 1.5rem; background: rgba(0,0,0,0.3); border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                                <div style="font-size: 0.55rem; color: #64748b; font-weight: 800; letter-spacing: 1px;">INTEGRITY_STATUS: <span style="color: #4ade80;">CERTIFIED</span></div>
+                                <div style="display: flex; gap: 0.8rem;">
+                                    <button id="verify-node-btn" onclick="verifyNodeCoherence()" style="padding: 0.6rem 1.2rem; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #10b981; border-radius: 8px; font-size: 0.65rem; font-weight: 900; cursor: pointer; transition: 0.3s;">VERIFICA COERENZA</button>
+                                    <button onclick="closeInspector()" style="padding: 0.6rem 1.2rem; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 8px; font-size: 0.65rem; font-weight: 900; cursor: pointer;">CHIUDI</button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="node-content-scroll">
-                            <div id="node-text" class="node-text-display mb-4" style="font-size: 0.9rem; line-height: 1.6; color: #f8fafc; margin-bottom: 1rem; background: rgba(0,0,0,0.4); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">Seleziona un punto...</div>
-                            <div id="media-preview-container" class="hidden mb-4" style="background:rgba(0,0,0,0.4); padding:0.5rem; border-radius:8px;"><img id="media-preview-img" src="" style="width:100%; border-radius:4px;"></div>
-                            <div id="node-meta" style="font-family: 'JetBrains Mono'; font-size: 0.65rem; color: #4ade80; background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 8px; white-space: pre-wrap; overflow-wrap: break-word;">{}</div>
-                        </div> <!-- node-content-scroll -->
-                        <div style="padding: 1rem; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.5rem; color: #8b949e; text-transform: uppercase; letter-spacing: 1px;">
-                            <i class="fas fa-link" style="margin-right: 5px;"></i> <span data-i18n="label_synaptic_integrity_check">Synaptic Link Integrity Check: Verified</span>
-                        </div>
-                    </div> <!-- node-sidebar -->
+                    </div>
 
                     <!-- 🌐 SOVEREIGN UNIFIED HUD (Persistent Immersion Deck) -->
-                    <div id="cycloscope-hud" style="transform: translateX(30px); display: none;">
+                    <div id="cycloscope-hud" style="position: absolute; bottom: 2rem; left: 2rem; right: 2rem; display: none; align-items: flex-end; justify-content: space-between; gap: 1rem; z-index: 5000; pointer-events: none;">
                         <!-- 💎 [LEFT] QUALITY SELECTOR -->
-                        <div id="quality-selector-bar" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(35px); padding: 0.5rem; border-radius: 100px; border: 1px solid rgba(59, 130, 246, 0.4); display: flex; align-items: center; gap: 0.4rem; box-shadow: 0 15px 50px rgba(0,0,0,0.9);">
+                        <div id="quality-selector-bar" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(35px); padding: 0.5rem; border-radius: 100px; border: 1px solid rgba(59, 130, 246, 0.4); display: flex; align-items: center; gap: 0.4rem; box-shadow: 0 15px 50px rgba(0,0,0,0.9); pointer-events: all;">
                              <button id="q-btn-lq" onclick="setNebulaQuality('LQ')" style="background: rgba(245, 158, 11, 0.1); border: none; color: #f59e0b; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; transition: 0.3s;" data-i18n-title="label_low_quality" title="Bassa Qualità (Performance)">LQ</button>
                              <button id="q-btn-hd" onclick="setNebulaQuality('HD')" style="background: rgba(16, 185, 129, 0.3); border: 2px solid #10b981; color: #10b981; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; transition: 0.3s;" data-i18n-title="label_high_definition" title="Alta Definizione (Bilanciato)">HD</button>
                              <button id="q-btn-4k" onclick="setNebulaQuality('4K')" style="background: rgba(239, 68, 68, 0.1); border: none; color: #ef4444; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; transition: 0.3s;" data-i18n-title="label_4k_ultra" title="4K Ultra (Fedeltà)">4K</button>
                         </div>
 
                         <!-- ⏳ [CENTER] NEURAL TIME DRIVE -->
-                        <div id="time-machine-bar" style="width: 380px; background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(35px); border: 1px solid rgba(59, 130, 246, 0.4); padding: 0.6rem 1.8rem; border-radius: 50px; display: flex; flex-direction: column; gap: 0.3rem; cursor: pointer; box-shadow: 0 15px 60px rgba(0,0,0,0.9); border-left: 5px solid #3b82f6;">
+                        <div id="time-machine-bar" style="width: 380px; background: rgba(15, 23, 42, 0.98); backdrop-filter: blur(35px); border: 1px solid rgba(59, 130, 246, 0.4); padding: 0.6rem 1.8rem; border-radius: 50px; display: flex; flex-direction: column; gap: 0.3rem; cursor: pointer; box-shadow: 0 15px 60px rgba(0,0,0,0.9); border-left: 5px solid #3b82f6; pointer-events: all;">
                             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                                 <div id="time-label" style="font-size: 0.55rem; color: #3b82f6; font-weight: 900; letter-spacing: 2px;">NEURAL_TIME_DRIVE</div>
                                 <div id="current-period" style="font-size: 0.65rem; font-weight: 800; color: #fff; font-family: 'JetBrains Mono';" data-i18n="label_present">PRESENTE</div>
@@ -633,7 +702,7 @@
                         </div>
 
                         <!-- 🛠️ [RIGHT] SCENE CONTROLS -->
-                        <div id="scene-controls-bar" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(35px); padding: 0.5rem; border-radius: 100px; border: 1px solid rgba(168, 85, 247, 0.4); display: flex; align-items: center; gap: 0.6rem; box-shadow: 0 15px 50px rgba(0,0,0,0.9);">
+                        <div id="scene-controls-bar" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(35px); padding: 0.5rem; border-radius: 100px; border: 1px solid rgba(168, 85, 247, 0.4); display: flex; align-items: center; gap: 0.6rem; box-shadow: 0 15px 50px rgba(0,0,0,0.9); pointer-events: all;">
                              <div style="position: relative;">
                                 <button onclick="toggleVisibilityMenu()" style="background: rgba(168, 85, 247, 0.1); border: none; color: #a855f7; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" data-i18n-title="label_layers_filter" title="Scene Layers"><i class="fas fa-layer-group"></i></button>
                                 <div id="visibility-menu" class="hidden" style="position: absolute; bottom: 65px; left: 0; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; width: 220px; padding: 1rem; flex-direction: column; gap: 0.5rem; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); z-index: 16000;">
@@ -649,8 +718,22 @@
                                     <label class="layer-item"><input type="checkbox" checked onchange="toggleLayer('grid')"> <span data-i18n="label_layer_grid">Piano Griglia</span></label>
                                 </div>
                              </div>
-                             <button id="rotation-toggle-btn" onclick="toggleRotation()" style="background: rgba(16, 185, 129, 0.1); border: none; color: #10b981; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" data-i18n-title="label_rotation_pause" title="Pause/Play Rotation"><i class="fas fa-pause"></i></button>
-                             <button onclick="toggleCycloscopeFullscreen()" style="background: rgba(34, 211, 238, 0.1); border: none; color: #22d3ee; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" data-i18n-title="label_immersion" title="Total Immersion"><i class="fas fa-expand"></i></button>
+                             <div style="position: relative;">
+                                <button onclick="toggleExpansionMenu()" class="btn-push-sovereign" style="background: rgba(245, 158, 11, 0.1); border: none; color: #f59e0b; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" data-i18n-title="label_nebula_expansion" title="Nebula Expansion"><i class="fas fa-expand-arrows-alt"></i></button>
+                                <div id="expansion-menu" class="hidden" style="position: absolute; bottom: 65px; left: 0; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; width: 200px; padding: 1rem; flex-direction: column; gap: 0.8rem; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); z-index: 16000;">
+                                    <div style="font-size: 0.6rem; color: #f59e0b; font-weight: 900; margin-bottom: 0.5rem; letter-spacing: 1px;" data-i18n="label_nebula_expansion">NEBULA_EXPANSION</div>
+                                    <input type="range" id="expansion-slider" min="1" max="5" step="0.1" value="1" style="width: 100%; cursor: pointer; accent-color: #f59e0b;" oninput="updateNebulaExpansion(this.value)">
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.5rem; color: #8b949e; font-family: 'JetBrains Mono';">
+                                        <span>1x</span>
+                                        <span>2x</span>
+                                        <span>3x</span>
+                                        <span>4x</span>
+                                        <span>5x</span>
+                                    </div>
+                                </div>
+                             </div>
+                             <button id="rotation-toggle-btn" onclick="toggleRotation()" class="btn-push-sovereign" style="background: rgba(16, 185, 129, 0.1); border: none; color: #10b981; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" data-i18n-title="label_rotation_pause" title="Pause/Play Rotation"><i class="fas fa-pause"></i></button>
+                             <button onclick="toggleCycloscopeFullscreen()" class="btn-push-sovereign" style="background: rgba(34, 211, 238, 0.1); border: none; color: #22d3ee; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;" data-i18n-title="label_immersion" title="Total Immersion"><i class="fas fa-expand"></i></button>
                         </div>
                     </div>
                 </div> <!-- End memory-graph-container -->
@@ -666,9 +749,13 @@
                 </div>
                 <div class="lab-workspace" style="flex: 1; display: grid; grid-template-columns: 0.4fr 0.6fr 450px; gap: 1.5rem; min-height: 0;">
                     <!-- Virtual Nebula / Observatory 3D -->
-                    <div class="glass-card observatory-3d" style="position: relative; overflow: hidden; background: #000; border-radius: 20px; border: 1px solid rgba(168, 85, 247, 0.2); display: flex; flex-direction: column;">
+                    <div id="col-swarm" class="glass-card observatory-3d" style="position: relative; overflow: hidden; background: #000; border-radius: 20px; border: 1px solid rgba(168, 85, 247, 0.2); display: flex; flex-direction: column; min-height: 0;">
                         <div class="card-header" style="background: rgba(255,255,255,0.03); padding: 0.8rem 1.5rem; border-bottom: 1px solid rgba(168, 85, 247, 0.2); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-                            <span style="font-size: 0.7rem; color: #a855f7; font-weight: 800;"><i class="fas fa-terminal" style="margin-right: 8px;"></i> SWARM_COMMAND_CONSOLE</span>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 0.7rem; color: #a855f7; font-weight: 800;"><i class="fas fa-terminal" style="margin-right: 8px;"></i> CMD-SWARM</span>
+                                <button onclick="toggleLabColumnExpand('col-swarm')" class="lab-col-btn" title="Espandi Colonna"><i class="fas fa-arrows-alt-h"></i></button>
+                                <button onclick="toggleLabColumnFullscreen('col-swarm')" class="lab-col-btn" title="Fullscreen"><i class="fas fa-expand"></i></button>
+                            </div>
                             <div style="font-size: 0.55rem; color: #4ade80; font-family: 'JetBrains Mono';">UPLINK_STABILITY: <span id="lab-synergy-val">99.9%</span></div>
                         </div>
                         
@@ -711,9 +798,13 @@
                     </div>
 
                     <!-- Middle Column: 🧪 LABORATORIO NEURALE v2.0 -->
-                    <div class="lab-main-forge" style="display: flex; flex-direction: column; gap: 1rem; height: 100%; min-width: 0;">
-                        <div class="glass-card" style="padding: 1.2rem; border-bottom: 2px solid #a855f7; background: rgba(15, 23, 42, 0.9); border-radius: 12px; flex-shrink: 0;">
+                    <div id="col-ops" class="lab-main-forge" style="display: flex; flex-direction: column; gap: 1rem; height: 100%; min-width: 0; min-height: 0;">
+                        <div class="glass-card" style="padding: 1.2rem; border-bottom: 2px solid #a855f7; background: rgba(15, 23, 42, 0.9); border-radius: 12px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center;">
                              <h3 style="margin:0; font-size: 0.9rem; color: #a855f7; text-transform: uppercase; font-weight: 900; letter-spacing: 2px;"><i class="fas fa-microchip"></i> <span data-i18n="title_swarm_ops">SWARM_OPERATIONS_CENTER</span></h3>
+                             <div style="display: flex; align-items: center; gap: 10px;">
+                                 <button onclick="toggleLabColumnExpand('col-ops')" class="lab-col-btn" title="Espandi Colonna" style="font-size: 0.8rem;"><i class="fas fa-arrows-alt-h"></i></button>
+                                 <button onclick="toggleLabColumnFullscreen('col-ops')" class="lab-col-btn" title="Fullscreen" style="font-size: 0.8rem;"><i class="fas fa-expand"></i></button>
+                             </div>
                         </div>
 
                         <!-- TAB SWITCHER -->
@@ -784,9 +875,15 @@
                     </div>
 
                     <!-- Right Column: 💬 INTEGRATED NEURAL CHAT -->
-                    <div class="lab-side-controls" style="display: flex; flex-direction: column; gap: 1rem; width: 450px; height: 100%; flex-shrink: 0;">
+                    <div id="col-chat" class="lab-side-controls" style="display: flex; flex-direction: column; gap: 1rem; width: 450px; height: 100%; flex-shrink: 0; min-height: 0;">
                         <div class="chat-wrapper" style="flex: 1; display: flex; flex-direction: column; background: rgba(15, 23, 42, 0.4); border-radius: 20px; padding: 1.2rem; border: 1px solid rgba(236, 72, 153, 0.2); min-height: 0;">
-                            <div style="font-size: 0.6rem; color: #ec4899; font-weight: 900; margin-bottom: 8px; letter-spacing: 2px; text-transform: uppercase;" data-i18n="title_integrated_chat">💬 INTEGRATED_NEURAL_CHAT</div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <div style="font-size: 0.6rem; color: #ec4899; font-weight: 900; letter-spacing: 2px; text-transform: uppercase;" data-i18n="title_integrated_chat">💬 INTEGRATED_NEURAL_CHAT</div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <button onclick="toggleLabColumnExpand('col-chat')" class="lab-col-btn" title="Espandi Colonna" style="font-size: 0.7rem;"><i class="fas fa-arrows-alt-h"></i></button>
+                                    <button onclick="toggleLabColumnFullscreen('col-chat')" class="lab-col-btn" title="Fullscreen" style="font-size: 0.7rem;"><i class="fas fa-expand"></i></button>
+                                </div>
+                            </div>
                             <div id="chat-box" style="flex: 1; overflow-y: auto; padding: 0.8rem; background: rgba(0,0,0,0.3); border-radius: 12px; margin-bottom: 0.8rem; scrollbar-width: thin; scrollbar-color: rgba(236, 72, 153, 0.3) transparent;"></div>
                             <div style="display: flex; flex-direction: column; gap: 0.6rem;">
                                 <div style="display: flex; gap: 0.5rem;">
@@ -1107,79 +1204,267 @@
 
                 <!-- [TAB 1] SWARM CONTROL -->
                 <div id="config-panel-swarm" class="settings-content" style="display:block; min-height: 60vh;">
-                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); max-width: 800px;">
+                    <div style="background: rgba(255,255,255,0.05); padding: 2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); width: 100%;">
                         <label style="display:block; margin-bottom: 0.5rem; color: #a855f7; font-weight: 800; font-size: 0.8rem; letter-spacing: 2px;" data-i18n="label_swarm_model_hub">🧠 SWARM MODEL HUB</label>
                         <p style="font-size: 0.55rem; color: #8b949e; margin-bottom: 2rem; line-height: 1.4;" data-i18n="label_swarm_model_hub_desc">Assegna compiti specifici ai modelli locali. I modelli piÃ¹ potenti (es. DeepSeek-R1) sono consigliati per AUDIT e SINTESI, mentre quelli rapidi (es. Qwen 2.5) eccellono nell'ESTRAZIONE.</p>
                         
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
-                            <div>
-                                <label class="cursor-help" data-tooltip="Modello core per la validazione finale e il ragionamento logico complesso." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;"><span data-i18n="label_audit_007">AUDIT (007)</span> <i class="fas fa-info-circle"></i></label>
-                                <select id="route-audit" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 2rem;">
+                            <!-- Task: AUDIT -->
+                            <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(168,85,247,0.1);">
+                                <div style="flex: 1;">
+                                    <label class="cursor-help" data-tooltip="Modello core per la validazione finale e il ragionamento logico complesso." style="font-size: 0.6rem; color: #a855f7; display: block; margin-bottom: 5px; font-weight: 800;"><span data-i18n="label_audit_007">AUDIT (007)</span> <i class="fas fa-info-circle"></i></label>
+                                    <select id="route-audit" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                </div>
+                                <div id="rec-audit" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(168,85,247,0.3); padding-left: 10px;">
+                                    <div style="color:#a855f7; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                    <div class="tip-installed">🏠 <span style="color: #fff;" data-i18n="label_best_installed">Best Installed:</span> <span class="val">-</span></div>
+                                    <div class="tip-hw">💻 <span style="color: #fff;" data-i18n="label_best_hw">Best for HW:</span> <span class="val">-</span></div>
+                                    <div class="tip-hub">🌌 <span style="color: #fff;" data-i18n="label_best_hub">Neural Hub:</span> <span class="val">-</span></div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="cursor-help" data-i18n="label_extraction" data-i18n-tooltip="tooltip_extraction" data-tooltip="Modello rapido ottimizzato per il parsing di entità da file grezzi (PDF, Code, Web)." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">ESTRAZIONE <i class="fas fa-info-circle"></i></label>
-                                <select id="route-extraction" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                            <!-- Task: EXTRACTION -->
+                            <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(59,130,246,0.1);">
+                                <div style="flex: 1;">
+                                    <label class="cursor-help" data-i18n="label_extraction" data-tooltip="Modello rapido ottimizzato per il parsing di entità da file grezzi." style="font-size: 0.6rem; color: #3b82f6; display: block; margin-bottom: 5px; font-weight: 800;">ESTRAZIONE <i class="fas fa-info-circle"></i></label>
+                                    <select id="route-extraction" class="swarm-select" style="width:100%; background:#000; border:1px solid #3b82f6; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                </div>
+                                <div id="rec-extraction" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(59,130,246,0.3); padding-left: 10px;">
+                                    <div style="color:#3b82f6; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                    <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                    <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                    <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="cursor-help" data-tooltip="Il Sentinel valida i legami tra web e locale, controllando la veridicitÃ  delle fonti." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;"><span data-i18n="label_crossref_sentinel">CROSSREF (Sentinel)</span> <i class="fas fa-info-circle"></i></label>
-                                <select id="route-crossref" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                            <!-- Task: CROSSREF -->
+                            <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(168,85,247,0.1);">
+                                <div style="flex: 1;">
+                                    <label class="cursor-help" data-tooltip="Il Sentinel valida i legami tra web e locale." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px; font-weight: 800;"><span data-i18n="label_crossref_sentinel">CROSSREF (Sentinel)</span> <i class="fas fa-info-circle"></i></label>
+                                    <select id="route-crossref" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                </div>
+                                <div id="rec-crossref" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(168,85,247,0.3); padding-left: 10px;">
+                                    <div style="color:#a855f7; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                    <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                    <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                    <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="cursor-help" data-i18n="label_synthesis" data-i18n-tooltip="tooltip_synth" data-tooltip="Il Muse genera intuizioni creative (Creative Sparks) collegando nodi distanti nel grafo." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">SINTESI (Synth) <i class="fas fa-info-circle"></i></label>
-                                <select id="route-synthesis" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                            <!-- Task: SYNTHESIS -->
+                            <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(168,85,247,0.1);">
+                                <div style="flex: 1;">
+                                    <label class="cursor-help" data-i18n="label_synthesis" data-tooltip="Il Muse genera intuizioni creative." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px; font-weight: 800;">SINTESI (Synth) <i class="fas fa-info-circle"></i></label>
+                                    <select id="route-synthesis" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                </div>
+                                <div id="rec-synthesis" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(168,85,247,0.3); padding-left: 10px;">
+                                    <div style="color:#a855f7; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                    <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                    <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                    <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="cursor-help" data-tooltip="Modello dedicato alla chat diretta con l'utente. Garantisce risposte rapide e discorsive." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;" data-i18n="label_chat_mediator">CHAT MEDIATOR <i class="fas fa-info-circle"></i></label>
-                                <select id="route-chat-mediator" class="swarm-select" style="width:100%; background:#000; border:1px solid #3b82f6; color:white; padding: 0.8rem; border-radius: 6px; font-size: 0.75rem;"></select>
+                            <!-- Task: CHAT -->
+                            <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(59,130,246,0.1);">
+                                <div style="flex: 1;">
+                                    <label class="cursor-help" data-tooltip="Modello dedicato alla chat diretta con l'utente." style="font-size: 0.6rem; color: #3b82f6; display: block; margin-bottom: 5px; font-weight: 800;" data-i18n="label_chat_mediator">CHAT MEDIATOR <i class="fas fa-info-circle"></i></label>
+                                    <select id="route-chat-mediator" class="swarm-select" style="width:100%; background:#000; border:1px solid #3b82f6; color:white; padding: 0.8rem; border-radius: 6px; font-size: 0.75rem;"></select>
+                                </div>
+                                <div id="rec-chat_mediator" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(59,130,246,0.3); padding-left: 10px;">
+                                    <div style="color:#3b82f6; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                    <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                    <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                    <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                </div>
                             </div>
-                            <div>
-                                <label class="cursor-help" data-tooltip="ORACLE EVOLUTION: Il modello incaricato di far evolvere la nebula autonomamente, utilizzando ricerche web su fonti accreditate." style="font-size: 0.6rem; color: #facc15; display: block; margin-bottom: 5px;" data-i18n="label_oracle_evolution_desc">ORACLE EVOLUTION (Deep Research) <i class="fas fa-search-dollar"></i></label>
-                                <select id="route-evolution" class="swarm-select" style="width:100%; background:#000; border:1px solid #facc15; color:white; padding: 0.8rem; border-radius: 6px; font-size: 0.75rem;"></select>
+                            <!-- Task: EVOLUTION -->
+                            <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(250,204,21,0.1);">
+                                <div style="flex: 1;">
+                                    <label class="cursor-help" data-tooltip="ORACLE EVOLUTION: Deep Research." style="font-size: 0.6rem; color: #facc15; display: block; margin-bottom: 5px; font-weight: 800;" data-i18n="label_oracle_evolution_desc">ORACLE EVOLUTION <i class="fas fa-search-dollar"></i></label>
+                                    <select id="route-evolution" class="swarm-select" style="width:100%; background:#000; border:1px solid #facc15; color:white; padding: 0.8rem; border-radius: 6px; font-size: 0.75rem;"></select>
+                                </div>
+                                <div id="rec-oracle_evolution" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(250,204,21,0.3); padding-left: 10px;">
+                                    <div style="color:#facc15; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                    <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                    <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                    <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                </div>
                             </div>
                             <div style="grid-column: span 2; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem; margin-top: 1rem;">
                                 <label style="display:block; margin-bottom: 1rem; color: #4ade80; font-weight: 800; font-size: 0.7rem; letter-spacing: 1px;" data-i18n="label_vision_multimodal">👁️ VISION & MULTIMODAL INTELLIGENCE</label>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                                    <div>
-                                        <label class="cursor-help" data-tooltip="Modello primario per l'analisi generale di immagini e video." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;" data-i18n="label_vision_general">VISION GENERAL (Global) <i class="fas fa-eye"></i></label>
-                                        <select id="route-multimodal" class="swarm-select" style="width:100%; background:#000; border:1px solid #4ade80; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                                    <!-- Vision General -->
+                                    <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(74,222,128,0.1);">
+                                        <div style="flex: 1;">
+                                            <label class="cursor-help" data-tooltip="Analisi generale immagini e video." style="font-size: 0.6rem; color: #4ade80; display: block; margin-bottom: 5px; font-weight: 800;" data-i18n="label_vision_general">VISION GENERAL (Global) <i class="fas fa-eye"></i></label>
+                                            <select id="route-multimodal" class="swarm-select" style="width:100%; background:#000; border:1px solid #4ade80; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                        </div>
+                                        <div id="rec-vision_general" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(74,222,128,0.3); padding-left: 10px;">
+                                            <div style="color:#4ade80; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                            <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                            <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                            <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label class="cursor-help" data-tooltip="Modello specializzato nella descrizione dettagliata delle scene (es. Moondream)." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;" data-i18n="label_scene_description">SCENE DESCRIPTION <i class="fas fa-image"></i></label>
-                                        <select id="route-vision-description" class="swarm-select" style="width:100%; background:#000; border:1px solid #4ade80; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+
+                                    <!-- Scene Description -->
+                                    <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(74,222,128,0.1);">
+                                        <div style="flex: 1;">
+                                            <label class="cursor-help" data-tooltip="Descrizione dettagliata delle scene." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px; font-weight: 800;" data-i18n="label_scene_description">SCENE DESCRIPTION <i class="fas fa-image"></i></label>
+                                            <select id="route-vision-description" class="swarm-select" style="width:100%; background:#000; border:1px solid #4ade80; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                        </div>
+                                        <div id="rec-scene_description" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(74,222,128,0.3); padding-left: 10px;">
+                                            <div style="color:#4ade80; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                            <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                            <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                            <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label class="cursor-help" data-tooltip="Modello per Object Detection e Tagging (es. Florence-2)." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;" data-i18n="label_detection_tagging">DETECTION & TAGGING <i class="fas fa-shapes"></i></label>
-                                        <select id="route-vision-detection" class="swarm-select" style="width:100%; background:#000; border:1px solid #4ade80; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+
+                                    <!-- Detection & Tagging -->
+                                    <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(74,222,128,0.1);">
+                                        <div style="flex: 1;">
+                                            <label class="cursor-help" data-tooltip="Object Detection e Tagging." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px; font-weight: 800;" data-i18n="label_detection_tagging">RILEVAMENTO & TAGGING <i class="fas fa-shapes"></i></label>
+                                            <select id="route-vision-detection" class="swarm-select" style="width:100%; background:#000; border:1px solid #4ade80; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                        </div>
+                                        <div id="rec-vision_detection" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(74,222,128,0.3); padding-left: 10px;">
+                                            <div style="color:#4ade80; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                            <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                            <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                            <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label class="cursor-help" data-tooltip="Modello ottimizzato per OCR e comprensione documenti (es. Qwen2-VL)." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;" data-i18n="label_ocr_documents">OCR & DOCUMENTS <i class="fas fa-file-invoice"></i></label>
-                                        <select id="route-vision-ocr" class="swarm-select" style="width:100%; background:#000; border:1px solid #4ade80; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+
+                                    <!-- OCR & Documents -->
+                                    <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(74,222,128,0.1);">
+                                        <div style="flex: 1;">
+                                            <label class="cursor-help" data-tooltip="OCR e comprensione documenti." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px; font-weight: 800;" data-i18n="label_ocr_documents">OCR & DOCUMENTS <i class="fas fa-file-invoice"></i></label>
+                                            <select id="route-vision-ocr" class="swarm-select" style="width:100%; background:#000; border:1px solid #4ade80; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                        </div>
+                                        <div id="rec-vision_ocr" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(74,222,128,0.3); padding-left: 10px;">
+                                            <div style="color:#4ade80; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                            <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                            <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                            <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label class="cursor-help" data-tooltip="Modello per analisi visuale profonda e ragionamento complesso (es. LLaVA-v1.6)." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;" data-i18n="label_complex_analysis">COMPLEX ANALYSIS <i class="fas fa-brain"></i></label>
-                                        <select id="route-vision-analysis" class="swarm-select" style="width:100%; background:#000; border:1px solid #4ade80; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+
+                                    <!-- Complex Analysis -->
+                                    <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(74,222,128,0.1);">
+                                        <div style="flex: 1;">
+                                            <label class="cursor-help" data-tooltip="Analisi visuale profonda." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px; font-weight: 800;" data-i18n="label_complex_analysis">COMPLEX ANALYSIS <i class="fas fa-brain"></i></label>
+                                            <select id="route-vision-analysis" class="swarm-select" style="width:100%; background:#000; border:1px solid #4ade80; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                        </div>
+                                        <div id="rec-vision_analysis" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(74,222,128,0.3); padding-left: 10px;">
+                                            <div style="color:#4ade80; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                            <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                            <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                            <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 🛠️ v4.5.0: CODING & AGENTIC ACTUATORS (The Great Challenge) -->
+                            <div style="grid-column: span 2; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1rem; margin-top: 1rem;">
+                                <label style="display:block; margin-bottom: 1rem; color: #3b82f6; font-weight: 800; font-size: 0.7rem; letter-spacing: 1px;" data-i18n="label_coding_actuators">🛠️ CODING & AGENTIC ACTUATORS</label>
+                                <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                                    <!-- Coding Specialist 1 -->
+                                    <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(59,130,246,0.1);">
+                                        <div style="flex: 1;">
+                                            <label class="cursor-help" data-tooltip="Specialista coding 1: genera ed esegue il primo draft del codice." style="font-size: 0.6rem; color: #3b82f6; display: block; margin-bottom: 5px; font-weight: 800;" data-i18n="label_coding_1">CODING SPECIALIST 1 <i class="fas fa-code"></i></label>
+                                            <select id="route-coding-1" class="swarm-select" style="width:100%; background:#000; border:1px solid #3b82f6; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                        </div>
+                                        <div id="rec-coding_1" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(59,130,246,0.3); padding-left: 10px;">
+                                            <div style="color:#3b82f6; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                            <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                            <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                            <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Coding Specialist 2 -->
+                                    <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(59,130,246,0.1);">
+                                        <div style="flex: 1;">
+                                            <label class="cursor-help" data-tooltip="Specialista coding 2: revisiona e propone alternative al codice." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px; font-weight: 800;" data-i18n="label_coding_2">CODING SPECIALIST 2 <i class="fas fa-terminal"></i></label>
+                                            <select id="route-coding-2" class="swarm-select" style="width:100%; background:#000; border:1px solid #3b82f6; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                        </div>
+                                        <div id="rec-coding_2" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(59,130,246,0.3); padding-left: 10px;">
+                                            <div style="color:#3b82f6; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                            <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                            <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                            <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Coding Supervisor -->
+                                    <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(250,204,21,0.1);">
+                                        <div style="flex: 1;">
+                                            <label class="cursor-help" data-tooltip="Supervisore Coding: convalida finale." style="font-size: 0.6rem; color: #facc15; display: block; margin-bottom: 5px; font-weight: 800;" data-i18n="label_coding_supervisor">CODING SUPERVISOR (Judge) <i class="fas fa-balance-scale"></i></label>
+                                            <select id="route-coding-supervisor" class="swarm-select" style="width:100%; background:#000; border:1px solid #facc15; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                        </div>
+                                        <div id="rec-coding_supervisor" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(250,204,21,0.3); padding-left: 10px;">
+                                            <div style="color:#facc15; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                            <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                            <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                            <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                             <div style="grid-column: span 2; border-top: 1px solid rgba(168, 85, 247, 0.3); padding-top: 1.5rem; margin-top: 1rem;">
-                                <label class="cursor-help" data-i18n="label_evolution_suggestions" data-tooltip="Modello incaricato di generare suggerimenti evolutivi e bug-hunting." style="font-size: 0.6rem; color: #a855f7; display: block; margin-bottom: 5px;">CHAT FOR EVOLUTION SUGGESTIONS <i class="fas fa-magic"></i></label>
-                                <select id="route-evolution-suggestions" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 0.8rem; border-radius: 6px; font-size: 0.75rem;"></select>
+                                <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(168,85,247,0.2);">
+                                    <div style="flex: 1;">
+                                        <label class="cursor-help" data-i18n="label_evolution_suggestions" data-tooltip="Modello per suggerimenti evolutivi e bug-hunting." style="font-size: 0.6rem; color: #a855f7; display: block; margin-bottom: 5px; font-weight: 800;">CHAT FOR EVOLUTION SUGGESTIONS <i class="fas fa-magic"></i></label>
+                                        <select id="route-evolution-suggestions" class="swarm-select" style="width:100%; background:#000; border:1px solid #a855f7; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                    </div>
+                                    <div id="rec-evolution_suggestions" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(168,85,247,0.3); padding-left: 10px;">
+                                        <div style="color:#a855f7; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                        <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                        <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                        <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                    </div>
+                                </div>
                             </div>
                             <!-- ⚖️ SOVEREIGN SUPREME COMMITTEE -->
                             <div style="grid-column: span 2; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.05);">
                                 <label style="display:block; margin-bottom: 1rem; color: #facc15; font-weight: 800; font-size: 0.7rem; letter-spacing: 1px;">⚖️ SOVEREIGN SUPREME COMMITTEE</label>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
-                                    <div>
-                                        <label style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;">JUDGE_ALPHA</label>
-                                        <select id="court-judge-1" class="swarm-select" style="width:100%; background:#000; border:1px solid #facc15; color:white; padding: 8px; border-radius: 6px; font-size: 0.7rem;" onchange="updateCourtSettings()"></select>
+                                <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                                    <!-- Judge Alpha -->
+                                    <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(250,204,21,0.1);">
+                                        <div style="flex: 1;">
+                                            <label style="font-size: 0.6rem; color: #facc15; display: block; margin-bottom: 5px; font-weight: 800;">JUDGE_ALPHA <i class="fas fa-balance-scale"></i></label>
+                                            <select id="court-judge-1" class="swarm-select" style="width:100%; background:#000; border:1px solid #facc15; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                        </div>
+                                        <div id="rec-court_judge_1" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(250,204,21,0.3); padding-left: 10px;">
+                                            <div style="color:#facc15; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                            <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                            <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                            <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;" data-i18n="label_judge_beta">JUDGE_BETA</label>
-                                        <select id="court-judge-2" class="swarm-select" style="width:100%; background:#000; border:1px solid #facc15; color:white; padding: 8px; border-radius: 6px; font-size: 0.7rem;" onchange="updateCourtSettings()"></select>
+                                    <!-- Judge Beta -->
+                                    <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(250,204,21,0.1);">
+                                        <div style="flex: 1;">
+                                            <label style="font-size: 0.6rem; color: #facc15; display: block; margin-bottom: 5px; font-weight: 800;">JUDGE_BETA <i class="fas fa-balance-scale"></i></label>
+                                            <select id="court-judge-2" class="swarm-select" style="width:100%; background:#000; border:1px solid #facc15; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                        </div>
+                                        <div id="rec-court_judge_2" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(250,204,21,0.3); padding-left: 10px;">
+                                            <div style="color:#facc15; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                            <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                            <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                            <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 5px;" data-i18n="label_judge_gamma">JUDGE_GAMMA</label>
-                                        <select id="court-judge-3" class="swarm-select" style="width:100%; background:#000; border:1px solid #facc15; color:white; padding: 8px; border-radius: 6px; font-size: 0.7rem;" onchange="updateCourtSettings()"></select>
+                                    <!-- Judge Gamma -->
+                                    <div style="display: flex; gap: 1rem; align-items: start; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 10px; border: 1px solid rgba(250,204,21,0.1);">
+                                        <div style="flex: 1;">
+                                            <label style="font-size: 0.6rem; color: #facc15; display: block; margin-bottom: 5px; font-weight: 800;">JUDGE_GAMMA <i class="fas fa-balance-scale"></i></label>
+                                            <select id="court-judge-3" class="swarm-select" style="width:100%; background:#000; border:1px solid #facc15; color:white; padding: 8px; border-radius: 6px; font-size: 0.75rem;"></select>
+                                        </div>
+                                        <div id="rec-court_judge_3" class="rec-panel" style="width: 250px; font-size: 0.55rem; color: #8b949e; border-left: 1px solid rgba(250,204,21,0.3); padding-left: 10px;">
+                                            <div style="color:#facc15; font-weight: 900; margin-bottom: 5px; font-size: 0.5rem; text-transform: uppercase;">Sovereign Recommendations</div>
+                                            <div class="tip-installed">🏠 <span style="color: #fff;">Best Installed:</span> <span class="val">-</span></div>
+                                            <div class="tip-hw">💻 <span style="color: #fff;">Best for HW:</span> <span class="val">-</span></div>
+                                            <div class="tip-hub">🌌 <span style="color: #fff;">Neural Hub:</span> <span class="val">-</span></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1189,19 +1474,58 @@
                         <label style="display:block; margin-bottom: 1rem; color: #4ade80; font-weight: 800; font-size: 0.7rem; letter-spacing: 1px;" data-i18n="label_sovereign_protocol">PROTOCOLLO SOVRANO</label>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
                             <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                                <label class="cursor-help" data-i18n="label_consensus" data-i18n-tooltip="tooltip_consensus" data-tooltip="Numero di modelli che devono concordare prima di una fusione semantica. Più è alto, minore è il rischio di allucinazioni." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 8px;">CONSENSO LLM <i class="fas fa-info-circle"></i></label>
+                                <label class="cursor-help" data-i18n="label_consensus" data-tooltip="Numero di modelli che devono concordare prima di una fusione semantica. Più è alto, minore è il rischio di allucinazioni." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 8px;">CONSENSO LLM <i class="fas fa-info-circle"></i></label>
                                 <input type="number" id="consensus-threshold" min="1" max="5" value="2" style="width:100%; background:#000; border:1px solid rgba(168,85,247,0.3); color:#a855f7; padding:10px; border-radius:8px; font-family:'JetBrains Mono'; font-size:0.8rem; outline:none; text-align:center;">
                             </div>
                             <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                                <label class="cursor-help" data-tooltip="Soglia di confidenza per i legami automatici. [Basso = Creativo, Alto = Rigoroso]" style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 8px;">SENSIBILITÀ WEAVER <i class="fas fa-info-circle"></i></label>
-                                <input type="number" id="weaver-sensitivity" min="0.5" max="0.95" step="0.01" value="0.82" style="width:100%; background:#000; border:1px solid rgba(59,130,246,0.3); color:#3b82f6; padding:10px; border-radius:8px; font-family:'JetBrains Mono'; font-size:0.8rem; outline:none; text-align:center;">
+                                <label class="cursor-help" data-tooltip="Se attivo, ogni suggerimento approvato creerà un branch Git locale per isolare la modifica." style="font-size: 0.6rem; color: #8b949e; display: block; margin-bottom: 8px;">AUTO-BRANCH EVOLUTION <i class="fas fa-code-branch"></i></label>
+                                <div style="display: flex; align-items: center; gap: 10px; background: #000; padding: 10px; border-radius: 8px; border: 1px solid rgba(16,185,129,0.3);">
+                                    <input type="checkbox" id="git-auto-branch-toggle" checked style="width: 18px; height: 18px; accent-color: #10b981; cursor: pointer;">
+                                    <span style="font-size: 0.6rem; color: #10b981; font-weight: 800;">GIT_CHECKPOINT ACTIVE</span>
+                                </div>
                             </div>
                         </div>
                         <textarea id="trusted-sources-pool" onchange="updateSwarmConfig('trusted_sources', this.value.split(','))" placeholder="Trusted Domains (es. github.com, docs.python.org)..." style="width: 100%; height: 60px; background: #000; border: 1px solid rgba(255,255,255,0.1); color: #4ade80; padding: 10px; border-radius: 8px; font-size: 0.7rem; margin-bottom: 1rem;"></textarea>
                         
-                        <div class="cursor-help" data-i18n-tooltip="tooltip_autopilot" data-tooltip="Se attivo, lo swarm agisce in autonomia. Se spento, ogni azione richiede approvazione nel Mission Control." style="display: flex; align-items: center; justify-content: space-between; background: rgba(74, 222, 128, 0.05); padding: 1rem; border-radius: 12px; border: 1px solid rgba(74, 222, 128, 0.2);">
+                        <div class="cursor-help" data-i18n-tooltip="tooltip_autopilot" data-tooltip="Se attivo, lo swarm agisce in autonomia. Se spento, ogni azione richiede approvazione nel Mission Control." style="display: flex; align-items: center; justify-content: space-between; background: rgba(74, 222, 128, 0.05); padding: 1rem; border-radius: 12px; border: 1px solid rgba(74, 222, 128, 0.2); margin-bottom: 10px;">
                             <div style="color: #fff; font-size: 0.7rem; font-weight: 800;" data-i18n="label_autopilot">Auto-Pilot Supervision <i class="fas fa-info-circle"></i></div>
                             <label class="ios-switch"><input type="checkbox" id="autopilot-supervision-toggle" onchange="updateSwarmConfig('auto_mode', this.checked)" checked><span class="ios-slider"></span></label>
+                        </div>
+
+                        <div class="cursor-help" data-tooltip="Se attivo, permette all'Evolution Advisor di scrivere fisicamente i file sul disco dopo la validazione." style="display: flex; align-items: center; justify-content: space-between; background: rgba(168, 85, 247, 0.05); padding: 1rem; border-radius: 12px; border: 1px solid rgba(168, 85, 247, 0.2);">
+                            <div style="color: #fff; font-size: 0.7rem; font-weight: 800;">Autonomous Patching <i class="fas fa-magic"></i></div>
+                            <label class="ios-switch"><input type="checkbox" id="auto-patching-toggle" onchange="saveSwarmRouting()"><span class="ios-slider"></span></label>
+                        </div>
+
+                        <!-- 🚀 v4.0: GLOBAL EVOLUTION & GITHUB SYNC -->
+                        <label style="display:block; margin: 1.5rem 0 1rem 0; color: #f97316; font-weight: 800; font-size: 0.7rem; letter-spacing: 1px;">🚀 GLOBAL EVOLUTION & GITHUB SYNC</label>
+                        <div style="background: rgba(249, 115, 22, 0.05); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(249, 115, 22, 0.2); margin-bottom: 2rem;">
+                            <div style="display: flex; gap: 15px; align-items: start; margin-bottom: 1.5rem; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border-left: 4px solid #f97316;">
+                                <i class="fas fa-exclamation-triangle" style="color: #f97316; font-size: 1.2rem; margin-top: 5px;"></i>
+                                <div>
+                                    <div style="color: #fff; font-weight: 900; font-size: 0.75rem; margin-bottom: 5px;">GITHUB INTEGRATION REQUIRED</div>
+                                    <p style="color: #8b949e; font-size: 0.6rem; line-height: 1.4; margin: 0;">Per abilitare le <strong>Auto-Evoluzioni</strong> globali, le <strong>Release</strong> e il backup remoto della conoscenza, è necessario configurare un Account GitHub e generare un <strong>Personal Access Token (PAT)</strong> con permessi 'repo' e 'workflow'.</p>
+                                </div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div>
+                                    <label style="font-size: 0.55rem; color: #8b949e; display: block; margin-bottom: 5px; text-transform: uppercase;">GitHub Access Token</label>
+                                    <input type="password" id="github-token" placeholder="ghp_xxxxxxxxxxxx" style="width:100%; background:#000; border:1px solid rgba(249,115,22,0.3); color:#fff; padding:12px; border-radius:8px; font-family:'JetBrains Mono'; font-size:0.7rem; outline:none;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 0.55rem; color: #8b949e; display: block; margin-bottom: 5px; text-transform: uppercase;">Target Repository</label>
+                                    <input type="text" id="github-repo" placeholder="username/neural-vault-evolved" style="width:100%; background:#000; border:1px solid rgba(249,115,22,0.3); color:#fff; padding:12px; border-radius:8px; font-family:'JetBrains Mono'; font-size:0.7rem; outline:none;">
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; border-top: 1px solid rgba(249,115,22,0.1);">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <div id="github-sync-indicator" style="width: 8px; height: 8px; border-radius: 50%; background: #4b5563;"></div>
+                                    <span id="github-sync-status" style="font-size: 0.55rem; color: #8b949e; font-weight: 800; text-transform: uppercase;">GitHub: Not Connected</span>
+                                </div>
+                                <button class="btn-glow" style="padding: 8px 20px; font-size: 0.6rem; background: #f97316; border: none; box-shadow: 0 0 15px rgba(249,115,22,0.2);" onclick="testGitHubConnection()">TEST CONNECTION</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1461,19 +1785,19 @@
         <!-- COLUMN 1: SUPER-METRICS STACK (v4.0 Sovereign) -->
         <div class="card" style="display: flex; flex-direction: column; gap: 0.8rem; justify-content: flex-start; padding: 1rem;">
             <!-- Cognitive Metrics -->
-            <div>
+            <div class="cursor-help" data-i18n-tooltip="tooltip_cognitive">
                 <div class="metric-title" id="title-cognitive" style="font-size: 0.6rem; margin-bottom: 2px;"><i class="fas fa-brain" style="color: #3b82f6; margin-right: 5px;"></i> <span data-i18n="title_metrics">METRICHE COGNITIVE</span></div>
-                <div id="metrics-data" style="font-family: 'JetBrains Mono'; font-size: 0.6rem; color: #3b82f6; background: rgba(59, 130, 246, 0.1); padding: 0.35rem; border-radius: 6px;">Ret: 98.4% | Stab: 99.9%</div>
+                <div id="metrics-data" style="font-family: 'JetBrains Mono'; font-size: 0.6rem; color: #3b82f6; background: rgba(59, 130, 246, 0.1); padding: 0.35rem; border-radius: 6px;">Ret: 0.0% | Stab: 0.0%</div>
             </div>
             
             <!-- Semantic Distance -->
-            <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.6rem;">
+            <div class="cursor-help" data-i18n-tooltip="tooltip_distance" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.6rem;">
                 <div class="metric-title" id="title-distance" style="font-size: 0.6rem; margin-bottom: 2px;"><i class="fas fa-project-diagram" style="color: #a855f7; margin-right: 5px;"></i> <span data-i18n="title_semantic_distance">DISTANZA SEMANTICA</span></div>
-                <div id="stat-distance" style="font-size: 0.65rem; font-weight: 800; color: #3b82f6; font-family: 'JetBrains Mono';">0.84</div>
+                <div id="stat-distance" style="font-size: 0.65rem; font-weight: 800; color: #3b82f6; font-family: 'JetBrains Mono';">0.00</div>
             </div>
 
             <!-- Agent007 Hardbank (Integrated) -->
-            <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <div class="cursor-help" data-i18n-tooltip="tooltip_agent007" style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.6rem; display: flex; flex-direction: column; gap: 0.5rem;">
                 <div class="metric-title" id="title-hardbank" style="font-size: 0.6rem; color: #a855f7;"><i class="fas fa-user-secret" style="margin-right: 5px;"></i> <span data-i18n="title_hardbank">BANCA DATI AGENT007</span></div>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                     <div style="font-size: 0.55rem; color: #94a3b8; border-left: 2px solid #a855f7; padding-left: 0.6rem; display: flex; justify-content: space-between;">
@@ -1484,48 +1808,84 @@
                     </div>
                 </div>
                 <div class="bottom-stats-panel">
-                    <div id="tip-nodes-2" style="color: #94a3b8; font-size: 0.6rem;">● NODES: <span id="stat-nodes-2" class="val-neon stat-nodes" style="color: #a855f7;">...</span></div>
-                    <div id="tip-edges-2" style="color: #94a3b8; font-size: 0.6rem;">● EDGES: <span id="stat-synapses-2" class="val-neon stat-synapses" style="color: #3b82f6;">...</span></div>
-                    <div id="tip-clusters-2" style="color: #94a3b8; font-size: 0.6rem;">● CLUSTERS: <span id="stat-clusters-2" class="val-neon stat-clusters" style="color: #10b981;">...</span></div>
-                    <div id="tip-blueprint" class="cursor-help" data-tooltip="Indica che il ciclo di sintesi tra gli agenti è completo. Significa che l'Archivista Prime ha generato un piano d'azione finale basato sulle analisi dell'Analista e del Guardiano." style="font-size: 0.5rem; color: #4ade80; font-weight: 800; letter-spacing: 1px; text-align: center; background: rgba(74, 222, 128, 0.05); padding: 0.4rem; border-radius: 4px; margin-top: auto;" data-i18n="label_mission_ready">● MISSION BLUEPRINT READY</div>
+                    <div id="tip-nodes-2" class="cursor-help" data-i18n-tooltip="tooltip_nodes" style="color: #94a3b8; font-size: 0.6rem;">● NODES: <span id="stat-nodes-2" class="val-neon stat-nodes" style="color: #a855f7;">0</span></div>
+                    <div id="tip-edges-2" class="cursor-help" data-i18n-tooltip="tooltip_edges" style="color: #94a3b8; font-size: 0.6rem;">● EDGES: <span id="stat-synapses-2" class="val-neon stat-synapses" style="color: #3b82f6;">0</span></div>
+                    <div id="tip-clusters-2" class="cursor-help" data-i18n-tooltip="tooltip_clusters" style="color: #94a3b8; font-size: 0.6rem;">● CLUSTERS: <span id="stat-clusters-2" class="val-neon stat-clusters" style="color: #10b981;">0</span></div>
+                    <div id="tip-blueprint" class="cursor-help" data-i18n-tooltip="tooltip_blueprint" style="font-size: 0.5rem; color: #4ade80; font-weight: 800; letter-spacing: 1px; text-align: center; background: rgba(74, 222, 128, 0.05); padding: 0.4rem; border-radius: 4px; margin-top: auto;" data-i18n="label_mission_ready">● MISSION BLUEPRINT READY</div>
                 </div>
             </div>
         </div>
 
         <!-- COLUMN 2: ENGINE TRACING (TALL & NARROW) -->
-        <div class="card" style="display: flex; flex-direction: column; position: relative;">
-            <div class="metric-title" id="title-tracing" data-tooltip="Monitoraggio a bassa latenza del core Rust/C++ e degli uplink Ollama. Traccia i vettori di input attraverso i layer di quantizzazione TurboQuant (4-bit) e registra l'attivazione dei trigger di gossip mesh per la sincronizzazione distribuita."><i class="fas fa-terminal" style="margin-right: 5px;"></i> <span data-i18n="title_engine_tracing">TRACCIAMENTO MOTORE</span></div>
+        <div class="card" style="display: flex; flex-direction: column; position: relative; height: 100%; overflow: hidden;">
+            <div class="metric-title" id="title-tracing" data-i18n-tooltip="tooltip_tracing" data-tooltip="Monitoraggio a bassa latenza del core..."><i class="fas fa-terminal" style="margin-right: 5px;"></i> <span data-i18n="title_engine_tracing">TRACCIAMENTO MOTORE</span></div>
             <button onclick="copyTracingLog()" style="position: absolute; top: 1.2rem; right: 1.2rem; background: rgba(255,255,255,0.05); border: none; color: #8b949e; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; font-size: 0.7rem;" data-i18n-title="btn_copy_log" title="Copia Log"><i class="fas fa-copy"></i></button>
             <div id="aura-console" style="font-family: 'JetBrains Mono'; font-size: 0.6rem; color: #4ade80; flex: 1; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); line-height: 1.3; scrollbar-width: thin; scrollbar-color: rgba(168,85,247,0.5) rgba(0,0,0,0.1);" data-i18n="label_awaiting_resonance">Awaiting resonance...</div>
         </div>
 
         <!-- COLUMN 3: KNOWLEDGE INVENTORY (COMPACT SCROLLABLE) -->
-        <div class="card" style="display: flex; flex-direction: column; overflow: hidden;">
-            <div class="metric-title" id="title-inventory" data-tooltip="Registro immutabile della provenienza (Provenance). Ogni riga rappresenta una sinapsi radice; associa i metadati di sistema (Hash-ID) alle coordinate temporali e alla natura del media (Testo, Audio, Video), garantendo la tracciabilità sovrana del dato."><i class="fas fa-archive" style="color: #3b82f6; margin-right: 5px;"></i> <span data-i18n="title_inventory">INVENTARIO CONOSCENZA</span></div>
+        <div class="card" style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+            <div class="metric-title" id="title-inventory" data-i18n-tooltip="tooltip_inventory" data-tooltip="Registro immutabile della provenienza..."><i class="fas fa-archive" style="color: #3b82f6; margin-right: 5px;"></i> <span data-i18n="title_inventory">INVENTARIO CONOSCENZA</span></div>
             <div id="knowledge-inventory-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 0.8rem;">
                 <div style="font-size: 0.65rem; color: rgba(255,255,255,0.2); text-align: center; margin-top: 2rem;" data-i18n="label_acquiring_history">Acquisizione cronologia sinaptica...</div>
             </div>
         </div>
 
-        <!-- COLUMN 4: GLOBAL SWARM SETTINGS (v4.0) -->
-        <div class="card" style="display: flex; flex-direction: column; gap: 0.8rem; overflow: visible;">
-            <div class="metric-title" data-i18n="title_swarm_settings"><i class="fas fa-sliders-h" style="color: #a855f7; margin-right: 5px;"></i> SWARM_GLOBAL_SETTINGS</div>
+        <!-- COLUMN 4: SOVEREIGN TELEMETRY HUB (v4.0) -->
+        <div class="card" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(168, 85, 247, 0.1);">
+            <div class="metric-title" data-i18n-tooltip="tooltip_telemetry" data-tooltip="Monitoraggio hardware profondo..."><i class="fas fa-microchip" style="color: #a855f7; margin-right: 5px;"></i> <span data-i18n="title_telemetry">SOVEREIGN TELEMETRY</span></div>
             
-            <div>
-                <label class="setting-label" data-i18n="label_judge_3">Supreme Court Judge #3</label>
-                <select id="setting-court-judge-3" class="swarm-select" data-setting="court_judge_3"></select>
-            </div>
-            
-            <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.8rem;">
-                <label class="setting-label" data-i18n="label_evolution_suggestion">Evolution Suggestion Brain</label>
-                <select id="setting-evolution-model" class="swarm-select" data-setting="evolution_suggestion_model"></select>
-                <p style="font-size: 0.45rem; color: #8b949e; margin-top: 4px; line-height: 1.3;" data-i18n="label_evolution_suggestion_desc">Seleziona l'LLM dedicato alla generazione di suggerimenti tecnici e bug-hunting.</p>
+            <div style="flex: 1; padding: 0.8rem; display: flex; flex-direction: column; gap: 0.6rem;">
+                <!-- CPU -->
+                <div class="telemetry-row">
+                    <div style="display:flex; justify-content:space-between; font-size:0.55rem; color:#8b949e; margin-bottom:2px;">
+                        <span>CPU (<span id="hw-cpu-cores">0</span> CORES)</span>
+                        <span id="hw-cpu-val" style="color:#fff; font-weight:800;">0%</span>
+                    </div>
+                    <div style="width:100%; height:3px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
+                        <div id="hw-cpu-bar" style="width:0%; height:100%; background:#3b82f6; transition:width 0.5s;"></div>
+                    </div>
+                </div>
+
+                <!-- RAM -->
+                <div class="telemetry-row">
+                    <div style="display:flex; justify-content:space-between; font-size:0.55rem; color:#8b949e; margin-bottom:2px;">
+                        <span>RAM (<span id="hw-ram-useful">0</span>GB FREE)</span>
+                        <span id="hw-ram-val" style="color:#fff; font-weight:800;">0 / 0 GB</span>
+                    </div>
+                    <div style="width:100%; height:3px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
+                        <div id="hw-ram-bar" style="width:0%; height:100%; background:#a855f7; transition:width 0.5s;"></div>
+                    </div>
+                </div>
+
+                <!-- GPU -->
+                <div class="telemetry-row">
+                    <div style="display:flex; justify-content:space-between; font-size:0.55rem; color:#8b949e; margin-bottom:2px;">
+                        <span>UNIFIED GPU (METAL)</span>
+                        <span id="hw-gpu-val" style="color:#fff; font-weight:800;">0%</span>
+                    </div>
+                    <div style="width:100%; height:3px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
+                        <div id="hw-gpu-bar" style="width:0%; height:100%; background:#10b981; transition:width 0.5s;"></div>
+                    </div>
+                </div>
+
+                <!-- DISK -->
+                <div class="telemetry-row">
+                    <div style="display:flex; justify-content:space-between; font-size:0.55rem; color:#8b949e; margin-bottom:2px;">
+                        <span>STORAGE (SSD)</span>
+                        <span id="hw-disk-val" style="color:#fff; font-weight:800;">0 / 0 GB</span>
+                    </div>
+                    <div style="width:100%; height:3px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
+                        <div id="hw-disk-bar" style="width:0%; height:100%; background:#f59e0b; transition:width 0.5s;"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
+
         <!-- COLUMN 5: INGESTION PORTAL (TALL) -->
-        <div class="card" id="ingestion-portal-card" onclick="document.getElementById('file-input').click()" style="display: flex; flex-direction: column; position: relative;">
-            <div class="metric-title" id="title-portal" data-tooltip="Punto di singolarità per l'input dati. Gestisce il pre-processing multimodale: temporal chunking per i video, diarizzazione per l'audio e scraping selettivo per gli URL, pilotando il caricamento verso il processore ImageBind."><i class="fas fa-microchip" style="margin-right: 5px;"></i> <span data-i18n="title_ingestion">PORTALE INGESTIONE</span></div>
+        <div class="card" id="ingestion-portal-card" onclick="document.getElementById('file-input').click()" style="display: flex; flex-direction: column; position: relative; height: 100%; overflow: hidden;">
+            <div class="metric-title" id="title-portal" data-i18n-tooltip="tooltip_ingestion" data-tooltip="Punto di singolarità per l'input dati..."><i class="fas fa-microchip" style="margin-right: 5px;"></i> <span data-i18n="title_ingestion">PORTALE INGESTIONE</span></div>
             <div class="ingestion-portal-inner" style="flex: 1; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(168, 85, 247, 0.3); border-radius: 16px; transition: 0.3s; cursor: pointer; position: relative;">
                 <div style="text-align: center; padding: 1rem;">
                     <i class="fas fa-file-export" style="font-size: 2rem; color: #a855f7; margin-bottom: 1rem; opacity: 0.6;"></i>

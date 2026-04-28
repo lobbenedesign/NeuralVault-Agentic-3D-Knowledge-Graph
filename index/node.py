@@ -33,6 +33,7 @@ class NodeLifecycleState(str, Enum):
     WASTE_PENDING    = "waste_pending"    # Marcato per l'eliminazione dal Janitron
     PROTECTED        = "protected"        # Memoria Episodica: Protetto permanentemente
     TOMBSTONE        = "tombstone"        # Eliminato, rimane solo la lapide crittografica
+    DELETED          = "tombstone"        # Alias per compatibilità con l'Orchestrator
     ARCHIVED         = "archived"         # Memoria sbiadita (Ebbinghaus Decay)
 
 # Alias per compatibilità con il vecchio sistema (v17.0)

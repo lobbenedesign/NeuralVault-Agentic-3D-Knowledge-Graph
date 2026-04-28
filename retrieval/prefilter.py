@@ -49,6 +49,8 @@ class DuckDBPrefilter:
             CREATE TABLE IF NOT EXISTS vault_metadata (
                 id VARCHAR PRIMARY KEY,
                 collection VARCHAR,
+                namespace VARCHAR DEFAULT 'default',
+                file_type VARCHAR DEFAULT 'text',
                 created_at TIMESTAMP,
                 last_access TIMESTAMP,
                 access_count INTEGER DEFAULT 0,
@@ -103,6 +105,16 @@ class DuckDBPrefilter:
                 print("🔒 [v0.5.5] Inizializzazione motore di Deduplicazione...")
                 self.con.execute("ALTER TABLE vault_metadata ADD COLUMN content_hash VARCHAR")
                 self.con.execute("CREATE INDEX IF NOT EXISTS idx_content_hash ON vault_metadata(content_hash)")
+
+            if 'namespace' not in col_names:
+                print("🏰 [v3.6.0] Inizializzazione Logical Namespacing...")
+                self.con.execute("ALTER TABLE vault_metadata ADD COLUMN namespace VARCHAR DEFAULT 'default'")
+                self.con.execute("CREATE INDEX IF NOT EXISTS idx_namespace ON vault_metadata(namespace)")
+
+            if 'file_type' not in col_names:
+                print("📄 [v3.6.0] Inizializzazione Advanced Scalar Filtering...")
+                self.con.execute("ALTER TABLE vault_metadata ADD COLUMN file_type VARCHAR DEFAULT 'text'")
+                self.con.execute("CREATE INDEX IF NOT EXISTS idx_file_type ON vault_metadata(file_type)")
         except Exception as e:
             print(f"⚠️ [DuckDB Migration] {e}")
 
@@ -125,14 +137,19 @@ class DuckDBPrefilter:
             importance = metadata.get("importance", 1.0)
             c_hash = metadata.get("content_hash")
             l_state = metadata.get("lifecycle_state", "stable")
-            data_to_insert.append((node_id, collection, importance, modality, c_hash, l_state, meta_json))
+            
+            # [v3.6.0] Namespacing & Scalar Data
+            namespace = metadata.get("namespace", "default")
+            file_type = metadata.get("file_type", "text")
+            
+            data_to_insert.append((node_id, collection, namespace, file_type, importance, modality, c_hash, l_state, meta_json))
 
         # Esecuzione in una singola transazione (Turbo Mode)
         try:
             self.executemany("""
                 INSERT OR REPLACE INTO vault_metadata 
-                (id, collection, created_at, last_access, access_count, importance, modality, content_hash, lifecycle_state, metadata)
-                VALUES (?, ?, now(), now(), 1, ?, ?, ?, ?, ?)
+                (id, collection, namespace, file_type, created_at, last_access, access_count, importance, modality, content_hash, lifecycle_state, metadata)
+                VALUES (?, ?, ?, ?, now(), now(), 1, ?, ?, ?, ?, ?)
             """, data_to_insert)
         except Exception as e:
             print(f"⚠️ Errore nel Batch Ingest Prefilter: {e}")

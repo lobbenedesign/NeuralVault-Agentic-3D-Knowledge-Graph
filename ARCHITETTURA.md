@@ -1,141 +1,196 @@
-# 🏺 NEURALVAULT: SOVEREIGN AGENTIC KNOWLEDGE OS (v3.5.0)
+# 🌌 NEURAL VAULT: ARCHITETTURA TECNICA v4.0
 
-> "Memory is not a static warehouse, but a living fabric nurtured by an autonomous swarm. Here, knowledge evolves, repairs, and connects in a zero-waste sovereign architecture."
-
----
-
-## 📜 1. VISION AND IDENTITY: MORE THAN JUST RAG
-NeuralVault transcends traditional categories to position itself as an **Agentic Knowledge OS** or **Autonomous Knowledge Fabric**.
-
-### The Pillars of Sovereignty
-1.  **Proactivity (Beyond RAG)**: While traditional RAG is reactive, NeuralVault is proactive. Through **Neural Dreaming** circadian cycles, the swarm works on knowledge even without user input.
-2.  **Latent Dimension (Beyond File Search)**: We don't search for files, but for concepts. The system operates in a 1024D vector space where a README and a video frame connect if they share deep meaning.
-3.  **Evolutionary Kinetics**: NeuralVault is kinetic. It prunes orphans, repairs synapses, and creates pulsating connections autonomously.
-4.  **Zero-Waste Storage**: Using the **AOBF** protocol and the **Reaper** module, it physically eliminates redundant data.
+Benvenuti nel manuale tecnico ufficiale di **Neural Vault**. Questo documento descrive l'architettura sovrana del sistema, mappando ogni modulo dalla persistenza binaria alla visualizzazione 3D in tempo reale. Il sistema bilancia velocità bruta e integrità crittografica per trasformare l'informazione in saggezza attiva.
 
 ---
 
-## 🏗️ SECTION I: COGNITIVE ENGINE (STORAGE & PERSISTENCE)
-The architecture balances brute speed, analytical capacity, and cryptographic integrity across three Tiers.
+## 📂 1. STRUTTURA DELLE CARTELLE: TARGET ARCHITECTURE (Fase 5.0)
+
+*Nota di Audit: La seguente struttura rappresenta l'architettura modulare obiettivo. Attualmente, per massimizzare la velocità di sviluppo e ridurre i tempi di context-switching, il sistema opera con un approccio ibrido e altamente performante concentrato in `api.py` e `neural_lab.py`, con visualizzazione delegata a `/dashboard`.*
+
+L'ecosistema in fase di consolidamento sarà organizzato in moduli atomici:
+
+*   **`/` (Root)**: Contiene l'entry point dell'API (`api.py`), l'orchestratore (`neural_lab.py`) e il kernel dell'engine (`__init__.py`).
+*   **`/index`**: Il cuore della memoria (HNSW, Lifecycle, TurboQuant, Cognitive Decay).
+*   **`/graph`**: Gestione della topologia semantica e monitoraggio dell'entropia.
+*   **`/retrieval`**: Pipeline di estrazione, Fusion Ranking e Multimodal Synapse Processing.
+*   **`/network`**: Layer di comunicazione mesh, mDNS Discovery e Sovereign Ledger.
+*   **`/storage`**: Persistenza fisica (Aegis-Log AOBF, Snapshot Engine).
+*   **`/dashboard`**: Interfaccia di comando (CMD-SWARM) basata su Three.js.
+
+---
+
+## 🏗️ 2. COGNITIVE ENGINE (STORAGE E PERSISTENZA)
+
+L'architettura bilancia velocità bruta e integrità crittografica su tre livelli (Tiers):
 
 ### 💎 Tier L1: Atomic Cache (RAM)
-Instant access to agent coordinates and hot embeddings for 60fps 3D rendering.
-
-### 💎 Tier L2: AegisLogStore (AOBF - Append-Only Binary Format)
-The zero-waste binary core.
-- **Append-Only Journaling**: New info and Tombstones written sequentially (latency < 10ms).
-- **The Tombstone Paradox**: Deletions are marked instantly for non-blocking atomic operations.
-- **Aegis Reaper (Compaction)**: Asynchronous module that physically removes marked records, recycling disk space.
-
-### 💎 Tier L3: Contextual Archive (DuckDB L2)
-The "Analytical Brain" for metadata.
-- **SQL Relational Layer**: Manages tags, Agent007 entities, and session history.
-- **Hybrid Search**: Combines conceptual (vector) search with precise SQL filters.
-
----
-
-## 🧪 SECTION II: THE KINETIC SWARM (AGENTIC ECOSYSTEM)
-An orchestra of specialized agents balanced between conservative and destructive tasks.
-
-### Operational Agents
-- **🟡 JA-001 (Janitron)**: *The Scavenger*. Cleans orphans and semantic noise.
-- **🟣 DI-007 (Distiller)**: *Semantic Pruner*. Prunes weak connections to keep the graph agile.
-- **🐍 SN-008 (Snake)**: *The Connector*. Collects isolated nodes and brings them to the center.
-- **🏗️ QA-101 (Quantum Architect)**: Performs **Semantic Centroiding**, fusing similar nodes into **Golden Clusters**.
-- **🛡️ SE-007 (Sentinel)**: Validates consistency, applies **VETO**, and forges RGB Super-Synapses.
-- **✨ SY-009 (Synth-Muse)**: *The Oracle*. Generates **Creative Sparks** via *Sweep & Zoom*.
-- **📡 FS-77 (Sky-Walker)**: Forages the web autonomously to fill knowledge gaps.
-- **🔗 CB-003 (Bridger)**: Creates Aura RGB arcs between local code and scientific documentation.
-
----
-
-## 🛡️ SECTION III: SEMANTIC GOVERNANCE & INTEGRITY
-- **Sovereign Ledger (Merkle Audit)**: Root hash generation representing the full Vault state.
-- **L2 Anchor & Trace**: Cryptographic notarization of data blocks for traceability and immutability.
-- **Supreme Court Consensus**: A committee of 3 judges (Alpha, Beta, Gamma) deliberates on disputed nodes.
-
----
-
-## 🌃 SECTION IV: MULTIMODAL FABRIC & FORENSICS
-- **Neural Video Forensics**: Scene-based keyframe extraction.
-- **Latent Identity Clustering**: Vocal and visual biometric recognition.
-- **Compute Selector (ECO/WARP)**: Dynamic power allocation for foraging tasks.
-
----
-
-## 🚀 SECTION V: ROADMAP 4.0: BRIDGING THE ENTERPRISE GAP
-- **Logical Namespacing**: Isolation between Professional and Private brains.
-- **Lightweight RAFT**: P2P synchronization across personal devices.
-- **Hybrid Quantization**: Binary + Precision quantization for 50% RAM saving.
-
----
-
-## 👤 About the Author
-**Giuseppe Lobbene** — Software architect and builder driven by the need to innovate. I spearheaded the technical growth of a beach-booking startup, scaling revenue by **10x in a single year** through the delivery of complex management software while wearing every hat necessary to ensure success. Despite these results, I faced a market that often fails to reward merit, leading me to seek stability in the construction industry. Yet, my true home is in IT. **NeuralVault is my manifesto**: proof that even at night, after a full day's work, it is possible to build the future of the AI revolution. I am looking for challenges that match my hunger for innovation, to prove to myself and my son **Oliver** that talent and dedication can still change the world.
-
----
----
-
-# 🏺 NEURALVAULT: SOVEREIGN AGENTIC KNOWLEDGE OS (v3.5.0) [ITA]
-
-> "La memoria non è un magazzino statico, ma un tessuto vivente nutrito da uno sciame autonomo. Qui, la conoscenza evolve, si ripara e si connette in un'architettura sovrana a spreco zero."
-
----
-
-## 📜 1. VISIONE E IDENTITÀ: PIÙ DI UN SEMPLICE RAG
-NeuralVault trascende le categorie tradizionali per posizionarsi come un **Agentic Knowledge OS** (Sistema Operativo Cognitivo Agentico).
-
-### I Pilastri della Sovranità
-1.  **Proattività (Oltre il RAG)**: Grazie ai cicli circadiani di **Neural Dreaming**, lo sciame lavora sulla conoscenza anche in assenza di input utente.
-2.  **Dimensione Latente (Oltre il File Search)**: Non cerchiamo file, ma concetti in uno spazio vettoriale a 1024D.
-3.  **Cinetica Evolutiva (Oltre la Wiki)**: Una Wiki è statica; NeuralVault è cinetico. Si pulisce dagli "orfani" e crea collegamenti pulsanti autonomamente.
-4.  **Zero-Waste Storage**: Utilizzando il protocollo **AOBF** e il modulo **Reaper**, elimina fisicamente i dati ridondanti.
-
----
-
-## 🏗️ SEZIONE I: COGNITIVE ENGINE (STORAGE E PERSISTENZA)
-L'architettura bilancia velocità bruta e integrità crittografica su tre livelli (Tiers).
-
-### 💎 Tier L1: Atomic Cache (RAM)
-Accesso istantaneo per il rendering 3D a 60fps.
+Accesso istantaneo per il rendering 3D a 60fps. I nodi più rilevanti sono mantenuti in memoria per query sub-millisecondo. Questa cache viene idratata proattivamente all'avvio tramite la **Hot Hydration**.
 
 ### 💎 Tier L2: AegisLogStore (AOBF)
-Cuore binario a spreco zero.
-- **The Tombstone Paradox**: Le eliminazioni sono marcate all'istante per operazioni non bloccanti.
-- **Aegis Reaper (Compaction)**: Modulo asincrono che ricicla lo spazio disco in tempo reale.
+Cuore binario a spreco zero. Utilizza un formato **Append-Only Binary Format** (ael) per garantire che ogni scrittura sia atomica.
+- **The Tombstone Paradox**: Le eliminazioni non rimuovono fisicamente i dati istantaneamente, ma applicano una "lapide" (Tombstone) logica. Questo permette operazioni di cancellazione non bloccanti e rollback immediati.
+- **Aegis Reaper (Compaction)**: Modulo asincrono che analizza il log binario e ricicla lo spazio fisico dei nodi eliminati durante i periodi di bassa attività hardware.
 
 ### 💎 Tier L3: Contextual Archive (DuckDB L2)
-Il "Cervello Analitico" per i metadati e la ricerca ibrida SQL/Vector.
+Il "Cervello Analitico" per i metadati e la ricerca ibrida SQL/Vector. DuckDB permette di eseguire query strutturate (es. "trovami tutti i PDF del 2023") incrociandole con la similarità semantica.
 
 ---
 
-## 🧪 SEZIONE II: THE KINETIC SWARM (ECOSISTEMA AGENTICO)
-- **🟡 JA-001 (Janitron)**: Pulizia e Scavenging.
-- **🟣 DI-007 (Distiller)**: Potatura semantica.
-- **🐍 SN-008 (Snake)**: Recupero e trasporto nodi isolati.
-- **🏗️ QA-101 (Quantum)**: Urbanistica semantica (Golden Clusters).
-- **🛡️ SE-007 (Sentinel)**: Validazione e Veto.
-- **✨ SY-009 (Synth)**: Sintesi creativa (Creative Sparks).
+## 🤖 3. AGENTIC LOGIC: IL KINETIC SWARM
+
+Il **Neural Lab Orchestrator** coordina uno sciame di 9 agenti specializzati che operano autonomamente nella nebula:
+
+1.  **🟡 JA-001 (Janitron)**: Esegue lo scavenging dei nodi orfani e la pulizia dei frammenti a bassa rilevanza.
+2.  **🟣 DI-007 (Distiller)**: Analizza i cluster semantici per estrarre saggezza collettiva e riassumere i concetti chiave.
+3.  **🐍 SN-008 (Snake)**: Recupero e trasporto nodi isolati; "striscia" tra i nodi per riconnettere cluster distanti.
+4. - **🏗️ QA-101 (Quantum)**: Urbanistica semantica (Golden Clusters).
+- **🛡️ SE-007 (Sentinel)**: Validazione e Consenso (Supreme Court).
+- **🧬 EV-001 (Advisor)**: Motore di Auto-Evoluzione.
+
+### 🛡️ Protocollo Safe-Genesis (Git Checkpoint)
+Prima di ogni intervento di scrittura autonoma del codice, il sistema esegue:
+1. **Snap-Commit**: Commit istantaneo dello stato attuale sul branch `main`.
+2. **Tagging Certificato**: Generazione di un Git Tag `vX.X.X-VERIFICATO`.
+3. **Remote Mirror**: Push immediato su GitHub del checkpoint stabile.
+*Questo garantisce un fallback deterministico al 100% in caso di allucinazioni del motore evolutivo.*
+
+> [!IMPORTANT]
+> **SOVEREIGN PRIVACY**: Tutte le operazioni di sincronizzazione con GitHub avvengono esclusivamente in **Modalità Privata**. Il sistema forza la creazione di repository non pubblici per garantire che il codice e l'evoluzione rimangano proprietà esclusiva dell'utente.
+
+5.  **🛡️ SE-007 (Sentinel)**: Validatore della mesh; verifica l'integrità dei nodi e delle sinapsi, applicando veti se necessario.
+6.  **✨ SY-009 (Synth)**: Sintesi creativa; genera "Creative Sparks" collegando concetti distanti tramite inferenza LLM.
+7.  **CB-003 (Bridger)**: Mantiene attivi i ponti semantici tra il codice sorgente locale e la conoscenza esterna (Latent Bridge).
+8.  **FS-77 (SkyWalker)**: Esploratore proattivo che esce dal Vault per cercare nuova conoscenza sul web (Mission Mode).
+9.  **Sovereign Auditor**: Monitora costantemente le performance (TPS/Latency) e il consumo hardware durante le inferenze.
 
 ---
 
-## 🛡️ SEZIONE III: GOVERNANCE & INTEGRITY
-- **Sovereign Ledger (Merkle Audit)**: Generazione di hash radice per l'intero stato del Vault.
-- **Supreme Court Consensus**: Delibera a 3 giudici (Alpha, Beta, Gamma) per garantire oggettività.
+## 🔄 4. FLUSSO DEI DATI (RAG): DALL'INPUT ALLA SINAPSI
+
+Il percorso di un'informazione segue una pipeline ad alta fedeltà:
+
+1.  **Ingestion Phase**: I dati entrano tramite URL (WebForager), File (MultimodalProcessor) o Testo Raw.
+2.  **Atomic Chunking**: Il testo viene spezzato seguendo confini logici (paragrafi, firme di codice) per mantenere la coesione.
+3.  **Vectorization**: Ogni frammento viene convertito in un vettore da 1024D (BGE-M3 o CLIP) e normalizzato per il calcolo della similarità coseno.
+4.  **Hybrid Search (BM25 + HNSW)**: Il sistema combina la forza del testo esatto (BM25) con la profondità semantica (HNSW).
+5.  **RRF & Reranking**: I risultati sono fusi tramite **Reciprocal Rank Fusion** e ri-ordinati da un modello **TinyBERT Cross-Encoder** per eliminare i falsi positivi.
 
 ---
 
-## 🚀 SEZIONE IV: ROADMAP 4.0
-- **Logical Namespacing**: Compartimenti stagni via DuckDB.
-- **Lightweight RAFT**: Sincronizzazione P2P tra i tuoi dispositivi.
-- **Hybrid Quantization**: Risparmio RAM del 50%.
+## 🛡️ 5. GOVERNANCE & INTEGRITY (BLOCKCHAIN)
+
+### Sovereign Ledger (Merkle Audit)
+Generazione di hash radice (Merkle Root) per l'intero stato del Vault. Permette di generare "Proof of Integrity" dimostrando che un nodo esisteva in un determinato momento senza rivelare l'intero contenuto del vault.
+
+### Supreme Court Consensus
+Protocollo di validazione a 3 giudici (Alpha, Beta, Gamma). Quando un agente propone un'estrazione critica, i tre modelli votano indipendentemente. Solo se c'è consenso il dato viene promosso a "Conoscenza Verificata".
 
 ---
 
-## 👤 Chi sono
-**Giuseppe Lobbene** — Architetto software e costruttore spinto dalla necessità di innovare. Ho guidato la crescita tecnica di una startup nel settore del booking balneare, portando il fatturato a un incremento di **10x in un solo anno** attraverso lo sviluppo di gestionali complessi e ricoprendo ogni ruolo necessario per garantire la consegna. Nonostante i risultati, mi sono scontrato con un mercato che spesso non valorizza il merito, costringendomi a cercare stabilità nel settore edile. Ma la mia vera casa è l'informatica. **NeuralVault è il mio manifesto**: la prova che, anche di notte e dopo una giornata di lavoro, è possibile costruire il futuro della rivoluzione AI. Cerco sfide all'altezza della mia fame di innovazione, per dimostrare a me stesso e a mio figlio **Oliver** che il talento e la dedizione possono ancora cambiare il mondo.
+## 🛡️ 6. HARDENING & INTELLIGENZA PERSISTENTE (v3.5.0)
+
+### 1. Macchina a Stati Formale (Node Lifecycle)
+Ogni nodo segue un percorso deterministico gestito da un Enum centrale:
+- **PENDING**: Protetto per un **Grace Period** di 30 minuti per permettere correzioni o rivalutazioni.
+- **STABLE**: Indicizzato e pronto per l'analisi profonda.
+- **PROTECTED**: Marcato come intoccabile (Memoria Episodica in DuckDB).
+- **TOMBSTONE**: Lapide crittografica post-eliminazione che permette ad **Aegis Reaper** di recuperare spazio fisico in modo asincrono.
+
+### 2. Pacing Adattivo (Warp Speed)
+Monitoraggio dinamico del carico hardware:
+- **WARP (0.1s)**: Operatività massima se CPU < 30%.
+- **NORMAL (2.0s)**: Pacing operativo standard.
+- **COOLING (5-10s)**: Se CPU > 85%, lo sciame rallenta per preservare le prestazioni.
+
+### 3. Ottimizzazione macOS (Apple Silicon)
+NeuralVault è temprato per l'architettura ARM di Apple:
+- **Silencing OBJC/FFmpeg**: Risoluzione dei conflitti di libreria tramite variabili d'ambiente mirate (`OBJC_DISABLE_INITIALIZE_FORK_SAFETY`).
+- **Daemon Threading**: Il servizio di Discovery e i loop di evoluzione sono isolati in thread daemon per non bloccare l'event loop di FastAPI.
+
+### 4. Precisione Biologica: Ebbinghaus v2 (Il Ritmo del Ricordo)
+Il sistema implementa una versione computazionale della **Curva dell'Oblio di Hermann Ebbinghaus**. A differenza dei database statici, NeuralVault è un organismo vivo dove l'informazione "respira" e svanisce se non alimentata dall'attenzione umana.
+
+- **La Formula del Decadimento**: Ogni nodo possiede un coefficiente di stabilità $S$ che decade secondo una funzione esponenziale negativa $R = e^{-t/S}$, dove $R$ è la ritenzione e $t$ è il tempo trascorso dall'ultima interazione.
+- **Visual Ghosting (Opacità Dinamica)**: Nella Nebula 3D, il valore di $R$ mappa direttamente l'opacità del punto.
+    *   **Piena Luce (R=1.0)**: Il nodo è stato appena creato o consultato. È una "Memoria Viva".
+    *   **Dissolvenza (R < 0.5)**: Il nodo inizia a diventare traslucido, segnalando che la sua rilevanza sta scivolando nell'inconscio del sistema.
+    *   **Soglia di Eclissi (R < 0.1)**: Il nodo scompare visivamente dal rendering 3D per evitare l'overload cognitivo, pur rimanendo accessibile via query testuale.
+- **Memory Strengthening (Rinforzo)**: Ogni volta che un nodo viene richiamato da una ricerca (Query Hit) o citato in una conversazione, la sua curva di decadimento viene resettata e la sua stabilità $S$ aumenta. Questo simula il processo biologico per cui un concetto ricordato più volte diventa "permanente".
+- **Ruolo degli Agenti**: Agenti come il **Janitron (JA-001)** monitorano i nodi con $R < 0.05$ (Stato di Oblio Profondo) per valutare se archiviarli fisicamente nel Tier L2 o procedere alla loro "digestione" definitiva per recuperare spazio hardware.
+
+---
+
+## 🌌 7. RENDERING 3D: LA VISUALIZZAZIONE DELLA NEBULA
+
+La visualizzazione Three.js non è solo estetica, ma una mappa termica della tua mente:
+- **Cluster Mapping**: Posizionamento basato sulla similarità semantica.
+- **Aura Synapses**: Connessioni arcobaleno (Latent Bridge) che collegano codice e documenti.
+- **Dynamic Icons**: Icone specifiche per immagini, audio e video integrate nel point cloud.
+
+---
+
+## 📦 8. DIPENDENZE CRITICHE
+*   **FastAPI & Uvicorn**: API Layer asincrono.
+*   **Three.js**: Rendering GPU accelerato.
+*   **DuckDB**: Metadata & Hybrid Search Engine.
+*   **Numpy & PyTorch**: Calcolo vettoriale e inferenza locale.
+*   **Zeroconf**: Mesh Discovery (stile AirDrop).
+*   **X25519 & AES-GCM**: Crittografia end-to-end per la mesh.
+
+---
+
+## 🚀 9. ROADMAP & STATO REALE (APRILE 2026)
+
+### 📊 NEURALVAULT: STATO REALE
+| Funzione | Stato | Note Tecniche |
+| :--- | :--- | :--- |
+| **X25519 + AES-GCM Encryption** | 100% ✅ | Handshake ellittico attivo su ogni pacchetto Mesh. |
+| **mDNS/ZeroConf Discovery** | 100% ✅ | Peer detection automatica stabilizzata via background threading. |
+| **Hybrid Search (BM25+HNSW+TinyBERT)** | 100% ✅ | Motore di fusione RRF con reranking neurale attivo. |
+| **Supreme Court Consensus** | 100% ✅ | Protocollo a 3 giudici per la validazione della conoscenza. |
+| **AOBF + Aegis Reaper** | 100% ✅ | Persistenza binaria atomica e compattazione asincrona operative. |
+| **Sovereign Snapshot (Instant Boot)** | 100% ✅ | Caricamento sub-secondo tramite snapshot Parquet/Pickle. |
+| **Latent Code-Doc Bridge** | 100% ✅ | Collegamento semantico tra codice locale e docs web (Agente CB-003). |
+| **Swarm Agents (v17.5)** | 100% ✅ | Telemetria ripristinata per Quantum, Distiller e Bridger. Sincronizzazione contatori attiva. |
+| **Node Lifecycle State Machine** | 100% ✅ | Gestione atomica degli stati (Pending/Stable/Tombstone/Protected). |
+| **Ebbinghaus Decay Visual** | 100% ✅ | Opacità dinamica 3D e calcolo real-time della forza del ricordo con reset proattivo. |
+| **Sovereign Priority Focus** | 100% ✅ | Stasi automatica agenti durante interazione utente (Lab). |
+| **Skywalker Fallback Protocol** | 100% ✅ | Ricerca web intelligente automatica per lacune o nodi corrotti. |
+| **Neural Model Hub (Apr 2026)** | 100% ✅ | Integrazione DeepSeek V4 Flash, Qwen 3.6 MoE, Gemma 4 Edge e Qwen Coder. |
+| **Sovereign 3D Alignment** | 100% ✅ | Nebula centrata a y=1.000.000. Ispezione nodi (Raycaster) stabilizzata. |
+| **Autonomous Evolution Engine** | 60% ⚠️ | Motore Safe-Genesis implementato (Git Tagging). Manca Test Suite automatica post-write per il 100%. |
+| **Semantic Temperature Heatmap** | 20% ⚠️ | Monitor entropia attivo, visualizzazione 3D in fase di affinamento. Priorità Assoluta. |
+| **Agentic Actuators Sandbox** | 10% ❌ | Inizio fase progettuale per esecuzione script protetta. |
+
+| **Neural Shadow iOS** | 0% ❌ | Concept per Thin Client mobile non ancora iniziato. |
+
+### 🚫 Feature Scartate (Out of Scope)
+*   **Modulo Email / IMAP Ingestion**: Inizialmente previsto, questo modulo è stato **definitivamente rimosso dall'architettura**. NeuralVault è concepito come un *Sovereign Cognitive Engine* per l'evoluzione e la sintesi di architetture e conoscenze complesse. Ridurlo a un "assistente personale per la lettura delle email" ne banalizzerebbe e diluirebbe l'identità ingegneristica.
+
+### 🐛 Changelog Architetturale & Bug Risolti (v4.0)
+*   **Telemetria Burocratica**: Svincolato il conteggio delle azioni degli agenti (UI Counters) dalla rigorosa validazione della Macchina a Stati Finiti. In precedenza, se un agente operava su un nodo non perfettamente `STABLE`, il lavoro non veniva conteggiato nell'HUD.
+*   **Z-Fighting WebGL**: Risolto lo sfarfallio visivo sollevando la geometria 3D dal piano della griglia. Ancoraggio assoluto (`cycloscope-immersion`) per garantire la persistenza dell'HUD su browser WebKit in modalità Full Screen.
+
+### 🏗️ Le Grandi Sfide (Fase 4.0/5.0)
+*   **📱 Neural Shadow iOS**: Costruzione del "Thin Client" per iPhone.
+*   **🤖 Agentic Actuators (Sandboxed)**: Ambiente sicuro per permettere agli agenti di eseguire script Python sul sistema operativo.
+*   **🧬 Autonomous Evolution**: Motore di self-writing per permettere al Vault di riscrivere i propri file .py in autonomia.
+
+### 🗺️ Nuova Roadmap Implementativa (Sovereign Expansion)
+*   **Fase 1 (Visiva e Sicurezza)**: Implementazione Semantic Heatmap 3D (Three.js) per visualizzazione entropia e risoluzione critica OAuth2 IMAP.
+*   **Fase 2 (Gamification & Health)**: 
+    *   **Vault Health Score**: Algoritmo per punteggio (0-100) basato su ritenzione, orfani e integrità crittografica.
+    *   **Agent Leaderboard**: Tracciamento performance agenti (successi, latenza, impatto) con indicatori visivi (es. "corone" sopra gli sprite).
+*   **Fase 3 (Evolution Safety)**: Sviluppo di un *Evolution Confidence Score* per determinare autonomamente l'applicazione, la richiesta di approvazione o lo scarto delle modifiche autogenerate dal codice.
+*   **Fase 4 (Distribuzione)**: Release Globali GitHub e Agentic Actuators.
+
+---
+
+## 👤 CHI SONO
+**Giuseppe Lobbene** — Architetto software e costruttore spinto dalla necessità di innovare. Ho guidato la crescita tecnica di una startup nel settore del booking balneare, portando il fatturato a un incremento di **10x in un solo anno**. **NeuralVault è il mio manifesto**: la prova che, anche di notte e dopo una giornata di lavoro, è possibile costruire il futuro della rivoluzione AI. Cerco sfide all'altezza della mia fame di innovazione, per dimostrare a me stesso e a mio figlio **Oliver** che il talento e la dedizione possono ancora cambiare il mondo.
 
 ---
 
 🏺 **NeuralVault: Turning Information into Active Wisdom.**
-**Temprato per la realtà. Sovrano per sempre.
+**Temprato per la realtà. Sovrano per sempre.**

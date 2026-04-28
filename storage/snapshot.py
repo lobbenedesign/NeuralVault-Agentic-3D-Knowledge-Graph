@@ -11,6 +11,7 @@ import os
 import time
 import pickle
 import tarfile
+import uuid
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -49,11 +50,16 @@ class SnapshotEngine:
             if hasattr(self.engine._prefilter, "con") and self.engine._prefilter.con:
                 self.engine._prefilter.con.execute(f"COPY vault_metadata TO '{pq_path}' (FORMAT PARQUET)")
                 
-            # 3. Pacchetto snapshot compresso
-            with tarfile.open(self.latest_snapshot, "w:gz") as tar:
+            # 3. Pacchetto snapshot compresso su file temporaneo
+            temp_snapshot = self.snapshot_dir / f"latest_{uuid.uuid4().hex}.tar.gz"
+            with tarfile.open(temp_snapshot, "w:gz") as tar:
                 tar.add(hnsw_path, arcname="hnsw_state.pkl")
                 if pq_path.exists():
                     tar.add(pq_path, arcname="vault_metadata.parquet")
+            
+            # 4. Atomic Rename: sostituzione sicura del file
+            import os
+            os.rename(temp_snapshot, self.latest_snapshot)
                     
         print(f"📸 [Snapshot] Dump completato in {time.time() - t0:.2f}s ({self.latest_snapshot.stat().st_size // 1024} KB)")
         return True
