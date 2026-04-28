@@ -1985,12 +1985,8 @@ window.showSection = (s) => {
     }
     
     // [SOVEREIGN PRIORITIZATION]
-    // Se entriamo nel Lab, attiviamo il Focus (Pausa Agenti)
-    if (s === 'lab') {
-        setPriorityFocus(true);
-    } else {
-        setPriorityFocus(false);
-    }
+    // Rimosso blocco stasi automatica: gli agenti ora corrono anche nel Lab (v4.0.1)
+    setPriorityFocus(false);
     const nav = document.getElementById(`nav-${s}`);
     if (nav) nav.classList.add('active');
     if (s === 'overview') { 
@@ -2811,6 +2807,7 @@ function initSSE() {
                     // --- Updates dei Contatori ---
                     if (id === 'RP-001') { 
                         const el = document.getElementById('val-reaper-healed'); 
+                        const rmb = document.getElementById('val-reaper-reclaimed');
                         if(el) {
                             const newVal = agentData.processed || 0;
                             if (newVal > parseInt(el.innerText || "0")) {
@@ -2822,6 +2819,7 @@ function initSSE() {
                             }
                             el.innerText = newVal; 
                         }
+                        if(rmb) rmb.innerText = (agentData.reclaimed_mb || 0).toFixed(2);
                         reaperTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
                     }
                     if (id === 'DI-007') { 
@@ -2866,6 +2864,7 @@ function initSSE() {
                     }
                     if (id === 'FS-77') {
                         const h = document.getElementById('val-skywalker-hits'); if(h) h.innerText = agentData.hits || agentData.web_hits || 0;
+                        const n = document.getElementById('val-skywalker-nodes'); if(n) n.innerText = agentData.nodes_created || 0;
                         skywalkerTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
                     }
                 }

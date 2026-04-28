@@ -89,6 +89,7 @@ from retrieval.web_forager import SovereignWebForager
 from retrieval.multimodal import MultimodalSynapseProcessor
 
 app = FastAPI(title="Aura Nexus: NeuralVault API")
+app.state.boot_time = datetime.now()
 
 def json_serializer(obj):
     if hasattr(obj, 'tolist'): return obj.tolist()
@@ -2546,6 +2547,13 @@ async def get_audit_ledger(full: bool = False, key: str = Depends(get_api_key)):
     
     # Sort finale: i più recenti in alto
     logs.sort(key=lambda x: str(x.get('timestamp', '')), reverse=True)
+    
+    # 🛡️ [v4.0.1] Session Isolation: Se non è richiesto il log completo, 
+    # filtriamo via qualsiasi cosa sia più vecchia dell'avvio del server.
+    if not full:
+        server_boot_str = app.state.boot_time.strftime("%Y-%m-%d %H:%M:%S")
+        logs = [l for l in logs if str(l.get('timestamp', '')) >= server_boot_str]
+
     print(f"📄 [Audit] Serving {len(logs)} mission records (Full: {full})")
     return logs
 
@@ -2684,6 +2692,6 @@ async def get_system_recommendations():
         return {"error": str(e)}
 
 if __name__ == "__main__":
-    print("🚀 [BOOT-TRACE-77i] CARICAMENTO CORE NEURALE v3.5.0...")
+    print("🚀 [BOOT-TRACE-77i] CARICAMENTO CORE NEURALE v4.0.1 Sovereign...")
     # Avvio del server su 127.0.0.1 con LOG INFO per vedere lo stato
     uvicorn.run(app, host="127.0.0.1", port=8001, log_level="info")

@@ -173,7 +173,7 @@ La visualizzazione Three.js non è solo estetica, ma una mappa termica della tua
 *   **Z-Fighting WebGL**: Risolto lo sfarfallio visivo sollevando la geometria 3D dal piano della griglia. Ancoraggio assoluto (`cycloscope-immersion`) per garantire la persistenza dell'HUD su browser WebKit in modalità Full Screen.
 
 ### 🏗️ Le Grandi Sfide (Fase 4.0/5.0)
-*   **📱 Neural Shadow iOS**: Costruzione del "Thin Client" per iPhone.
+*   **📱 Neural Shadow iOS e android ( si potrebbe realizzare in flutter?? non so!)**: Costruzione del "Thin Client" per iPhonee android.
 *   **🤖 Agentic Actuators (Sandboxed)**: Ambiente sicuro per permettere agli agenti di eseguire script Python sul sistema operativo.
 *   **🧬 Autonomous Evolution**: Motore di self-writing per permettere al Vault di riscrivere i propri file .py in autonomia.
 

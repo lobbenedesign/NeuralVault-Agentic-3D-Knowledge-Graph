@@ -566,7 +566,7 @@
                                     </div>
                                     <div class="agent-mission-item mt-2 inactive-agent" id="reaper-hud-icon" onclick="toggleFollow('RP-001')">
                                         <div class="reaper-mario-hud"><div class="medical-cross-hud"></div></div>
-                                        <div style="flex:1;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="color:#fff; font-weight:800; font-size:0.55rem;" data-i18n="agent_reaper">RP-001 DR. REAPER</div><i class="fas fa-question-circle agent-info-btn" onclick="event.stopPropagation(); showAgentHelp('RP-001')"></i></div><div id="reaper-mission-stat" class="stat-badge"><span data-i18n="stat_healed">Auto-Riparazione</span>: <span id="val-reaper-healed">0</span></div></div>
+                                        <div style="flex:1;"><div style="display:flex; justify-content:space-between; align-items:center;"><div style="color:#fff; font-weight:800; font-size:0.55rem;" data-i18n="agent_reaper">RP-001 DR. REAPER</div><i class="fas fa-question-circle agent-info-btn" onclick="event.stopPropagation(); showAgentHelp('RP-001')"></i></div><div id="reaper-mission-stat" class="stat-badge" style="display:flex; gap:4px;"><span data-i18n="stat_healed">Auto-Riparazione</span>: <span id="val-reaper-healed">0</span> <span style="border-left: 1px solid rgba(255,255,255,0.2); padding-left:4px;">MB: <span id="val-reaper-reclaimed">0</span></span></div></div>
                                     </div>
                                     <div class="agent-mission-item mt-2 inactive-agent" id="snake-hud-icon" onclick="toggleFollow('SN-008')">
                                         <div class="snake-hud"></div>
@@ -629,7 +629,10 @@
                                             <div class="agent-avatar-mini" style="background:#ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);"><i class="fas fa-fighter-jet"></i></div>
                                             <div class="flex-grow-1">
                                                 <div class="agent-name-mini" data-i18n="agent_skywalker">FS-77 SKY-WALKER</div>
-                                                <div id="skywalker-mission-stat" class="stat-badge" style="background:rgba(239, 68, 68, 0.1); color: #ef4444;"><span data-i18n="label_web_hits">Web-Hits</span>: <span id="val-skywalker-hits">0</span></div>
+                                                <div id="skywalker-mission-stat" class="stat-badge" style="background:rgba(239, 68, 68, 0.1); color: #ef4444; display: flex; gap: 4px;">
+                                                    <span><span data-i18n="label_web_hits">Web-Hits</span>: <span id="val-skywalker-hits">0</span></span>
+                                                    <span style="border-left: 1px solid rgba(239, 68, 68, 0.3); padding-left: 4px;"><span data-i18n="label_nodes_added">Nodes</span>: <span id="val-skywalker-nodes">0</span></span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

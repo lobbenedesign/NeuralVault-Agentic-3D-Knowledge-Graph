@@ -647,7 +647,7 @@ class JanitorAgent:
                     candidates = [
                         nid for nid, n in nodes.items() 
                         if len(n.edges) == 0 
-                        and (now_ts - getattr(n, 'created_at', 0)) > 1800
+                        and (now_ts - getattr(n, 'created_at', 0)) > 300
                         and getattr(n, 'ingestion_status', 'STABLE') == "STABLE"
                         and not self.vault.is_node_protected(nid) # 🧠 Persistent check
                         and self.orch.node_states.get(nid) == NodeState.STABLE
@@ -769,7 +769,7 @@ class SnakeAgent:
         self.found = 0; self.harvested = 0; self.processed = 0
         self.is_returning = False
         self.attached_nodes = []
-        self.max_wagons = 5 # adaptive
+        self.max_wagons = 100 # 🚀 [v4.0.1] Mega-Convoy Capacity
 
     def calculate_movement(self, nodes: dict):
         if not nodes: return None
@@ -778,7 +778,6 @@ class SnakeAgent:
         # 🏮 [Phase 1: Delivery at Center]
         dist_to_center = (self.pos['x']**2 + self.pos['y']**2 + self.pos['z']**2)**0.5
         if self.is_returning and dist_to_center < 100000:
-            # 🤝 HAND-OFF AT NEBULA HEART
             delivered_count = len(self.attached_nodes)
             if delivered_count > 0:
                 self.status = "Arbitrating Convoy..."
@@ -786,73 +785,59 @@ class SnakeAgent:
                     "agent": "SN-008",
                     "action": "Center Hand-off",
                     "nodes_delivered": self.attached_nodes,
-                    "motivation": f"Delivered {delivered_count} orphans to the Nebula Heart for LLM arbitration.",
+                    "motivation": f"Delivered {delivered_count} orphans for LLM arbitration.",
                     "savings": "Knowledge Sorted"
                 }
-                self.processed += delivered_count # Successfully Sorted/Processed
+                self.processed += delivered_count
                 self.attached_nodes = []
                 self.is_returning = False
                 return res
             self.is_returning = False
 
-        # 🗺️ [Phase 2: Target Selection]
-        # ADAPTIVE CONVOY: Scale capacity based on orphan density
-        orphan_ids = [nid for nid, node in nodes.items() if len(node.edges) <= 1]
-        if len(orphan_ids) > 20: self.max_wagons = 20
-        elif len(orphan_ids) > 10: self.max_wagons = 12
-        else: self.max_wagons = 8
+        # 🌌 [Vacuum-Sweep Protocol] v4.0.1
+        # Aspira i nodi orfani nel raggio d'azione durante il volo (sia andata che ritorno)
+        if len(self.attached_nodes) < self.max_wagons:
+            v_rad = 400000 # Raggio esteso per massima efficienza
+            nearby = [nid for nid, node in nodes.items() 
+                      if nid not in self.attached_nodes and len(node.edges) == 0
+                      and ((self.pos['x']-float(getattr(node,'x',node.metadata.get('x',0))))**2 + 
+                           (self.pos['y']-float(getattr(node,'y',node.metadata.get('y',0))))**2 + 
+                           (self.pos['z']-float(getattr(node,'z',node.metadata.get('z',0))))**2)**0.5 < v_rad]
+            for nid in nearby[:10]: # Più veloce: 10 nodi per "respiro"
+                if len(self.attached_nodes) < self.max_wagons:
+                    self.attached_nodes.append(nid)
+                    self.found += 1
+                    print(f"🧲 [Mega-Vacuum] Ingested {nid[:8]} ({len(self.attached_nodes)}/{self.max_wagons})")
 
+        # 🗺️ [Phase 3: Target Selection]
+        tx, ty, tz = 0, 0, 0
         if len(self.attached_nodes) >= self.max_wagons:
             self.is_returning = True
-            self.status = "Returning to Center [FULL]"
-            step = 60000
-            self.pos['x'] -= (self.pos['x']) * 0.1
-            self.pos['y'] -= (self.pos['y']) * 0.1
-            self.pos['z'] -= (self.pos['z']) * 0.1
+            self.status = "Convoy Full - Heading to Core"
         else:
-            # 🔍 Gather Orphans OR Proactive Audit
             orphans = [nid for nid, node in nodes.items() if len(node.edges) <= 1 and nid not in self.attached_nodes]
-            
-            # ⚡ [Proactive Spark] Se non ci sono orfani, campioniamo nodi a bassa connettività
-            if not orphans and (random.random() < 0.45):
-                orphans = [nid for nid, node in nodes.items() if len(node.edges) <= 3 and nid not in self.attached_nodes]
-            
             if orphans:
-                target_id = random.choice(orphans)
+                target_id = random.choice(orphans[:50]) # Puntiamo lontano
                 target_node = nodes[target_id]
-                self.status = f"Gathering Orphan {target_id[:8]}"
-                
-                # Move towards target
-                try: from api import safe_get_node_data
-                except: pass
-                tx = getattr(target_node, 'x', target_node.metadata.get('x', 0))
-                ty = getattr(target_node, 'y', target_node.metadata.get('y', 0))
-                tz = getattr(target_node, 'z', target_node.metadata.get('z', 0))
-                
-                step = 0.45 # Fast Gather
-                self.pos['x'] += (tx - self.pos['x']) * step
-                self.pos['y'] += (ty - self.pos['y']) * step
-                self.pos['z'] += (tz - self.pos['z']) * step
-                
-                dist = ((self.pos['x']-tx)**2 + (self.pos['y']-ty)**2 + (self.pos['z']-tz)**2)**0.5
-                if dist < 120000: # Wide gather radius
-                    self.attached_nodes.append(target_id)
-                    self.found += 1
-                    self.harvested += 1 # Crafted/Gathered
+                tx = float(getattr(target_node, 'x', target_node.metadata.get('x', 0)))
+                ty = float(getattr(target_node, 'y', target_node.metadata.get('y', 0)))
+                tz = float(getattr(target_node, 'z', target_node.metadata.get('z', 0)))
+                self.status = f"Deep Sweeping: {len(self.attached_nodes)}/{self.max_wagons}"
             else:
-                # 🛸 Idle Patrol
-                self.status = "Patrolling for Orphans..."
-                step = 40000
-                self.pos["x"] += random.uniform(-step, step)
-                self.pos["y"] += random.uniform(-step, step)
-                self.pos["z"] += random.uniform(-step, step)
+                if self.attached_nodes: 
+                    self.is_returning = True
+                    self.status = "Returning with Harvest..."
+                else:
+                    self.status = "Monitoring Clean Grid"
+                    return None
 
-        # Space bounds cleanup
-        limit = 1800000
-        for k in ["x", "y", "z"]:
-            if self.pos[k] > limit: self.pos[k] = limit
-            if self.pos[k] < -limit: self.pos[k] = -limit
-        return None
+        # 🗺️ [Phase 4: Movement Execution]
+        step = 0.45
+        self.pos['x'] += (tx - self.pos['x']) * step
+        self.pos['y'] += (ty - self.pos['y']) * step
+        self.pos['z'] += (tz - self.pos['z']) * step
+        
+        return {"agent": "SN-008", "pos": dict(self.pos), "wagons": len(self.attached_nodes)}
 
 class ReaperAgent:
     """⚕️ [RP-001] Dr. Reaper / Storage Compactor"""
@@ -862,7 +847,8 @@ class ReaperAgent:
         self.pos = {"x": 500000.0, "y": -200000.0, "z": 500000.0}
         self.target_node = None
         self.status = "Monitoring Storage..."
-        self.processed = 0.0
+        self.processed = 0 # Interventi (count)
+        self.reclaimed_mb = 0.0 # Spazio (MB)
         self.regeneration_timer = 0
         self.patrol_cycles = 0 # 🛰️ Mandatory orbit cycles after surgery
 
@@ -913,12 +899,13 @@ class ReaperAgent:
                         "action": "Storage Surgery",
                         "pos": {"x": tx, "y": ty, "z": tz},
                         "motivation": "Critical storage repair in progress...",
+                        "reclaimed": 0.12 # MB stimati
                     }
                 
                 self.regeneration_timer -= 1
                 if self.regeneration_timer <= 0:
                     # FINISH SURGERY
-                    self.processed += 0.12
+                    self.processed += 1
                     registry = getattr(self, 'tombstone_registry', None)
                     if registry: registry.finalize(self.target_node['id'])
                     
@@ -926,7 +913,8 @@ class ReaperAgent:
                         "agent": "RP-001",
                         "action": "Surgery Completed",
                         "pos": {"x": tx, "y": ty, "z": tz},
-                        "motivation": "Memory integrity restored. Sector stabilized."
+                        "motivation": "Memory integrity restored. Sector stabilized.",
+                        "reclaimed": 0.12 # MB finali
                     }
                     self.target_node = None 
                     self.patrol_cycles = 60
@@ -1439,6 +1427,7 @@ class SkyWalkerAgent:
         self.pos = {"x": 1100000.0, "y": 800000.0, "z": 1100000.0}
         self.status = "Idle"
         self.web_hits = 0
+        self.nodes_created = 0 # 🛰️ [v4.0.1] New sub-counter
         self.laser_active = False
 
     def calculate_movement(self, nodes: Dict) -> Optional[Dict]:
@@ -1478,13 +1467,15 @@ class SkyWalkerAgent:
                 if self.orch and self.orch.forager:
                     # Inneschiamo il foraging tramite l'orchestratore
                     try:
-                        self.orch.forager.forage(url, max_depth=1)
+                        new_nodes = self.orch.forager.forage(url, max_depth=1)
                         self.web_hits += 1
+                        if isinstance(new_nodes, list):
+                            self.nodes_created += len(new_nodes)
                         time.sleep(2) # Breath between URLs
                     except: pass
             self.status = "MISSION_COMPLETE: Intel Synchronized"
-            if self.orch: self.orch._process_agent_action({"agent": "FS-77", "action": "MISSION_COMPLETE", "motivation": f"Synchronized intel for '{query}'."})
-            print(f"🚀 [FS-77] MISSION_COMPLETE: {len(urls)} sources ingested for '{query}'.")
+            if self.orch: self.orch._process_agent_action({"agent": "FS-77", "action": "MISSION_COMPLETE", "motivation": f"Synchronized intel for '{query}'.", "nodes_added": self.nodes_created})
+            print(f"🚀 [FS-77] MISSION_COMPLETE: {len(urls)} sources ingested for '{query}'. Total Nodes: {self.nodes_created}")
         else:
             self.status = "MISSION_FAILED: No Intel Found"
             print(f"⚠️ [FS-77] MISSION_FAILED: DuckDuckGo returned 0 results for '{query}'.")
@@ -2152,94 +2143,43 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
             time.sleep(300) # Analisi ogni 5 minuti in modalità continua
 
     def _process_supreme_court(self):
-        """
-        ⚖️ [Tier 3] The Sovereign Court
-        Now implements the Triple-Judge Committee Consensus protocol.
-        Can operate in Autonomous Mode (LLM Majority Vote) or Human-over-Loop.
-        """
+        """⚖️ [v4.0.1] Sovereign Court - Parallel Burst Implementation"""
         while not self._stop_event.is_set():
             is_autonomous = self.settings.get("autonomous_court", False)
             if is_autonomous and self.autonomous_audit_queue:
-                try:
-                    edge_task = self.autonomous_audit_queue.pop(0)
-                    src_id = edge_task.get("src")
-                    dst_id = edge_task.get("dst")
-                    
-                    # 1. Convene the Sovereign Committee
-                    raw_judges = [
-                        self.settings.get_model("court_judge_1"),
-                        self.settings.get_model("court_judge_2"),
-                        self.settings.get_model("court_judge_3")
-                    ]
-                    active_judges = [j for j in raw_judges if j != "-"]
-                    
-                    if not active_judges:
-                        active_judges = ["llama3.2"] # Safety fallback
-                    
-                    self.blackboard.post(SynapticSignal("SUPREME_COURT", AgentRole.EXPERT, 
-                        f"⚖️ COMMITTEE CONVENED: Judiciary ensemble ({', '.join(active_judges)}) deliberating on Synapse {src_id[:8]}...", 
-                        SignalType.SYSTEM_NOTIFICATION))
-                    
-                    time.sleep(3.0) # Protocol for deep reasoning
-                    
-                    votes = []
-                    for judge in active_judges:
-                        try:
-                            # 3. Chiamata Reale ad ogni Giudice (Ensemble Majority)
-                            prompt = f"Judge: {judge}. Audit this Synapse: {src_id[:8]} -> {dst_id[:8]}. Content: {edge_task.get('text', 'N/A')}. Should this connection be officially anchored? Answer 'APPROVED' or 'REJECTED' with reasoning."
-                            
-                            base_url = self.settings.get("ollama_url")
-                            with httpx.Client() as client:
-                                resp = client.post(f"{base_url}/api/generate", json={
-                                    "model": judge, "prompt": prompt, "stream": False
-                                }, timeout=15.0)
-                                if resp.status_code == 200:
-                                    response_text = resp.json().get("response", "").upper()
-                                    votes.append("APPROVED" in response_text)
-                        except:
-                            votes.append(True) # Fallback to approval on timeout to maintain flow
-                    
-                    # 4. Consensus Decision (CONSERVATIVE TIE-BREAK - Critica #2)
-                    approval_count = sum(votes)
-                    # Majority must be strictly greater than half for approval
-                    # On parity (e.g. 1-1 or 0-0 with skip), it defaults to False (STAY IN ARCHIVE/KEEP)
-                    verdict_approved = approval_count > (len(active_judges) / 2.0)
-                    
-                    if verdict_approved:
-                        if src_id in self.vault._nodes and dst_id in self.vault._nodes:
-                            self.vault.add_relation(src_id, dst_id, RelationType.SYNAPSE, 0.99)
-                            self.blackboard.post(SynapticSignal("SUPREME_COURT", AgentRole.ARCHITECT, 
-                                f"🏛️ VERDICT_STAMPED: Majority consensus ({approval_count}/{len(active_judges)}) achieved. Synapse validated.", 
-                                SignalType.SYSTEM_HEALING))
-                            
-                            # Log to history for the UI Court Archive
-                            self.archiver.log_action({
-                                "agent": "SUPREME_COURT",
-                                "action": "COMMITTEE_VERDICT",
-                                "target_id": src_id,
-                                "reasoning": f"Judicial committee ({', '.join(active_judges)}) verified semantic alignment. Consensus reached ({approval_count}/{len(active_judges)}).",
-                                "wisdom_recorded": True
-                            })
-                            
-                            # v1.1.0: Reward the agent if their proposal was approved
-                            proposer = edge_task.get("original_action", {}).get("agent") or edge_task.get("agent_proposer")
-                            if proposer:
-                                self.trust_network.update_trust(proposer, success=True)
-                    else:
-                        reason = "Majority consensus not reached" if active_judges else "No active judges"
-                        self.blackboard.post(SynapticSignal("SUPREME_COURT", AgentRole.EXPERT, 
-                            f"🛑 VERDICT_REJECTED: {reason} ({approval_count}/{len(active_judges)}). Synapse discarded/conserved for safety.", 
-                            SignalType.ALERT))
+                batch_limit = 10
+                processed = 0
+                while self.autonomous_audit_queue and processed < batch_limit:
+                    try:
+                        edge_task = self.autonomous_audit_queue.pop(0)
+                        processed += 1
+                        src_id = edge_task.get("src")
+                        dst_id = edge_task.get("dst")
+                        if not src_id or not dst_id: continue
+
+                        raw_judges = [self.settings.get_model("court_judge_1"), self.settings.get_model("court_judge_2"), self.settings.get_model("court_judge_3")]
+                        active_judges = [j for j in raw_judges if j and j != "-"] or ["llama3.2"]
                         
-                        # v1.1.0: Penalize the agent if their proposal was rejected
-                        proposer = edge_task.get("original_action", {}).get("agent") or edge_task.get("agent_proposer")
-                        if proposer:
-                            self.trust_network.update_trust(proposer, success=False)
-                    
-                except Exception as e:
-                    logger.error(f"⚖️ [Court Error] Committee failed: {e}")
-            
-            time.sleep(5.0) # Judicial rest interval
+                        votes = []
+                        for judge in active_judges:
+                            try:
+                                prompt = f"Audit Synapse: {src_id[:8]} -> {dst_id[:8]}. Content: {edge_task.get('text', 'N/A')}. APPROVED or REJECTED?"
+                                base_url = self.settings.get("ollama_url")
+                                with httpx.Client() as client:
+                                    resp = client.post(f"{base_url}/api/generate", json={"model": judge, "prompt": prompt, "stream": False}, timeout=10.0)
+                                    if resp.status_code == 200:
+                                        votes.append("APPROVED" in resp.json().get("response", "").upper())
+                            except: votes.append(True)
+
+                        if sum(votes) > (len(active_judges) / 2.0):
+                            if src_id in self.vault._nodes and dst_id in self.vault._nodes:
+                                self.vault.add_relation(src_id, dst_id, RelationType.SYNAPSE, 0.99)
+                                self.blackboard.post(SynapticSignal("COURT", AgentRole.ARCHITECT, f"✅ APPROVED: {src_id[:8]}", SignalType.SYSTEM_HEALING))
+                        else:
+                            self.blackboard.post(SynapticSignal("COURT", AgentRole.EXPERT, f"🛑 REJECTED: {src_id[:8]}", SignalType.ALERT))
+                    except Exception as e:
+                        logger.error(f"⚖️ Court Burst Error: {e}")
+            time.sleep(1.0)
 
     def _process_agent_action(self, result: Any):
         """🧬 [Sovereign Logic] Routes agent kinetic results to the blackboard and registry."""
@@ -2282,13 +2222,12 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
             
             if valid_targets:
                 w, p = self._batch_arbitrate_nodes(valid_targets, "CORE")
-                self.snake.processed += w # Aggiorniamo il contatore 'Deleted' dello Snake
+                # self.snake.processed += w  <-- Rimosso doppio conteggio manuale
                 self.blackboard.post(SynapticSignal("CORE", AgentRole.OPTIMIZER, f"Batch Arbitration Complete: {w} WASTE, {p} POTENTIAL.", SignalType.SYSTEM_NOTIFICATION))
 
         # 📡 [STRATEGIC_MISSION] Sentinel -> SkyWalker Loop
         if result.get("action") == "Strategic Gap Identified":
             topic = result.get("topic")
-            self.sentinel.validated_count += 1
             if topic and self.skywalker:
                 self.skywalker.status = f"MISSION: {topic}"
                 self.blackboard.post(SynapticSignal("SE-007", AgentRole.GUARDIAN, 
@@ -2298,28 +2237,27 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
         # 🧹 [Janitron] Cleanup & Tombstones
         if result.get("action") in ["Tombstone Created", "Node Digestion"]:
             self.tombstone_registry.register(result.get("pos"))
-            if aid == "JA-001": self.janitor.eaten_count += 1
-        
-        if result.get("action") == "Cross-Reference Audit":
-            self.sentinel.validated_count += 1
-            
-        if result.get("action") == "Super-Synapse Forging":
-            self.sentinel.super_synapses += 1
-            
-        if result.get("action") == "Center Hand-off":
-            num_delivered = len(result.get("nodes_delivered", []))
-            self.snake.processed += num_delivered
-            self.snake.harvested += num_delivered
-            
-        if result.get("action") == "Semantic Fusion":
-            self.quantum.clusters_fused += 1
-            
-        if result.get("action") == "Gap Filling":
+
+        # --- NUOVA LOGICA TELEMETRIA ROBUSTA (v4.0.1) ---
+        # Incrementiamo i contatori basandoci sull'ID dell'agente (aid) 
+        # Questo garantisce che ogni successo venga conteggiato anche se l'LLM cambia il nome dell'azione.
+        if aid == "DI-007": self.distiller.pruned_count += 1
+        elif aid == "JA-001": self.janitor.eaten_count += 1
+        elif aid == "RP-001": 
+            self.reaper.processed += 1
+            if "reclaimed" in result:
+                self.reaper.reclaimed_mb += result["reclaimed"]
+        elif aid == "SN-008": self.snake.processed += 1
+        elif aid == "QA-101": self.quantum.clusters_fused += 1
+        elif aid == "SE-007": self.sentinel.validated_count += 1
+        elif aid == "SY-009": self.synth.sparks_generated += 1
+        elif aid == "CB-003": self.bridger_agent.bridges_total += 1
+        elif aid == "FS-77": 
             self.skywalker.web_hits += 1
-            
-        if result.get("action") == "MISSION_COMPLETE":
-            if self.skywalker: self.skywalker.web_hits += 1
-        
+            # Se l'azione riporta nuovi nodi, li aggiungiamo al contatore globale
+            if "nodes_added" in result:
+                self.skywalker.nodes_created = result["nodes_added"]
+
         if "action" not in result: return # Movement-only update
         
         tid = result.get("target_id")
@@ -2332,7 +2270,7 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
         # 🛡️ [Resilience Logic] Se l'agente ha avuto successo, assicuriamoci di loggare l'attività
         if result["action"] != "Standard Movement":
             audit_entry = {
-                "timestamp": time.strftime("%H:%M:%S"), 
+                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"), 
                 "agent": aid, 
                 "action": result["action"], 
                 "target": str(tid)[:10] if tid else "N/A", 
@@ -2343,6 +2281,10 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
             
             self.mission_history.append(audit_entry)
             if len(self.mission_history) > 1000: self.mission_history.pop(0)
+            
+            # [PERMANENCE] Registra nell'archivio storico su disco
+            if hasattr(self, 'archiver') and self.archiver:
+                self.archiver.record(audit_entry)
             
             # Print to terminal for feedback
             print(f"📡 [Swarm] Agent {aid} completed: {result['action']} on {str(tid)[:8] if tid else 'Global'}")
