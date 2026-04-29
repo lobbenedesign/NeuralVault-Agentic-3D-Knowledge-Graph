@@ -1,4 +1,4 @@
-# 🌌 NEURAL VAULT: ARCHITETTURA TECNICA v4.0
+# 🌌 NEURAL VAULT: ARCHITETTURA TECNICA v4.0.1
 
 Benvenuti nel manuale tecnico ufficiale di **Neural Vault**. Questo documento descrive l'architettura sovrana del sistema, mappando ogni modulo dalla persistenza binaria alla visualizzazione 3D in tempo reale. Il sistema bilancia velocità bruta e integrità crittografica per trasformare l'informazione in saggezza attiva.
 
@@ -152,15 +152,15 @@ La visualizzazione Three.js non è solo estetica, ma una mappa termica della tua
 | **AOBF + Aegis Reaper** | 100% ✅ | Persistenza binaria atomica e compattazione asincrona operative. |
 | **Sovereign Snapshot (Instant Boot)** | 100% ✅ | Caricamento sub-secondo tramite snapshot Parquet/Pickle. |
 | **Latent Code-Doc Bridge** | 100% ✅ | Collegamento semantico tra codice locale e docs web (Agente CB-003). |
-| **Swarm Agents (v17.5)** | 100% ✅ | Telemetria ripristinata per Quantum, Distiller e Bridger. Sincronizzazione contatori attiva. |
+| **Swarm Agents (v24.3.1)** | 100% ✅ | Telemetria ripristinata per Quantum, Distiller, SkyWalker e Snake. Sincronizzazione contatori attiva. |
 | **Node Lifecycle State Machine** | 100% ✅ | Gestione atomica degli stati (Pending/Stable/Tombstone/Protected). |
 | **Ebbinghaus Decay Visual** | 100% ✅ | Opacità dinamica 3D e calcolo real-time della forza del ricordo con reset proattivo. |
 | **Sovereign Priority Focus** | 100% ✅ | Stasi automatica agenti durante interazione utente (Lab). |
 | **Skywalker Fallback Protocol** | 100% ✅ | Ricerca web intelligente automatica per lacune o nodi corrotti. |
 | **Neural Model Hub (Apr 2026)** | 100% ✅ | Integrazione DeepSeek V4 Flash, Qwen 3.6 MoE, Gemma 4 Edge e Qwen Coder. |
 | **Sovereign 3D Alignment** | 100% ✅ | Nebula centrata a y=1.000.000. Ispezione nodi (Raycaster) stabilizzata. |
-| **Autonomous Evolution Engine** | 60% ⚠️ | Motore Safe-Genesis implementato (Git Tagging). Manca Test Suite automatica post-write per il 100%. |
-| **Semantic Temperature Heatmap** | 20% ⚠️ | Monitor entropia attivo, visualizzazione 3D in fase di affinamento. Priorità Assoluta. |
+| **Autonomous Evolution Engine** | 85% ✅ | Motore Safe-Genesis implementato (Git Tagging). Missioni X-Wing stabilizzate. |
+| **Semantic Temperature Heatmap** | 40% ⚠️ | Monitor entropia attivo, visualizzazione 3D in fase di affinamento. |
 | **Agentic Actuators Sandbox** | 10% ❌ | Inizio fase progettuale per esecuzione script protetta. |
 
 | **Neural Shadow iOS** | 0% ❌ | Concept per Thin Client mobile non ancora iniziato. |

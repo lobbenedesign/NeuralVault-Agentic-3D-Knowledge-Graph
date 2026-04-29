@@ -26,3 +26,16 @@ node_modules/
 .env
 swarm_settings.json
 vault_key.bin
+
+# NeuralVault System Data
+.snapshots/
+.checkpoints/
+.backup_hub/
+backup/
+Dashboard-BACKUP/
+scratch/
+vault_data/
+neuralvault_rs/target/
+bench_py/
+bench_rs/
+oracle_performance.log

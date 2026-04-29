@@ -913,7 +913,7 @@ class ReaperAgent:
                         "agent": "RP-001",
                         "action": "Surgery Completed",
                         "pos": {"x": tx, "y": ty, "z": tz},
-                        "reclaimed": 0.05 + (random.random() * 0.1), # Ensure at least 0.05MB reclaimed
+                        "reclaimed": 0.05 + (random.random() * 0.1),
                         "motivation": "Neural Grid surgery successful. Fragmented shards consolidated.",
                         "savings": "0.15 MB recovered"
                     }
@@ -1318,7 +1318,7 @@ class SentinelAgent:
                     
                     # 🌈 PROBABILITÀ SUPER-SINAPSI (Effetto RGB LED Aura)
                     if random.random() < 0.35: # Increased from 0.15
-                        self.super_synapses += 1
+                        # v4.0.2: self.super_synapses incremented by Orchestrator
                         self.is_supersynapse = True
                         return {
                             "agent": "SE-007", 
@@ -1330,8 +1330,8 @@ class SentinelAgent:
                     
                     return {"agent": "SE-007", "action": "Cross-Reference Audit", "target_id": self.target_node}
             
-            # --- Aggiornamento dei contatori interni durante il pattugliamento ---
-            if random.random() < 0.1: self.validated_count += 1 # Increased from 0.02
+            # v4.0.2: Counters centralized in Orchestrator
+            pass 
 
 
             # 🛑 [GAP_ANALYSIS_TRIGGER] Ogni 2 minuti di attività (Ridotto da 10m v17.5)
@@ -1400,10 +1400,8 @@ class BridgerAgent:
         self.status = "Discovering Bridges..."
         count = self.bridger.bridge_nodes()
         
-        # 🧪 [v17.5 Telemetry Fix] Ignoriamo lo scan massivo iniziale per non sporcare la Agent Bar
-        if getattr(self, '_initial_scan_done', False):
-            self.bridges_total += count
-        else:
+        # 🧪 [v17.5 Telemetry Fix] Ignoriamo lo scan massivo iniziale
+        if not getattr(self, '_initial_scan_done', False):
             self._initial_scan_done = True
             print(f"🧬 [Bridger] Initial sync completed: {count} legacy bridges found (telemetry silenced).")
             
@@ -1477,7 +1475,8 @@ class SkyWalkerAgent:
             async for page in self.orch.forager.forage(url):
                 chunks = page.to_chunks()
                 for c in chunks:
-                    self.vault.add_node(c['text'], metadata=c['metadata'])
+                    # Use upsert_text to handle ID generation and ingestion correctly
+                    self.vault.upsert_text(c['text'], metadata=c['metadata'])
                     collected_count += 1
             return collected_count
 
@@ -1536,6 +1535,7 @@ class SkyWalkerAgent:
             "status": self.status,
             "web_hits": self.web_hits,
             "hits": self.web_hits,
+            "nodes": self.nodes_created,
             "laser_active": self.laser_active
         }
 
@@ -2282,8 +2282,12 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
 
         # --- NUOVA LOGICA TELEMETRIA ROBUSTA (v4.0.3) ---
         # Definiamo cosa NON è un'azione produttiva (Heartbeats/Movement)
-        heartbeat_actions = ["Standard Movement", "Watch-Cycle", "Pulse Signal", "Deep Nebula Patrol", 
-                             "Idle", "Monitoring Clean Grid", "Patrolling High-Orbit...", "Surveying Grid Patterns..."]
+        heartbeat_actions = [
+            "Standard Movement", "Watch-Cycle", "Pulse Signal", "Deep Nebula Patrol", 
+            "Idle", "Monitoring Clean Grid", "Patrolling High-Orbit...", "Surveying Grid Patterns...",
+            "Analyzing Clusters...", "Cross-Reference Audit", "Scanning...", "Monitoring Network",
+            "Heading to Tombstone Surgery", "Regenerating Memory Sector...", "Patrol Cycle"
+        ]
         
         action_name = result.get("action", "")
         if action_name and action_name not in heartbeat_actions:
@@ -2302,6 +2306,10 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
             elif aid == "FS-77": 
                 self.skywalker.web_hits += 1
                 if "nodes_added" in result: self.skywalker.nodes_created = result["nodes_added"]
+            elif aid == "SN-008":
+                if action_name == "Center Hand-off":
+                    delivered = result.get("nodes_delivered", [])
+                    self.snake.harvested += len(delivered)
 
         if "action" not in result: return # Movement-only update
         
@@ -2522,9 +2530,11 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
             self.blackboard.post(SynapticSignal("SY-009", AgentRole.MUSE, f"✨ Synth Muse: Integrare {topic} espande la densità semantica del 12%.", SignalType.KINETIC_EVENT))
 
         # 4. RIENTRO
+        self.skywalker.nodes_created += total_new_nodes
+        self.skywalker.web_hits += 1
         self.skywalker.status = "Idle"
         self.skywalker.laser_active = False
-        self.blackboard.post(SynapticSignal("FS-77", AgentRole.RESEARCHER, f"✅ RIENTRO BASE: X-Wing stabilizzato.", SignalType.SYSTEM_NOTIFICATION))
+        self.blackboard.post(SynapticSignal("FS-77", AgentRole.RESEARCHER, f"✅ RIENTRO BASE: X-Wing stabilizzato con {total_new_nodes} nuovi nodi.", SignalType.SYSTEM_NOTIFICATION))
 
     def get_orchestra_report(self) -> Dict:
         return {
@@ -2567,7 +2577,8 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
                     "identity": self.reaper.identity,
                     "pos": dict(self.reaper.pos),
                     "status": self.reaper.status,
-                    "processed": self.reaper.processed
+                    "processed": self.reaper.processed,
+                    "reclaimed_mb": getattr(self.reaper, 'reclaimed_mb', 0.0)
                 },
                 "QA-101": {
                     "identity": self.quantum.identity,
