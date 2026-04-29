@@ -1,7 +1,7 @@
 # 🏺 NeuralVault — The Sovereign Agentic Knowledge OS (v4.0.1)
 > **"Turning raw information into active, sovereign wisdom through kinetic swarm orchestration and autonomous evolution."**
 
-![Aura Nexus Dashboard](assets/dashboard_v401.png)
+![Aura Nexus Dashboard](assets/dashboard_v350.png)
 
 [![Version](https://img.shields.io/badge/version-4.0.1%20Sovereign%20Evolution-purple?style=for-the-badge)](CHANGELOG.md)
 [![Hardware](https://img.shields.io/badge/Optimized-Apple%20Silicon%20M--Series-orange?style=for-the-badge)](https://developer.apple.com/metal/)
@@ -16,6 +16,8 @@ Traditional RAG is a static mirror. **NeuralVault v4.0.1** is a biological lens.
 
 ## 🏗️ I. 4-TIER PERSISTENT ARCHITECTURE (v4.0 Upgrade)
 Designed for the Apple Silicon era, balancing atomic speed with self-healing integrity.
+
+![Layers and Filters](assets/layers_filter.png)
 
 1.  **Tier L1 (Atomic RAM)**: Latency < 1µs with **Hardware Pinning**. Real-time 60fps WebGL synchronization.
 2.  **Tier L2 (AegisLogStore)**: Binary **AOBF** with "Tombstone Paradox" resolution.
@@ -45,7 +47,18 @@ NeuralVault is now aware of its own source code.
 
 ---
 
-## 📊 IV. ANALYTICAL COMPARISON & HONESTY
+## ⚖️ IV. GOVERNANCE & OBSERVATORY
+To ensure data sovereignty against hallucinations and monitor hardware in real-time.
+
+![Hardware Observatory](assets/hardware_observatory.png)
+
+*   **Agent Trust Network**: Dynamic reputation based on user feedback.
+*   **Conservative Supreme Court**: 3-judge arbitration (Alpha, Beta, Gamma). In case of a tie, the **Safe-Keep (Tie-break = KEEP)** protocol applies.
+*   **Hardware DNA Trace**: Native Metal/MPS monitoring and real-time RAM consumption.
+
+---
+
+## 📊 V. ANALYTICAL COMPARISON & HONESTY
 
 | Feature | Pinecone / Zilliz | Mem0 | **NeuralVault v4.0.1** |
 | :--- | :---: | :---: | :---: |
@@ -59,7 +72,14 @@ NeuralVault is now aware of its own source code.
 
 ---
 
-## 🚀 V. ROADMAP 4.1: MESH COHESION
+## ⚙️ VI. CONFIGURATION & SOVEREIGNTY
+NeuralVault allows granular control over your "synthetic mind."
+
+![Sovereign Configuration](assets/sovereign_config.png)
+
+---
+
+## 🚀 VII. ROADMAP 4.1: MESH COHESION
 While v4.0 focused on evolution, v4.1 will introduce:
 *   **Logical Namespacing**: Sealed compartments (Professional/Private) via DuckDB.
 *   **Lightweight RAFT**: Distributed consensus across your personal devices.
@@ -82,6 +102,8 @@ Il RAG tradizionale è uno specchio statico. **NeuralVault v4.0.1** è una lente
 
 ## 🏗️ I. ARCHITETTURA A 4 LIVELLI (v4.0 Upgrade)
 Bilanciamento perfetto tra velocità atomica e integrità autorigenerante su Apple Silicon.
+
+![Layers and Filters](assets/layers_filter.png)
 
 1.  **Tier L1 (Atomic RAM)**: Latenza < 1µs con **Hardware Pinning**. Sincronizzazione WebGL a 60fps.
 2.  **Tier L2 (AegisLogStore)**: Storage binario **AOBF** con risoluzione del "Paradosso della Tombstone".
@@ -108,6 +130,24 @@ NeuralVault è ora consapevole del proprio codice sorgente.
 *   **Audit Tecnico Proattivo**: Il sistema analizza i propri componenti (`api.py`, `neural_lab.py`) e identifica bug o ottimizzazioni.
 *   **Evolution Mode**: Toggle tra **Research Mode** (ingestione sicura) ed **Evolution Mode** (crescita autonoma e bridging).
 *   **Saggezza Collettiva**: Impara dai feedback dell'utente per affinare la propria logica decisionale interna.
+
+---
+
+## ⚖️ IV. GOVERNANCE & OBSERVATORY
+Per garantire la sovranità del dato contro le allucinazioni e monitorare l'hardware in tempo reale.
+
+![Hardware Observatory](assets/hardware_observatory.png)
+
+*   **Agent Trust Network**: Reputazione dinamica basata sul feedback utente.
+*   **Conservative Supreme Court**: Arbitrato a 3 giudici (Alpha, Beta, Gamma). In caso di parità, si applica il protocollo **Safe-Keep (Tie-break = KEEP)**.
+*   **Hardware DNA Trace**: Monitoraggio nativo Metal/MPS e consumo RAM in tempo reale.
+
+---
+
+## ⚙️ VI. CONFIGURAZIONE E SOVRANITÀ
+NeuralVault permette un controllo granulare sulla tua "mente sintetica".
+
+![Sovereign Configuration](assets/sovereign_config.png)
 
 ---
 
