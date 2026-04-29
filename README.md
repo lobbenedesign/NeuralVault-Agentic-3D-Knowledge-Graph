@@ -5,7 +5,7 @@
 ![Aura Nexus Dashboard](assets/dashboard_v350.png)
 
 [![Version](https://img.shields.io/badge/version-4.1.4%20Sovereign%20Intelligence-purple?style=for-the-badge)](CHANGELOG.md)
-[![Hardware](https://img.shields.io/badge/Optimized-Apple%20Silicon%20M--Series-orange?style=for-the-badge)](https://developer.apple.com/metal/)
+[![Hardware](https://img.shields.io/badge/Hardware-Universal%20Agnostic-green?style=for-the-badge)](ARCHITETTURA.md)
 [![Architecture](https://img.shields.io/badge/Engine-Sovereign%204--Tier%20AOBF-blue?style=for-the-badge)](ARCHITETTURA.md)
 
 ---
@@ -86,7 +86,17 @@ To ensure data sovereignty against hallucinations and monitor hardware in real-t
 
 *   **Agent Trust Network**: Dynamic reputation based on user feedback.
 *   **Conservative Supreme Court**: 3-judge arbitration (Alpha, Beta, Gamma). In case of a tie, the **Safe-Keep (Tie-break = KEEP)** protocol applies.
-*   **Hardware DNA Trace**: Native Metal/MPS monitoring and real-time RAM consumption.
+*   **Hardware DNA Trace**: Native Metal/MPS/CUDA monitoring and real-time environment adaptation.
+
+---
+
+## 🧬 V. UNIVERSAL HARDWARE DNA & SELF-OPTIMIZATION
+NeuralVault is not bound to a single ecosystem. It is a **Hardware-Agnostic Chameleon** designed to detect and saturate any available resource:
+
+- **Apple Silicon (M1/M2/M3/M4)**: Native Metal (MPS) acceleration for ultra-fast synaptic retrieval.
+- **NVIDIA ARM64 (2026+ Gen)**: Fully optimized for the latest NVIDIA Grace-Hopper/Blackwell ARM architectures via CUDA integration.
+- **x86_64 (Intel/AMD)**: High-performance AVX-512 vectorization and multi-thread optimization for legacy and enterprise workstations.
+- **Self-Optimization Engine**: At boot, the **DNA Trace Daemon** analyzes the CPU/GPU topology and automatically selects the most efficient model quantizations and processing backends. No configuration required.
 
 ---
 
@@ -142,7 +152,7 @@ Bilanciamento perfetto tra velocità atomica e integrità autorigenerante su App
 
 ![Layers and Filters](assets/layers_filter.png)
 
-1.  **Tier L1 (Atomic RAM)**: Latenza **< 1ms** (Hot-path) via **Hardware Pinning**. Sincronizzazione WebGL a 60fps.
+1.  **Tier L1 (Atomic RAM)**: Latenza **< 1ms** (Hot-path) via **Hardware Pinning**. Rilevamento automatico e saturazione di MPS (Apple) o CUDA (NVIDIA).
 2.  **Tier L2 (AegisLogStore)**: Storage binario **AOBF** con risoluzione del "Paradosso della Tombstone".
 3.  **Tier L3 (Contextual Archive)**: Motore analitico **DuckDB** + HNSW per ricerca ibrida (**RRF Fusion**).
 4.  **Tier L4 (Evolutionary Ledger)**: Registro persistente dei suggerimenti di codice e delle ottimizzazioni implementate autonomamente.
@@ -177,7 +187,17 @@ Per garantire la sovranità del dato contro le allucinazioni e monitorare l'hard
 
 *   **Agent Trust Network**: Reputazione dinamica basata sul feedback utente.
 *   **Conservative Supreme Court**: Arbitrato a 3 giudici (Alpha, Beta, Gamma). In caso di parità, si applica il protocollo **Safe-Keep (Tie-break = KEEP)**.
-*   **Hardware DNA Trace**: Monitoraggio nativo Metal/MPS e consumo RAM in tempo reale.
+*   **Hardware DNA Trace**: Monitoraggio nativo Metal/MPS/CUDA e adattamento automatico all'ambiente (Intel, AMD, ARM64 NVIDIA 2026).
+
+---
+
+## 🧬 V. HARDWARE DNA & AUTO-OTTIMIZZAZIONE
+NeuralVault non è vincolato a un singolo ecosistema. È un **Camaleonte Hardware** progettato per rilevare e saturare ogni risorsa disponibile:
+
+- **Apple Silicon (M1/M2/M3/M4)**: Accelerazione nativa Metal (MPS) per il recupero sinaptico ultra-veloce.
+- **NVIDIA ARM64 (2026+ Gen)**: Ottimizzazione completa per le ultime architetture NVIDIA Grace-Hopper/Blackwell tramite integrazione CUDA.
+- **x86_64 (Intel/AMD)**: Vettorizzazione AVX-512 ad alte prestazioni per workstation legacy ed enterprise.
+- **Motore di Auto-Ottimizzazione**: All'avvio, il **DNA Trace Daemon** analizza la topologia hardware e seleziona automaticamente le quantizzazioni e i backend di calcolo più efficienti. Nessuna configurazione richiesta.
 
 ---
 
