@@ -1,9 +1,9 @@
-# 🏺 NeuralVault — The Sovereign Agentic Knowledge OS (v4.0.1)
+# 🏺 NeuralVault — The Sovereign Agentic Knowledge OS (v4.0.8)
 > **"Turning raw information into active, sovereign wisdom through kinetic swarm orchestration and autonomous evolution."**
 
 ![Aura Nexus Dashboard](assets/dashboard_v350.png)
 
-[![Version](https://img.shields.io/badge/version-4.0.1%20Sovereign%20Evolution-purple?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-4.0.8%20Sovereign%20Intelligence-purple?style=for-the-badge)](CHANGELOG.md)
 [![Hardware](https://img.shields.io/badge/Optimized-Apple%20Silicon%20M--Series-orange?style=for-the-badge)](https://developer.apple.com/metal/)
 [![Architecture](https://img.shields.io/badge/Engine-Sovereign%204--Tier%20AOBF-blue?style=for-the-badge)](ARCHITETTURA.md)
 
@@ -33,7 +33,7 @@ The 9 agents are now smarter, faster, and more visual.
 *   **🐍 SN-008 (Snake)**: Upgraded to **Mega-Convoy**. It doesn't just move nodes; it performs **Sprouting (Germogliazione)**, reconnecting orphan data points to the nebula via semantic anchors.
 *   **📡 FS-77 (SkyWalker)**: High-altitude foraging. Identifies "Strategic Gaps" and autonomously browses the web to fill them, injecting fresh knowledge into the grid.
 *   **🏗️ QA-101 (Quantum)**: Performs **Batch Arbitration** and semantic centroiding to collapse noise into "Golden Clusters."
-*   **✨ SY-009 (Synth)**: Generates **Creative Sparks** during "Neural Dreaming," proposing emergent connections between distant concepts.
+*   **✨ SY-009 (Synth)**: Generates **Creative Sparks (RGB LED)** during "Neural Dreaming," proposing emergent connections between distant concepts with vibrant multi-modal feedback.
 *   **⚕️ RP-001 (Reaper)**: The Surgeon. Performs physical binary storage compaction, reclaiming MBs of fragmented space with sub-millisecond precision.
 *   **🔗 CB-003 (Bridger)**: The Architect. Synchronizes local code (AST) with theoretical documentation, creating latent bridges across the repository.
 
@@ -93,7 +93,7 @@ While v4.0 focused on evolution, v4.1 will introduce:
 ---
 ---
 
-# 🏺 NeuralVault — The Sovereign Agentic Knowledge OS (v4.0.1) [ITA]
+# 🏺 NeuralVault — The Sovereign Agentic Knowledge OS (v4.0.8) [ITA]
 
 ## 📜 Visione: La Singolarità Evolutiva
 Il RAG tradizionale è uno specchio statico. **NeuralVault v4.0.1** è una lente biologica. Siamo andati oltre la semplice persistenza entrando nell'era dell'**Evoluzione Autonoma**. Il sistema non si limita a ricordare; individua i propri gap di conoscenza, riconnette idee frammentate e suggerisce ottimizzazioni tecniche alla sua stessa architettura core.
@@ -115,7 +115,7 @@ Bilanciamento perfetto tra velocità atomica e integrità autorigenerante su App
 ## 🐝 II. THE KINETIC SWARM: MISSIONI EVOLUTIVE
 I 9 agenti sono ora più intelligenti, veloci e dotati di feedback visivi avanzati.
 
-*   **🛡️ SE-007 (Sentinella)**: Implementa il **Sovraccarico Neurale**. Durante gli audit, genera **Super-Sinapsi (Archi RGB)** con effetti visivi a fulmini, elevando l'affidabilità sinaptica al 99%.
+*   **🛡️ SE-007 (Sentinella)**: Implementa il **Sovraccarico Neurale**. Durante gli audit, genera **Ponti Supremi (Arancio-Giallo)** con pulsazioni sincronizzate, elevando l'affidabilità sinaptica al 99%.
 *   **🐍 SN-008 (Snake)**: Potenziato in **Mega-Convoy**. Non si limita a spostare nodi; esegue la **Germogliazione (Sprouting)**, riconnettendo nodi orfani alla nebula tramite ancore semantiche.
 *   **📡 FS-77 (SkyWalker)**: Foraging ad alta quota. Identifica "Gap Strategici" e naviga autonomamente sul web per colmarli, iniettando nuova conoscenza nella griglia.
 *   **🏗️ QA-101 (Quantum)**: Esegue l'arbitrato batch e il centroiding semantico per collassare il rumore in **Cluster Dorati**.

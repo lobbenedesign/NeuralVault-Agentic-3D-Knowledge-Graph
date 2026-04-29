@@ -2369,6 +2369,8 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
             self.synth.sparks_generated += 1
             if tid and self.transition_node(tid, NodeState.POTENTIAL, NodeState.INDEXING, "SY-009"):
                 sid2 = result.get("secondary_id", "")
+                if sid2:
+                    self.vault.add_relation(tid, sid2, RelationType.SEMANTIC, 0.85, is_aura=True)
                 self.blackboard.post(SynapticSignal("SYNTH", AgentRole.CREATIVE, f"✨ SPARK: Multi-modal fusion between {str(tid)[:8]} and {str(sid2)[:8]}.", SignalType.CREATIVE_SPARK, motivation=motivation, savings=savings))
         
         elif result["action"] == "Audit Complete":

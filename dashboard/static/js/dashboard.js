@@ -904,32 +904,25 @@ function animate() {
             neuralLinks.children.forEach(link => {
                 const now = Date.now();
                 if (link.isSpark) {
+                    // 🌈 [LED RGB EFFECT] Continuous HSL shift
                     link.material.color.setHSL((time * 0.4) % 1, 1, isLight ? 0.4 : 0.6);
-                    link.material.opacity = isLight ? 0.8 : 0.6 + Math.sin(time * 10) * 0.3;
+                    link.material.opacity = isLight ? 0.8 : 0.6 + Math.sin(time * 15) * 0.3;
+                    link.material.blending = isLight ? THREE.NormalBlending : THREE.AdditiveBlending;
+                } else if (link.isSuper) {
+                    // 🟠🟡 [SUPER-LINK PULSE] 2 pulses, then 30s solid orange-yellow
+                    const cycle = now % 31000; // 31 seconds cycle
+                    if (cycle < 2000) {
+                        // 2 rapid pulses in the first 2 seconds
+                        const p = Math.abs(Math.sin(cycle * 0.002 * Math.PI * 2));
+                        link.material.color.setRGB(1.0, 0.6 + 0.4 * p, 0.1); // Arancio -> Giallo
+                        link.material.opacity = 0.4 + 0.6 * p;
+                    } else {
+                        // Solid Orange-Yellow for the rest of the 30s
+                        link.material.color.setHex(0xf59e0b);
+                        link.material.opacity = 0.7;
+                    }
                     link.material.blending = isLight ? THREE.NormalBlending : THREE.AdditiveBlending;
                 } else if (link.isNew) {
-                    function updateLinkMaterial(link, isSuper) {
-                        if (isSuper) {
-                            const timeInit = link.userData.createdAt || Date.now();
-                            const age = Date.now() - timeInit;
-                            const color = new THREE.Color();
-                            const hue = (Date.now() * 0.0002) % 1;
-                            color.setHSL(hue, 0.8, 0.5);
-                            link.material.color.copy(color);
-                            
-                            // Aura LED Pulse
-                            if (age < superSynapseAuraDuration) {
-                                const pulse = 0.5 + Math.sin(Date.now() * 0.01) * 0.5;
-                                link.material.emissive = color;
-                                link.material.emissiveIntensity = 2.0 * pulse;
-                                link.material.opacity = 0.8 + 0.2 * pulse;
-                            } else {
-                                link.material.emissiveIntensity = 0;
-                                link.material.opacity = 0.6;
-                            }
-                        }
-                    }
-                    updateLinkMaterial(link, true);
                     link.material.opacity = 0.5 + Math.sin(time * 20) * 0.5;
                     link.material.blending = isLight ? THREE.NormalBlending : THREE.AdditiveBlending;
                 } else {
@@ -1122,24 +1115,32 @@ function updateThreeScene(points, links = null) {
                     new THREE.Vector3(dstNode.x * exp, dstNode.y * exp, dstNode.z * exp)
                 ]);
                 const isSpark = l.is_aura === true;
+                const isSuper = l.relation === 'synapse';
                 const isNew = (now - (l.created_at * 1000) < 6000);
-                let edgeColor = isLight ? 0x475569 : 0xffffff;
+                
+                let edgeColor = isLight ? 0x475569 : 0x2d3748; // Grigio default
                 let opacity = 0.15;
+                
                 if (isSpark) {
-                    edgeColor = 0xa855f7; 
-                    opacity = 0.6;
+                    edgeColor = 0xffffff; // Verrà sovrascritto dall'HSL in animate
+                    opacity = 0.8;
+                } else if (isSuper) {
+                    edgeColor = 0xf59e0b; // Arancio base
+                    opacity = 0.7;
                 } else if (isNew) {
                     edgeColor = 0x00ffff;
                     opacity = 0.8;
                 }
+
                 const mat = new THREE.LineBasicMaterial({ 
                     color: edgeColor, 
                     transparent: true, 
                     opacity: opacity,
-                    blending: isLight ? THREE.NormalBlending : ((isSpark || isNew) ? THREE.AdditiveBlending : THREE.NormalBlending)
+                    blending: isLight ? THREE.NormalBlending : ((isSpark || isSuper || isNew) ? THREE.AdditiveBlending : THREE.NormalBlending)
                 });
                 const line = new THREE.Line(geo, mat);
                 line.isSpark = isSpark;
+                line.isSuper = isSuper;
                 line.isNew = isNew;
                 line.createdAt = l.created_at * 1000;
                 neuralLinks.add(line);
