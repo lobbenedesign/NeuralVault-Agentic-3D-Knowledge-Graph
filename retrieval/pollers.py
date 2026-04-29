@@ -8,9 +8,6 @@ Permettono l'ingestione sicura senza webhook o porte aperte.
 import time
 import threading
 import logging
-import imaplib
-import email
-from email.header import decode_header
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import httpx
@@ -94,87 +91,6 @@ class RSSPoller(BasePoller):
         except Exception as e:
             self.logger.error(f"⚠️ RSS Poll Fail: {e}")
 
-class IMAPPoller(BasePoller):
-    """Poller per Email via IMAP (Gmail, Outlook, etc.)."""
-    def __init__(self, host: str, user: str, password: str, name: str, interval: int = 600, namespace: str = "emails"):
-        super().__init__(name, interval, namespace)
-        self.host = host
-        self.user = user
-        self.password = password
-        self._last_uid: Optional[int] = None
-
-    def poll(self, engine: Any):
-        self.logger.info(f"📧 Polling IMAP: {self.host} for {self.user}")
-        try:
-            mail = imaplib.IMAP4_SSL(self.host)
-            
-            # 🛡️ [Hardening] Tenta OAuth2 prima della password
-            oauth_manager = getattr(engine, 'oauth', None)
-            if oauth_manager:
-                try:
-                    auth_string = oauth_manager.get_auth_string(self.user)
-                    if auth_string:
-                        # Gmail richiede XOAUTH2
-                        mail.authenticate('XOAUTH2', lambda x: auth_string)
-                        self.logger.info(f"✅ [OAuth2] Login effettuato con successo per {self.user}")
-                    else:
-                        mail.login(self.user, self.password)
-                except Exception as e:
-                    self.logger.warning(f"⚠️ [OAuth2] Login fallito: {e}. Provo fallback password...")
-                    mail.login(self.user, self.password)
-            else:
-                mail.login(self.user, self.password)
-
-            mail.select("inbox")
-            
-            # Cerca email non lette o tutte (usiamo UNSEEN per efficienza)
-            status, messages = mail.search(None, 'UNSEEN')
-            if status != 'OK': return
-            
-            email_ids = messages[0].split()
-            new_nodes = 0
-            
-            for e_id in email_ids:
-                status, data = mail.fetch(e_id, '(RFC822)')
-                if status != 'OK': continue
-                
-                raw_email = data[0][1]
-                msg = email.message_from_bytes(raw_email)
-                
-                subject, encoding = decode_header(msg["Subject"])[0]
-                if isinstance(subject, bytes):
-                    subject = subject.decode(encoding or "utf-8")
-                
-                sender = msg.get("From")
-                
-                # Estrazione corpo
-                body = ""
-                if msg.is_multipart():
-                    for part in msg.walk():
-                        if part.get_content_type() == "text/plain":
-                            body = part.get_payload(decode=True).decode()
-                            break
-                else:
-                    body = msg.get_payload(decode=True).decode()
-                
-                content = f"📧 EMAIL DA: {sender}\nOGGETTO: {subject}\n\n{body}"
-                engine.upsert_text(content, metadata={
-                    "source": f"IMAP: {self.name}",
-                    "sender": sender,
-                    "subject": subject,
-                    "namespace": self.namespace,
-                    "file_type": "email"
-                })
-                new_nodes += 1
-                
-                # Segna come letta (opzionale, imaplib lo fa di default con fetch)
-            
-            mail.close()
-            mail.logout()
-            if new_nodes > 0:
-                self.logger.info(f"✅ Ingerite {new_nodes} nuove email.")
-        except Exception as e:
-            self.logger.error(f"⚠️ IMAP Poll Fail: {e}")
 
 class TelegramPoller(BasePoller):
     """Poller per Telegram Bot API (Pull-based)."""

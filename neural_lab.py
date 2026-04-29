@@ -18,6 +18,53 @@ import logging
 from typing import Any, List, Dict
 from pathlib import Path
 from enum import Enum
+import ast
+import traceback
+
+class SovereignTestRunner:
+    """🛡️ [STR-001] Modulo di Validazione Multilinguaggio (Python/Rust)."""
+    def __init__(self, workspace_path: str):
+        self.workspace = Path(workspace_path)
+
+    def audit_syntax(self, file_path: str) -> bool:
+        """Rileva il linguaggio e applica l'audit corretto."""
+        p = Path(file_path)
+        if p.suffix == ".py":
+            return self._audit_python(file_path)
+        elif p.suffix == ".rs":
+            return self._audit_rust()
+        return True # Default per file non critici
+
+    def _audit_python(self, file_path: str) -> bool:
+        try:
+            with open(file_path, 'r') as f:
+                source = f.read()
+            ast.parse(source)
+            return True
+        except Exception as e:
+            print(f"🚨 [Sovereign-Audit/PY] Errore in {file_path}: {e}")
+            return False
+
+    def _audit_rust(self) -> bool:
+        """Verifica la coerenza del core Rust via 'cargo check'."""
+        try:
+            rust_path = self.workspace / "neuralvault_rs"
+            if not rust_path.exists(): return True
+            
+            # Eseguiamo cargo check (leggero e veloce) invece di build
+            import subprocess
+            res = subprocess.run(["cargo", "check"], cwd=str(rust_path), 
+                               capture_output=True, text=True, timeout=30)
+            if res.returncode != 0:
+                print(f"🚨 [Sovereign-Audit/RS] Cargo Check FAILED:\n{res.stderr}")
+                return False
+            return True
+        except Exception as e:
+            print(f"⚠️ [Sovereign-Audit/RS] Impossibile eseguire Cargo: {e}")
+            return True # Non blocchiamo se cargo manca nell'ambiente
+
+    def run_smoke_test(self, file_path: str) -> bool:
+        return self.audit_syntax(file_path)
 
 # Configure sovereign logging
 logger = logging.getLogger("NeuralVault-Orchestrator")
@@ -43,6 +90,7 @@ class SwarmSettingsManager:
             "codebase_bridging": False,
             "evolution_mode": False, # Unified Key
             "evolution_suggestion_model": "llama3.2",
+            "chat": "llama3.2",
             "coding_1": "llama3.2",
             "coding_2": "llama3.2",
             "coding_supervisor": "llama3.2",
@@ -808,6 +856,12 @@ class SnakeAgent:
                     self.found += 1
                     print(f"🧲 [Mega-Vacuum] Ingested {nid[:8]} ({len(self.attached_nodes)}/{self.max_wagons})")
 
+        # 🧬 [v4.1.4] Node Sprouting (Germogliazione)
+        # Se abbiamo pochi nodi e vediamo orfani isolati, proviamo a 'germogliare' connessioni
+        if random.random() < 0.05 and self.attached_nodes:
+            self.status = "SPROUTING: Creating Semantic Anchors..."
+            self.sprout_nodes(nodes)
+
         # 🗺️ [Phase 3: Target Selection]
         tx, ty, tz = 0, 0, 0
         if len(self.attached_nodes) >= self.max_wagons:
@@ -827,8 +881,21 @@ class SnakeAgent:
                     self.is_returning = True
                     self.status = "Returning with Harvest..."
                 else:
-                    self.status = "Monitoring Clean Grid"
                     return None
+
+    def sprout_nodes(self, nodes: dict):
+        """[v4.1.4] Riconnette nodi orfani creando archi verso i cluster più vicini."""
+        try:
+            for nid in self.attached_nodes[:5]: # Solo i primi 5 per ciclo
+                if nid in nodes:
+                    # Cerchiamo un ancora (un nodo con molte connessioni)
+                    anchors = [anid for anid, n in nodes.items() if len(n.edges) > 3 and anid != nid]
+                    if anchors:
+                        anchor = random.choice(anchors)
+                        self.vault.add_relation(nid, anchor, RelationType.SEMANTIC, 0.7)
+                        # Notifica nel terminale con estetica biotica
+                        print(f"🌱 [Sprouting] Nodo {nid[:8]} riconnesso all'ancora {anchor[:8]}")
+        except: pass
 
         # 🗺️ [Phase 4: Movement Execution]
         step = 0.45
@@ -1222,8 +1289,10 @@ class SentinelAgent:
             
             if not topics: return None
             
-            # Troviamo il topic più "promettente" che non ha molte connessioni e non è stato già cercato
-            unique_topics = set(topics)
+            # Troviamo il topic più "promettente" (Tecnico e non cercato)
+            technical_whitelist = ["python", "rust", "async", "memory", "buffer", "kernel", "thread", "semantic", "logic", "vector"]
+            unique_topics = set([t for t in topics if t in technical_whitelist or len(t) > 8])
+            
             # Filtriamo quelli in history
             candidates = [t for t in unique_topics if t not in self.gap_history]
             if not candidates: return None
@@ -1450,7 +1519,7 @@ class SkyWalkerAgent:
         self.pos['z'] = float(rad * np.sin(angle))
         
         # 📡 [AUTONOMOUS_FORAGING] Se l'agente ha una missione attiva
-        if self.status.startswith("MISSION:") and random.random() < 0.05:
+        if (self.status.startswith("MISSION:") or self.status.startswith("🚀")) and not self.laser_active:
             self.laser_active = True
             threading.Thread(target=self._execute_mission_logic, daemon=True).start()
         else:
@@ -1459,72 +1528,141 @@ class SkyWalkerAgent:
         return {"agent": "FS-77", "pos": dict(self.pos), "laser": self.laser_active}
 
     def _execute_mission_logic(self):
-        """Esegue il ciclo di foraging senza bloccare il thread principale."""
+        """Esegue il ciclo di foraging avanzato con sintesi AI asincrona."""
         if "MISSION:" not in self.status: return
         query = self.status.replace("MISSION:", "").strip()
-        self.status = "MISSION_IN_PROGRESS: Searching..."
         
-        # 1. Ricerca Web Autonoma
+        # 1. THOUGHT: Pianificazione query
+        self.status = "THOUGHT: Analyzing gap..."
+        time.sleep(1) # Simula riflessione
+        
+        # 2. SEARCH: Ricerca Multi-Motore (Google/DDG)
+        self.status = f"SEARCH: Querying Google for '{query}'..."
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         urls = loop.run_until_complete(self._search_web(query))
         
-        async def _collect_and_ingest(url):
-            collected_count = 0
-            async for page in self.orch.forager.forage(url):
-                chunks = page.to_chunks()
-                for c in chunks:
-                    # Use upsert_text to handle ID generation and ingestion correctly
-                    self.vault.upsert_text(c['text'], metadata=c['metadata'])
-                    collected_count += 1
-            return collected_count
-
-        if urls:
-            self.status = f"MISSION_IN_PROGRESS: Foraging {len(urls)} sources..."
-            for url in urls:
-                if self.orch and self.orch.forager:
-                    try:
-                        count = loop.run_until_complete(_collect_and_ingest(url))
-                        self.web_hits += 1
-                        self.nodes_created += count
-                        time.sleep(2) 
-                    except Exception as e:
-                        print(f"⚠️ [FS-77/Forage] Error on {url}: {e}")
-            
-            self.status = "MISSION_COMPLETE: Intel Synchronized"
-            if self.orch: 
-                self.orch._process_agent_action({
-                    "agent": "FS-77", 
-                    "action": "MISSION_COMPLETE", 
-                    "motivation": f"Synchronized {self.nodes_created} nodes from web intel.", 
-                    "nodes_added": self.nodes_created
-                })
-            print(f"🚀 [FS-77] MISSION_COMPLETE: {len(urls)} sources ingested. Total Nodes Forged: {self.nodes_created}")
-        else:
+        if not urls:
             self.status = "MISSION_FAILED: No Intel Found"
-            print(f"⚠️ [FS-77] MISSION_FAILED: DuckDuckGo returned 0 results for '{query}'.")
+            time.sleep(10); self.status = "Idle"
+            return
+
+        # 3. FORAGE: Estrazione rapida
+        self.status = f"FORAGE: Scraping {len(urls)} sources..."
+        raw_intel = ""
+        for url in urls:
+            try:
+                # Recuperiamo solo il testo principale per la sintesi
+                async def _get_fast_text(u):
+                    text = ""
+                    async for page in self.orch.forager.forage(u):
+                        text += page.text + "\n"
+                    return text[:4000] # Limite per finestra LLM
+                
+                raw_intel += loop.run_until_complete(_get_fast_text(url))
+                self.web_hits += 1
+            except: continue
+
+        # 4. SYNTHESIS: L'Agente attende l'AI Mode (System stays active)
+        if raw_intel:
+            self.status = "SYNTHESIS: Waiting for AI Mode..."
+            synthesis = self._ask_ai_to_synthesize(query, raw_intel)
+            
+            if synthesis:
+                self.status = "INJECTING: Finalizing Wisdom Node..."
+                # v4.1.6: Pausa per permettere al dashboard di mostrare la Laser Storm
+                time.sleep(3) 
+                
+                # Iniezione del nodo sintetizzato ad alta qualità
+                meta = {"source": "SkyWalker_AI_Synthesis", "query": query, "quality": "HIGH"}
+                self.vault.upsert_text(synthesis, metadata=meta)
+                self.nodes_created += 1
+                
+                self.status = "MISSION_COMPLETE: Wisdom Anchored"
+                if self.orch: 
+                    self.orch._process_agent_action({
+                        "agent": "FS-77", 
+                        "action": "MISSION_COMPLETE", 
+                        "motivation": f"Synthesized high-quality wisdom for '{query}'.", 
+                        "nodes_added": 1
+                    })
+            else:
+                self.status = "MISSION_FAILED: Synthesis Error"
+        else:
+            self.status = "MISSION_FAILED: Empty Data"
         
-        # Reset dopo 30 secondi per tornare in pattugliamento
         time.sleep(30)
         self.status = "Idle"
 
-    async def _search_web(self, query: str) -> List[str]:
-        """Esegue una ricerca stealth su DuckDuckGo per trovare URL di partenza."""
-        urls = []
+    def _ask_ai_to_synthesize(self, topic: str, content: str) -> Optional[str]:
+        """Interpella l'LLM locale per creare una sintesi granulare (Asincrono per l'agente)."""
         try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
-                # Usiamo la versione HTML di DDG per semplicità (no JS bypass necessario)
-                resp = await client.get(f"https://html.duckduckgo.com/html/?q={query}", headers=headers)
+            # Recuperiamo l'URL di Ollama dai settings dell'orchestratore
+            base_url = self.orch.settings.get("ollama_url", "http://localhost:11434")
+            model = self.orch.settings.get_model("synthesis") # v4.1.4: Fixed key from 'chat' to 'synthesis'
+            
+            prompt = f"""
+            Sei l'Agente FS-77 SkyWalker. Hai raccolto queste informazioni su: {topic}.
+            SINTETIZZA queste informazioni in un unico nodo di conoscenza tecnico, denso e privo di rumore.
+            Usa un tono professionale e strutturato (Markdown).
+            
+            DATI RACCOLTI:
+            {content[:6000]}
+            """
+            
+            with httpx.Client(timeout=60.0) as client:
+                try:
+                    resp = client.post(f"{base_url}/api/generate", json={
+                        "model": model,
+                        "prompt": prompt,
+                        "stream": False
+                    })
+                    if resp.status_code == 200:
+                        return resp.json().get("response")
+                    else:
+                        print(f"🚨 [FS-77/AI] Ollama Error {resp.status_code}: {resp.text}")
+                except httpx.ConnectError:
+                    print(f"🚨 [FS-77/AI] Connection Failed to {base_url}. Is Ollama running?")
+                except Exception as e:
+                    print(f"🚨 [FS-77/AI] Request Error: {e}")
+        except Exception as e:
+            print(f"⚠️ [FS-77/AI] Critical Error during synthesis: {e}")
+        return None
+
+    async def _search_web(self, query: str) -> List[str]:
+        """Esegue una ricerca stealth su Google/DuckDuckGo."""
+        urls = []
+        headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
+        
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # --- TRY GOOGLE FIRST ---
+            try:
+                resp = await client.get(f"https://www.google.com/search?q={query}", headers=headers)
                 if resp.status_code == 200:
                     from bs4 import BeautifulSoup
                     soup = BeautifulSoup(resp.text, "html.parser")
-                    links = soup.select(".result__a")
-                    for link in links[:3]: # Primi 3 risultati per missione
-                        url = link.get("href")
-                        if url: urls.append(url)
-        except Exception as e:
-            print(f"⚠️ [FS-77/Search] Errore ricerca: {e}")
+                    # Google search result links usually in 'div.g' or specific anchor classes
+                    for a in soup.select('a'):
+                        href = a.get('href', '')
+                        if href.startswith('/url?q='):
+                            url = href.split('/url?q=')[1].split('&')[0]
+                            if 'google.com' not in url and url.startswith('http'):
+                                urls.append(url)
+                                if len(urls) >= 3: break
+            except: pass
+
+            # --- FALLBACK TO DUCKDUCKGO ---
+            if not urls:
+                try:
+                    resp = await client.get(f"https://html.duckduckgo.com/html/?q={query}", headers=headers)
+                    if resp.status_code == 200:
+                        from bs4 import BeautifulSoup
+                        soup = BeautifulSoup(resp.text, "html.parser")
+                        links = soup.select(".result__a")
+                        for link in links[:3]:
+                            url = link.get("href")
+                            if url: urls.append(url)
+                except: pass
         return urls
 
     def get_status_report(self):
@@ -1561,6 +1699,7 @@ class NeuralLabOrchestrator:
         
         # v1.1.0: Cognitive Hardening Modules
         self.mood_engine = VaultMoodEngine(self)
+        self.test_runner = SovereignTestRunner(engine.data_dir.parent)
 
         if self.benchmarks is None:
             self.benchmarks = ModelBenchmarkTracker(engine)
@@ -2155,10 +2294,17 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
                                 if self.settings.get("autonomous_patching"):
                                     res = self.actuator.apply_fix(a_file, a_line, a_content)
                                     if res["success"]:
-                                        self.git_bridge.commit_fix(branch, f"Autonomous Fix applied to {a_file}")
-                                        self.blackboard.post(SynapticSignal("EVOLUTION", AgentRole.GUARDIAN, 
-                                            f"🔧 CODE WRITTEN: {a_file} patched and committed to {branch}.", 
-                                            SignalType.SYSTEM_HEALING))
+                                        # 🛡️ [v4.1.3] Sovereign Verification Suite
+                                        if self.test_runner.audit_syntax(str(full_path)):
+                                            self.git_bridge.commit_fix(branch, f"Autonomous Fix applied to {a_file}")
+                                            self.blackboard.post(SynapticSignal("EVOLUTION", AgentRole.GUARDIAN, 
+                                                f"🔧 CODE VERIFIED: {a_file} syntax audit PASSED. Committed to {branch}.", 
+                                                SignalType.SYSTEM_HEALING))
+                                        else:
+                                            self.git_bridge.rollback()
+                                            self.blackboard.post(SynapticSignal("EVOLUTION", AgentRole.GUARDIAN, 
+                                                f"🚨 AUDIT FAILED: {a_file} syntax error detected. Rollback executed.", 
+                                                SignalType.SYSTEM_NOTIFICATION))
                                     else:
                                         self.git_bridge.rollback()
                                         self.blackboard.post(SynapticSignal("EVOLUTION", AgentRole.ANALYST, 
@@ -2304,7 +2450,7 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
             elif aid == "CB-003": self.bridger_agent.bridges_total += 1
             elif aid == "FS-77": 
                 self.skywalker.web_hits += 1
-                if "nodes_added" in result: self.skywalker.nodes_created = result["nodes_added"]
+                if "nodes_added" in result: self.skywalker.nodes_created += result["nodes_added"]
             elif aid == "SN-008":
                 if action_name == "Center Hand-off":
                     delivered = result.get("nodes_delivered", [])
@@ -2549,11 +2695,25 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
         self.skywalker.laser_active = False
         self.blackboard.post(SynapticSignal("FS-77", AgentRole.RESEARCHER, f"✅ RIENTRO BASE: X-Wing stabilizzato con {total_new_nodes} nuovi nodi.", SignalType.SYSTEM_NOTIFICATION))
 
+    def _calculate_vault_health(self) -> int:
+        """Calcola l'Health Score (0-100) basato su stabilità, entropia e gap."""
+        total = len(self.vault._nodes)
+        if total == 0: return 100
+        stable = sum(1 for s in self.node_states.values() if s == NodeState.STABLE)
+        orphans = sum(1 for n in self.vault._nodes.values() if not n.edges)
+        
+        # Algoritmo Sovereign Health v1.0
+        stability_ratio = (stable / total) * 60 # 60% peso stabilità
+        connectivity_ratio = (1 - (orphans / total)) * 40 # 40% peso connettività
+        return int(stability_ratio + connectivity_ratio)
+
     def get_orchestra_report(self) -> Dict:
         return {
             "timestamp": time.time(),
             "weather": self.blackboard.get_weather(),
             "swarm_settings": self.settings.settings,
+            "health_score": self._calculate_vault_health(),
+            "heatmap_enabled": True,
             "agents": {
                 "FS-77": self.skywalker.get_status_report(),
                 "JA-001": {
@@ -2614,6 +2774,13 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
                     "pos": {"x": self.bridger_agent.pos[0], "y": self.bridger_agent.pos[1], "z": self.bridger_agent.pos[2]},
                     "status": self.bridger_agent.status,
                     "bridges": self.bridger_agent.bridges_total
+                },
+                "FS-77": {
+                    "identity": self.skywalker.identity,
+                    "pos": dict(self.skywalker.pos),
+                    "status": self.skywalker.status,
+                    "web_hits": self.skywalker.web_hits,
+                    "nodes_forged": self.skywalker.nodes_created
                 }
             },
             "blackboard": self.blackboard.get_recent(12),

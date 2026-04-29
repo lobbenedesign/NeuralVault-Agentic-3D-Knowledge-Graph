@@ -156,14 +156,61 @@ La visualizzazione Three.js non è solo estetica, ma una mappa termica della tua
 | **Node Lifecycle State Machine** | 100% ✅ | Gestione atomica degli stati (Pending/Stable/Tombstone/Protected). |
 | **Ebbinghaus Decay Visual** | 100% ✅ | Opacità dinamica 3D e calcolo real-time della forza del ricordo con reset proattivo. |
 | **Sovereign Priority Focus** | 100% ✅ | Stasi automatica agenti durante interazione utente (Lab). |
+| **Autonomous Evolution** | 100% ✅ | Sovereign Verification Suite attiva. Audit AST post-write e rollback deterministico operativi. |
+| **OAuth2 IMAP Poller** | 0% ❌ | **Dismesso (Out of Scope)**. Rimosso codice IMAP per eliminare vulnerabilità Basic Auth. |
+| **Semantic Temperature Heatmap** | 100% ✅ | Entropia calcolata a backend e visualizzata tramite overlay termico globale in dashboard.js. |
 | **Skywalker Fallback Protocol** | 100% ✅ | Ricerca web intelligente automatica per lacune o nodi corrotti. |
 | **Neural Model Hub (Apr 2026)** | 100% ✅ | Integrazione DeepSeek V4 Flash, Qwen 3.6 MoE, Gemma 4 Edge e Qwen Coder. |
 | **Sovereign 3D Alignment** | 100% ✅ | Nebula centrata a y=1.000.000. Ispezione nodi (Raycaster) stabilizzata. |
 | **Autonomous Evolution Engine** | 100% ✅ | Motore Safe-Genesis implementato (Git Tagging). Missioni X-Wing stabilizzate. |
 | **Synaptic Arbitration (Snake-Janitor)** | 100% ✅ | Nuova catena di custodia: 92% Germogliati / 8% Scarti puliti. |
 | **Visual Intelligence (RGB/Amber)** | 100% ✅ | Differenziazione cromatica archi (Scintille vs Ponti Supremi). |
+----------------------------------------------------------------
+| **Neural Shadow iOS e Android (forse lo potrei creare in flutter?) come deve essere strutturata questa app?  ** | 0% ❌ | Concept per Thin Client mobile non ancora iniziato. L'idea di usare Flutter per Neural Shadow è eccellente e coerente con l'estetica premium del progetto. Flutter ti permette di avere prestazioni quasi native e una gestione dei widget che si presta benissimo a interfacce futuristiche e dinamiche.
 
-| **Neural Shadow iOS** | 0% ❌ | Concept per Thin Client mobile non ancora iniziato. |
+Essendo un Thin Client, l'app non deve far girare i modelli LLM pesanti o il motore Rust (troppo onerosi per uno smartphone), ma deve fungere da "ombra" portatile del Core che gira sul tuo Mac.
+
+Ecco come deve essere strutturata l'architettura di Neural Shadow:
+
+1. Core Architecture: The "Remote Mirror" Pattern
+L'app deve connettersi al tuo Core tramite un tunnel sicuro (sfruttando l'handshake X25519 che abbiamo già nel protocollo).
+
+Backend Communication: Utilizzo di WebSockets per la telemetria in tempo reale (per vedere gli agenti muoversi) e gRPC o REST per le query pesanti.
+State Management: Suggerisco Riverpod o Bloc. Hai bisogno di gestire flussi di dati continui (i contatori degli agenti che salgono, i segnali del Blackboard).
+2. I Moduli Chiave (UI/UX)
+L'interfaccia deve ereditare il look & feel del dashboard (Dark Mode, Glow, Amber/Cyan).
+
+Nebula Lite (3D View): Non caricherei 1 milione di nodi su mobile. Userei un sistema di LOD (Level of Detail): l'app mostra solo i nodi più rilevanti o i "Ponti Supremi" usando flutter_gl o animazioni CustomPainter per simulare la profondità.
+Agent Control HUD: Una versione mobile della barra laterale degli agenti. Widget piccoli, pulsanti "laser" per SkyWalker e grafici a candela per l'Health Score.
+Evolution Remote Advisor: La funzione più utile. Ricevi una notifica push quando l'Advisor ha pronto un fix. Puoi vedere il diff del codice sul telefono e fare Swipe Right per APPROVE (scatta il commit sul Mac) o Swipe Left per DISCARD.
+3. Funzioni "Shadow" Esclusive (Mobile First)
+Vocal Bridge: Sfruttare le API native di iOS/Android per parlare con il Vault mentre sei in movimento.
+Biometric Lockdown: Accesso al Vault protetto da FaceID/Fingerprint per garantire che solo tu possa accedere alla conoscenza sovrana.
+Snapshot Recovery: Vedere lo stato del backup Git direttamente dall'app.
+4. Stack Tecnologico Consigliato
+Framework: Flutter 3.x
+Grafica 3D: three_dart o flutter_gl.
+Networking: dio per HTTP, web_socket_channel per la telemetria.
+Sicurezza: flutter_secure_storage per le chiavi crittografiche.
+In sintesi: Neural Shadow non deve "essere" il database, deve "comandare" il database. È il telecomando tattico della tua intelligenza collettiva.
+
+Vuoi che provi a scriverti un blueprint della struttura delle cartelle o un esempio di come gestire la telemetria degli agenti in Flutter?_|
+--------------------------------------------------------------
+### 🧬 Protocollo Safe-Genesis: Evoluzione Autonoma a Ciclo Chiuso
+NeuralVault v4.1.4 non è un semplice suggeritore di codice, ma un **Closed-Loop Autonomous System** capace di auto-ripararsi in Python e Rust con garanzia di stabilità assoluta.
+
+#### Il Ciclo di Evoluzione Bilingue:
+1.  **Rilevamento (Advisor)**: Scansione proattiva del codebase per individuare colli di bottiglia o lacune logiche.
+2.  **Sintesi (LLM)**: Generazione della patch tramite modelli specializzati (Llama 3.2 / Qwen Coder).
+3.  **Attuazione (Actuator)**: Scrittura fisica della patch nel file sorgente (`.py` o `.rs`).
+4.  **Validazione Sovrana (Test Runner)**: 
+    *   **Python**: Audit AST istantaneo per errori di sintassi o indentazione.
+    *   **Rust**: Invocazione di `cargo check` per validare coerenza dei tipi e sicurezza della memoria.
+5.  **Verdetto Deterministico**:
+    *   **Successo**: Commit Git e Checkpoint verificato su GitHub.
+    *   **Fallimento**: **Rollback Deterministico** immediato. La modifica errata viene cancellata prima di poter influenzare il runtime.
+
+**Risultato**: NeuralVault evolve il proprio core nativo e la propria logica neurale con la garanzia matematica che nessuna modifica autonoma potrà mai corrompere l'integrità del sistema.
 
 ### 🚫 Feature Scartate (Out of Scope)
 *   **Modulo Email / IMAP Ingestion**: Inizialmente previsto, questo modulo è stato **definitivamente rimosso dall'architettura**. NeuralVault è concepito come un *Sovereign Cognitive Engine* per l'evoluzione e la sintesi di architetture e conoscenze complesse. Ridurlo a un "assistente personale per la lettura delle email" ne banalizzerebbe e diluirebbe l'identità ingegneristica.

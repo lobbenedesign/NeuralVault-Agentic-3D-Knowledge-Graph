@@ -2692,6 +2692,6 @@ async def get_system_recommendations():
         return {"error": str(e)}
 
 if __name__ == "__main__":
-    print("🚀 [BOOT-TRACE-77i] CARICAMENTO CORE NEURALE v4.0.1 Sovereign...")
+    print("🚀 [BOOT-TRACE-77i] CARICAMENTO CORE NEURALE v4.1.4 Sovereign...")
     # Avvio del server su 127.0.0.1 con LOG INFO per vedere lo stato
     uvicorn.run(app, host="127.0.0.1", port=8001, log_level="info")

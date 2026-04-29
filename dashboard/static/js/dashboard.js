@@ -2876,6 +2876,16 @@ function initSSE() {
                         const f = document.getElementById('val-snake-found'); if(f) f.innerText = agentData.found || 0;
                         const c = document.getElementById('val-snake-crafted'); if(c) c.innerText = agentData.crafted || 0;
                         const dsell = document.getElementById('val-snake-deleted'); if(dsell) dsell.innerText = agentData.deleted || 0;
+                        
+                        // 🧬 Sprouting Logic
+                        const isSprouting = agentData.status && agentData.status.includes("SPROUTING");
+                        if (isSprouting) {
+                            snakeTargetPos.copy(snakeSprite.position);
+                            triggerSnakeSprouting(agentData.pos);
+                            if (window.log && Math.random() > 0.98) window.log("🌱 [SN-008] Sprouting Semantic Anchors...", "#10b981");
+                        } else {
+                            snakeTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
+                        }
                     }
                     if (id === 'QA-101') { 
                         const el = document.getElementById('val-quantum-fused'); if(el) el.innerText = agentData.fused_clusters || 0; 
@@ -2903,9 +2913,44 @@ function initSSE() {
                         bridgerTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
                     }
                     if (id === 'FS-77') {
-                        const h = document.getElementById('val-skywalker-hits'); if(h) h.innerText = agentData.hits || agentData.web_hits || 0;
-                        const n = document.getElementById('val-skywalker-nodes'); if(n) n.innerText = agentData.nodes_created || 0;
-                        skywalkerTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
+                        const h = document.getElementById('val-skywalker-hits'); if(h) h.innerText = agentData.web_hits || 0;
+                        const n = document.getElementById('val-skywalker-nodes'); if(n) n.innerText = agentData.nodes_forged || agentData.nodes_created || 0;
+                        
+                        // v4.1.4: Sovereign Laser-Fire Choreography
+                        const statusEl = document.getElementById('skywalker-mission-stat');
+                        const cardEl = document.getElementById('skywalker-hud-icon');
+                        const isInjecting = agentData.status && agentData.status.includes("INJECTING");
+                        
+                        if (statusEl && agentData.status && agentData.status !== "Idle" && !agentData.status.includes("Idle")) {
+                            if (cardEl) cardEl.classList.remove('inactive-agent');
+                            statusEl.style.background = isInjecting ? "rgba(239, 68, 68, 0.6)" : "rgba(239, 68, 68, 0.3)";
+                            statusEl.innerHTML = `<span style="font-weight:bold; color:#fff; animation: pulse 1s infinite; text-shadow: 0 0 5px #ef4444;">${agentData.status}</span>`;
+                            
+                            // 🔥 Heatmap & Laser Logic
+                            document.body.style.boxShadow = "inset 0 0 120px rgba(239, 68, 68, 0.15)";
+                            
+                            if (isInjecting) {
+                                // ⏸️ Pausa pattugliamento: Blocchiamo la target pos sulla posizione attuale per lo shooting
+                                skywalkerTargetPos.copy(skywalkerSprite.position);
+                                
+                                // 🔥 Burst Fire Logic: Spara solo ogni 500ms durante l'iniezione
+                                const now = Date.now();
+                                if (!window._lastSkywalkerFire || (now - window._lastSkywalkerFire > 500)) {
+                                    triggerSkywalkerLaserStorm(agentData.pos); 
+                                    window._lastSkywalkerFire = now;
+                                }
+                            } else {
+                                // 🛸 Pattugliamento attivo
+                                skywalkerTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
+                            }
+                        } else if (statusEl) {
+                            if (cardEl) cardEl.classList.add('inactive-agent');
+                            statusEl.style.background = "rgba(239, 68, 68, 0.1)";
+                            statusEl.innerHTML = `<span>Web-Hits: ${agentData.web_hits || 0}</span> | <span>Forged: ${agentData.nodes_forged || 0}</span>`;
+                            document.body.style.boxShadow = "none";
+                            // Continua il pattugliamento in idle
+                            skywalkerTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
+                        }
                     }
                 }
             });
@@ -4485,4 +4530,136 @@ window.copyTracingLog = () => {
     }).catch(err => {
         console.error("Failed to copy logs:", err);
     });
+};
+
+// 🔫 v4.1.4: Skywalker Laser Storm Engine
+// Spara proiettili laser neon dai cannoni delle ali verso il target
+window.triggerSkywalkerLaserStorm = function(targetPos) {
+    if (!window.skywalkerSprite || !window.scene) {
+        console.warn("⚠️ [LaserStorm] Sprite o Scena non pronti.");
+        return;
+    }
+    
+    console.log("🚀 [FS-77] LASER STORM TRIGGERED towards:", targetPos);
+    if (window.log) window.log("⚡ [FS-77] LASER STORM: INJECTING KNOWLEDGE...", "#ef4444");
+
+    const colors = [0xff4444, 0xff0000, 0xee2222]; // Red Neon Palette
+    const exp = 4000; // Expansion factor matches nebula
+    
+    for (let i = 0; i < 6; i++) { // Aumentati a 6 per più densità
+        const laserGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(0, 0, 80) // Più lungo per visibilità
+        ]);
+        
+        const laserMat = new THREE.MeshBasicMaterial({ 
+            color: colors[Math.floor(Math.random() * colors.length)],
+            transparent: true,
+            opacity: 1.0, // Massima luminosità
+            side: THREE.DoubleSide
+        });
+        
+        const laser = new THREE.Mesh(laserGeo, laserMat);
+        
+        // Offset dai cannoni delle ali
+        const sideOffset = (i < 3 ? -35 : 35);
+        const verticalOffset = (i % 3 === 0 ? 15 : (i % 3 === 1 ? 0 : -15));
+        
+        laser.position.copy(window.skywalkerSprite.position);
+        
+        const right = new THREE.Vector3(1, 0, 0).applyQuaternion(window.skywalkerSprite.quaternion);
+        const up = new THREE.Vector3(0, 1, 0).applyQuaternion(window.skywalkerSprite.quaternion);
+        
+        laser.position.add(right.multiplyScalar(sideOffset));
+        laser.position.add(up.multiplyScalar(verticalOffset));
+        
+        const finalTarget = new THREE.Vector3(
+            targetPos.x * exp + (Math.random() - 0.5) * 150,
+            targetPos.y * exp + (Math.random() - 0.5) * 150,
+            targetPos.z * exp + (Math.random() - 0.5) * 150
+        );
+        
+        laser.lookAt(finalTarget);
+        window.scene.add(laser);
+        
+        const startTime = Date.now();
+        const duration = 500 + Math.random() * 300; // Volo più rapido e aggressivo
+        const startPos = laser.position.clone();
+        
+        function animateLaser() {
+            const elapsed = Date.now() - startTime;
+            const progress = elapsed / duration;
+            
+            if (progress < 1) {
+                laser.position.lerpVectors(startPos, finalTarget, progress);
+                laser.scale.z = 1 + progress * 5;
+                requestAnimationFrame(animateLaser);
+            } else {
+                window.scene.remove(laser);
+                laserGeo.dispose();
+                laserMat.dispose();
+            }
+        }
+        animateLaser();
+    }
+    
+    // Feedback nel log solo la prima volta per scarica
+    if (Math.random() > 0.95 && window.log) {
+        window.log("⚡ [FS-77] Injecting Wisdom via Laser Storm.", "#ef4444");
+    }
+};
+
+// 🌱 v4.1.4: Snake Sprouting Engine
+// Genera piccoli archi organici che 'germogliano' dallo Snake verso la Nebula
+window.triggerSnakeSprouting = function(agentPos) {
+    if (!window.snakeSprite || !window.scene) return;
+    
+    // Solo un burst ogni tanto per non saturare
+    if (Math.random() > 0.2) return;
+
+    const start = window.snakeSprite.position.clone();
+    const exp = 4000;
+    
+    for (let i = 0; i < 3; i++) {
+        // Target randomico nel raggio d'azione
+        const target = new THREE.Vector3(
+            start.x + (Math.random() - 0.5) * 800,
+            start.y + (Math.random() - 0.5) * 800,
+            start.z + (Math.random() - 0.5) * 800
+        );
+        
+        // Curva Bezier per effetto 'organico'
+        const mid = start.clone().lerp(target, 0.5);
+        mid.y += 200; // Curva verso l'alto
+        
+        const curve = new THREE.QuadraticBezierCurve3(start, mid, target);
+        const points = curve.getPoints(20);
+        const sproutGeo = new THREE.BufferGeometry().setFromPoints(points);
+        
+        const sproutMat = new THREE.LineBasicMaterial({ 
+            color: 0x10b981, // Green Sprout
+            transparent: true,
+            opacity: 0.8
+        });
+        
+        const sproutLine = new THREE.Line(sproutGeo, sproutMat);
+        window.scene.add(sproutLine);
+        
+        // Animazione: da verde ad arancione e poi scompare
+        let progress = 0;
+        function animateSprout() {
+            progress += 0.02;
+            if (progress < 1) {
+                // Sfumatura verso arancio (0xfb923c)
+                sproutMat.color.lerp(new THREE.Color(0xfb923c), progress);
+                sproutMat.opacity = 0.8 * (1 - progress);
+                requestAnimationFrame(animateSprout);
+            } else {
+                window.scene.remove(sproutLine);
+                sproutGeo.dispose();
+                sproutMat.dispose();
+            }
+        }
+        animateSprout();
+    }
 };
