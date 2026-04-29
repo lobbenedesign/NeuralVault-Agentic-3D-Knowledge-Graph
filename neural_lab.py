@@ -905,7 +905,7 @@ class ReaperAgent:
                 self.regeneration_timer -= 1
                 if self.regeneration_timer <= 0:
                     # FINISH SURGERY
-                    self.processed += 1
+                    # Incremento gestito dall'Orchestratore v4.0.2
                     registry = getattr(self, 'tombstone_registry', None)
                     if registry: registry.finalize(self.target_node['id'])
                     
@@ -913,8 +913,9 @@ class ReaperAgent:
                         "agent": "RP-001",
                         "action": "Surgery Completed",
                         "pos": {"x": tx, "y": ty, "z": tz},
-                        "motivation": "Memory integrity restored. Sector stabilized.",
-                        "reclaimed": 0.12 # MB finali
+                        "reclaimed": 0.05 + (random.random() * 0.1), # Ensure at least 0.05MB reclaimed
+                        "motivation": "Neural Grid surgery successful. Fragmented shards consolidated.",
+                        "savings": "0.15 MB recovered"
                     }
                     self.target_node = None 
                     self.patrol_cycles = 60
@@ -1034,7 +1035,7 @@ class SynthAgent:
                 return None
         
         if random.random() < 0.25: # Increased from 0.05
-            self.sparks_generated += 1
+            # Incremento gestito dall'Orchestratore v4.0.2
             if not self.team: self.spawn_team() 
             
             # 🧠 [High #3] Semantic Synthesis Algorithm
@@ -1171,6 +1172,7 @@ class SentinelAgent:
         self.target_node = None
         self.last_gap_analysis = 0 # ⏱️ Time-based analysis trigger
         self.gap_history = [] # 📚 History of identified gaps to avoid repetition
+        self.is_supersynapse = False # 🌈 Momentary flag for UI lightning
 
     def calculate_resonance(self, source_id: str, target_id: str) -> float:
         """
@@ -1264,28 +1266,36 @@ class SentinelAgent:
                 tid = self.target_node
                 self.target_node = None
                 self.status = "Audit Complete"
-                self.validated_count += 1
+                
+                # 🌈 [v4.0.2] Super-Synapse Chance during Audit
+                is_super = False
+                if random.random() < 0.25: # 25% chance during successful audit
+                    self.is_supersynapse = True
+                    is_super = True
+                
                 return {
                     "agent": "SE-007", 
                     "action": "Audit Complete", 
                     "target_id": tid, 
-                    "motivation": "Synaptic integrity verified via cross-reference audit.",
-                    "savings": "Reliability Index increased to 98%."
+                    "is_supersynapse": is_super,
+                    "motivation": "Synaptic integrity verified. High-fidelity cross-reference archived." if is_super else "Synaptic integrity verified via cross-reference audit.",
+                    "savings": "Reliability Index increased to 99%."
                 }
             else:
                 self.status = f"Auditing {self.target_node[:8]}"
         else:
-            # Patrol the outer edges of the nebula (Looking for incoming data)
+            # Patrol the ENTIRE nebula (Dynamic Radius v4.0.2)
             angle = now * 0.08
-            rad = 1600000 + 200000 * np.sin(now * 0.3)
+            # Varia il raggio da 500k a 2.5M per coprire l'intero volume
+            rad = 1500000 + 1000000 * np.sin(now * 0.05) 
             tx = float(rad * np.cos(angle))
-            ty = float(400000 * np.sin(now * 0.1))
+            ty = float(800000 * np.sin(now * 0.12)) # Escursione verticale aumentata
             tz = float(rad * np.sin(angle))
-            step = 0.4 # Super fast Sentinel (v3.5.0)
+            step = 0.45 # Super fast Sentinel
             self.pos['x'] += (tx - self.pos['x']) * step
             self.pos['y'] += (ty - self.pos['y']) * step
             self.pos['z'] += (tz - self.pos['z']) * step
-            self.status = "Monitoring Ingress..."
+            self.status = "Deep Nebula Patrol"
             
             if random.random() < 0.15: # Increased from 0.03
                 # 🛡️ v17.5 Advanced Validation Gateway
@@ -1309,6 +1319,7 @@ class SentinelAgent:
                     # 🌈 PROBABILITÀ SUPER-SINAPSI (Effetto RGB LED Aura)
                     if random.random() < 0.35: # Increased from 0.15
                         self.super_synapses += 1
+                        self.is_supersynapse = True
                         return {
                             "agent": "SE-007", 
                             "action": "Super-Synapse Forging", 
@@ -1461,21 +1472,36 @@ class SkyWalkerAgent:
         asyncio.set_event_loop(loop)
         urls = loop.run_until_complete(self._search_web(query))
         
+        async def _collect_and_ingest(url):
+            collected_count = 0
+            async for page in self.orch.forager.forage(url):
+                chunks = page.to_chunks()
+                for c in chunks:
+                    self.vault.add_node(c['text'], metadata=c['metadata'])
+                    collected_count += 1
+            return collected_count
+
         if urls:
             self.status = f"MISSION_IN_PROGRESS: Foraging {len(urls)} sources..."
             for url in urls:
                 if self.orch and self.orch.forager:
-                    # Inneschiamo il foraging tramite l'orchestratore
                     try:
-                        new_nodes = self.orch.forager.forage(url, max_depth=1)
+                        count = loop.run_until_complete(_collect_and_ingest(url))
                         self.web_hits += 1
-                        if isinstance(new_nodes, list):
-                            self.nodes_created += len(new_nodes)
-                        time.sleep(2) # Breath between URLs
-                    except: pass
+                        self.nodes_created += count
+                        time.sleep(2) 
+                    except Exception as e:
+                        print(f"⚠️ [FS-77/Forage] Error on {url}: {e}")
+            
             self.status = "MISSION_COMPLETE: Intel Synchronized"
-            if self.orch: self.orch._process_agent_action({"agent": "FS-77", "action": "MISSION_COMPLETE", "motivation": f"Synchronized intel for '{query}'.", "nodes_added": self.nodes_created})
-            print(f"🚀 [FS-77] MISSION_COMPLETE: {len(urls)} sources ingested for '{query}'. Total Nodes: {self.nodes_created}")
+            if self.orch: 
+                self.orch._process_agent_action({
+                    "agent": "FS-77", 
+                    "action": "MISSION_COMPLETE", 
+                    "motivation": f"Synchronized {self.nodes_created} nodes from web intel.", 
+                    "nodes_added": self.nodes_created
+                })
+            print(f"🚀 [FS-77] MISSION_COMPLETE: {len(urls)} sources ingested. Total Nodes Forged: {self.nodes_created}")
         else:
             self.status = "MISSION_FAILED: No Intel Found"
             print(f"⚠️ [FS-77] MISSION_FAILED: DuckDuckGo returned 0 results for '{query}'.")
@@ -1552,7 +1578,7 @@ class NeuralLabOrchestrator:
         project_root = engine.data_dir.parent if self.settings.get("codebase_bridging", False) else None
         self.bridger = LatentBridge(engine, project_root)
         self.forager = getattr(engine, 'forager', None) # Passed from api.py
-        self.last_bridge_time = 0
+        self.last_bridge_time = time.time()
         
         # Agenti Core (Passando 'self' per coordinamento stati)
         self.janitor = JanitorAgent(engine, self)
@@ -1745,8 +1771,22 @@ class NeuralLabOrchestrator:
         # Finalize states
         for node in waste:
             self.transition_node(node.id, NodeState.IN_JUDGEMENT, NodeState.WASTE_PENDING, agent_id)
+        
+        # 🌱 [Sprouting Logic] Reconect potential nodes to the nebula
         for node in potential:
-            self.transition_node(node.id, NodeState.IN_JUDGEMENT, NodeState.POTENTIAL, agent_id)
+            if self.transition_node(node.id, NodeState.IN_JUDGEMENT, NodeState.POTENTIAL, agent_id):
+                # Cerchiamo un nodo ancora per far germogliare l'orfano
+                stable_nodes = [nid for nid, state in self.node_states.items() if state == NodeState.STABLE]
+                if stable_nodes:
+                    anchor = random.choice(stable_nodes)
+                    self.vault.add_relation(node.id, anchor, RelationType.SEMANTIC, 0.7)
+                else:
+                    # Fallback: connect to root or a random node if nebula is young
+                    all_ids = list(self.vault._nodes.keys())
+                    if all_ids:
+                        anchor = random.choice(all_ids)
+                        if anchor != node.id:
+                            self.vault.add_relation(node.id, anchor, RelationType.SEMANTIC, 0.5)
             
         return len(waste), len(potential)
         
@@ -2221,9 +2261,11 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
                     valid_targets.append(node)
             
             if valid_targets:
-                w, p = self._batch_arbitrate_nodes(valid_targets, "CORE")
-                # self.snake.processed += w  <-- Rimosso doppio conteggio manuale
-                self.blackboard.post(SynapticSignal("CORE", AgentRole.OPTIMIZER, f"Batch Arbitration Complete: {w} WASTE, {p} POTENTIAL.", SignalType.SYSTEM_NOTIFICATION))
+                w, p = self._batch_arbitrate_nodes(valid_targets, "SN-008")
+                # 📊 [v4.0.2] Precision Telemetry for Mega-Convoy
+                self.snake.harvested += p # Nodi Germogliati
+                self.snake.processed += w # Nodi Eliminati
+                self.blackboard.post(SynapticSignal("CORE", AgentRole.OPTIMIZER, f"Batch Arbitration Complete: {w} WASTE, {p} POTENTIAL (Snake Sprouted).", SignalType.SYSTEM_NOTIFICATION))
 
         # 📡 [STRATEGIC_MISSION] Sentinel -> SkyWalker Loop
         if result.get("action") == "Strategic Gap Identified":
@@ -2238,25 +2280,28 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
         if result.get("action") in ["Tombstone Created", "Node Digestion"]:
             self.tombstone_registry.register(result.get("pos"))
 
-        # --- NUOVA LOGICA TELEMETRIA ROBUSTA (v4.0.1) ---
-        # Incrementiamo i contatori basandoci sull'ID dell'agente (aid) 
-        # Questo garantisce che ogni successo venga conteggiato anche se l'LLM cambia il nome dell'azione.
-        if aid == "DI-007": self.distiller.pruned_count += 1
-        elif aid == "JA-001": self.janitor.eaten_count += 1
-        elif aid == "RP-001": 
-            self.reaper.processed += 1
-            if "reclaimed" in result:
-                self.reaper.reclaimed_mb += result["reclaimed"]
-        elif aid == "SN-008": self.snake.processed += 1
-        elif aid == "QA-101": self.quantum.clusters_fused += 1
-        elif aid == "SE-007": self.sentinel.validated_count += 1
-        elif aid == "SY-009": self.synth.sparks_generated += 1
-        elif aid == "CB-003": self.bridger_agent.bridges_total += 1
-        elif aid == "FS-77": 
-            self.skywalker.web_hits += 1
-            # Se l'azione riporta nuovi nodi, li aggiungiamo al contatore globale
-            if "nodes_added" in result:
-                self.skywalker.nodes_created = result["nodes_added"]
+        # --- NUOVA LOGICA TELEMETRIA ROBUSTA (v4.0.3) ---
+        # Definiamo cosa NON è un'azione produttiva (Heartbeats/Movement)
+        heartbeat_actions = ["Standard Movement", "Watch-Cycle", "Pulse Signal", "Deep Nebula Patrol", 
+                             "Idle", "Monitoring Clean Grid", "Patrolling High-Orbit...", "Surveying Grid Patterns..."]
+        
+        action_name = result.get("action", "")
+        if action_name and action_name not in heartbeat_actions:
+            # print(f"📊 [Telemetry] Processing productive action: {aid} -> {action_name}")
+            if aid == "DI-007": self.distiller.pruned_count += 1
+            elif aid == "JA-001": self.janitor.eaten_count += 1
+            elif aid == "RP-001": 
+                self.reaper.processed += 1
+                if "reclaimed" in result: self.reaper.reclaimed_mb += result["reclaimed"]
+            elif aid == "QA-101": self.quantum.clusters_fused += 1
+            elif aid == "SE-007": 
+                self.sentinel.validated_count += 1
+                if result.get("is_supersynapse"): self.sentinel.super_synapses += 1
+            elif aid == "SY-009": self.synth.sparks_generated += 1
+            elif aid == "CB-003": self.bridger_agent.bridges_total += 1
+            elif aid == "FS-77": 
+                self.skywalker.web_hits += 1
+                if "nodes_added" in result: self.skywalker.nodes_created = result["nodes_added"]
 
         if "action" not in result: return # Movement-only update
         
@@ -2320,6 +2365,12 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
                             self.vault.add_relation(edge["src"], edge["dst"], RelationType.SYNAPSE, result.get("confidence", 0.9))
                 
                 self.blackboard.post(SynapticSignal("SENTINEL", AgentRole.GUARDIAN, f"🛡️ AUDIT: Node {str(tid)[:8]} validated as LIVE.", SignalType.KINETIC_EVENT, motivation=motivation, savings=savings))
+        
+        elif result["action"] == "Super-Synapse Forging":
+            self.sentinel.super_synapses += 1
+            self.blackboard.post(SynapticSignal("SENTINEL", AgentRole.GUARDIAN, 
+                f"🌈 RGB_SYNAPSE: Established high-fidelity cross-reference for {str(tid)[:8]}.", 
+                SignalType.SYSTEM_HEALING, motivation=motivation, savings=savings, is_supersynapse=True))
         
         elif result["action"] == "Semantic Pruning":
             self.distiller.pruned_count += 1
@@ -2453,7 +2504,6 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
                                 setattr(new_node, 'pending_validation', True) # Doppio scudo
                         
                         total_new_nodes += 1
-                        self.skywalker.web_hits += 1
             except Exception as e:
                 print(f"⚠️ [FS-77] Forage error for {url}: {e}")
 
@@ -2531,7 +2581,8 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
                     "pos": dict(self.sentinel.pos),
                     "status": self.sentinel.status,
                     "validated": getattr(self.sentinel, 'validated_count', 0),
-                    "synapses": getattr(self.sentinel, 'super_synapses', 0)
+                    "super_synapses": getattr(self.sentinel, 'super_synapses', 0),
+                    "is_supersynapse": getattr(self.sentinel, 'is_supersynapse', False)
                 },
                 "CB-003": {
                     "identity": {"id": "CB-003", "name": "Code-Doc-Bridger", "role": "Latent Bridge Creator", "archetype": "expert"},
@@ -2543,6 +2594,12 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
             "blackboard": self.blackboard.get_recent(12),
             "court_actions": self.archiver.history[:20]
         }
+        
+        # [SIGNAL_RESET] Reset momentary flags after transmission
+        if hasattr(self.sentinel, 'is_supersynapse'):
+            self.sentinel.is_supersynapse = False
+            
+        return report
 
     # --- Persistence Logic (v3.5.0) ---
 

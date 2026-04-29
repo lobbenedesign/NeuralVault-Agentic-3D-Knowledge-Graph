@@ -427,11 +427,11 @@ async def startup_event():
     
     # 2. Initialize Multimodal Engine with dynamic URL & Routing Settings
     app.state.mm_processor = MultimodalSynapseProcessor(ollama_url=base_url, settings=settings_manager)
-    engine.mm_processor = app.state.mm_processor # Attach for health check
-    
-    # 3. Initialize Neural Lab (Orchestrator)
+    engine.mm_processor = app.state.mm_processor # Attach for health
+    # 3. Initialize Forager & Neural Lab (Orchestrator)
+    engine.forager = SovereignWebForager(max_depth=1, max_pages=10)
     app.state.lab = NeuralLabOrchestrator(engine)
-    
+
     # 4. Agent007 Schema Gardening
     try:
         engine.agent007.ensure_schema()

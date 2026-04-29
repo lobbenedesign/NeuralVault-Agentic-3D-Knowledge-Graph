@@ -33,7 +33,8 @@ let lastQuantumClusters = 0, lastSynthSparks = 0;
 let isEvolving = false;
 let evolutionProgress = 0;
 let evolutionStep = "";
-let quantumFlashTime = 0, synthFlashTime = 0, sentinelFlashTime = 0;
+let quantumFlashTime = 0, synthFlashTime = 0, sentinelFlashTime = 0, sentinelLightningTime = 0;
+let sentinelLightningGroup = null;
 let followedAgent = null;
 let clusterNodesGroup;
 let medicalCubes = [];
@@ -752,6 +753,40 @@ function animate() {
             sentinelGroup.userData.mat.emissive.setHex(0x1e293b);
             sentinelGroup.userData.mat.emissiveIntensity = 0.5;
             sentinelGroup.userData.mat.color.setHex(0xcccccc);
+        }
+
+        // ⚡ [v4.0.2] Neural Overload: Yellow Lightning Effect
+        if (sentinelLightningTime > 0) {
+            sentinelLightningTime--;
+            
+            // Pulsazione e Colore Giallo Intenso
+            const pulse = 1.0 + Math.sin(time * 40) * 0.3;
+            sentinelGroup.scale.setScalar(pulse);
+            sentinelGroup.userData.mat.emissive.setHex(0xfacc15); // Yellow
+            sentinelGroup.userData.mat.emissiveIntensity = 5.0;
+
+            // Disegna i fulmini
+            if (!sentinelLightningGroup) {
+                sentinelLightningGroup = new THREE.Group();
+                sentinelGroup.add(sentinelLightningGroup);
+            }
+            sentinelLightningGroup.clear();
+            
+            for (let i = 0; i < 5; i++) {
+                const points = [];
+                let curr = new THREE.Vector3(0,0,0);
+                points.push(curr.clone());
+                for (let j = 0; j < 4; j++) {
+                    curr.add(new THREE.Vector3((Math.random()-0.5)*50000, (Math.random()-0.5)*50000, (Math.random()-0.5)*50000));
+                    points.push(curr.clone());
+                }
+                const lightningGeo = new THREE.BufferGeometry().setFromPoints(points);
+                const lightningMat = new THREE.LineBasicMaterial({ color: 0xffff00, transparent: true, opacity: Math.random() });
+                const lightning = new THREE.Line(lightningGeo, lightningMat);
+                sentinelLightningGroup.add(lightning);
+            }
+        } else if (sentinelLightningGroup) {
+            sentinelLightningGroup.clear();
         }
     }
 
@@ -2848,8 +2883,12 @@ function initSSE() {
                     }
                     if (id === 'SE-007') { 
                         const v = document.getElementById('val-sentinel-validated'); if(v) v.innerText = agentData.validated || 0;
-                        const s = document.getElementById('val-sentinel-synapses'); if(s) s.innerText = agentData.synapses || (agentData.processed || 0);
+                        const s = document.getElementById('val-sentinel-synapses'); 
+                        if(s) s.innerText = agentData.super_synapses || 0;
+                        
                         if (agentData.is_validating) sentinelFlashTime = 180; 
+                        if (agentData.is_supersynapse) sentinelLightningTime = 180; // 3 Seconds of Lightning
+
                         sentinelTargetPos.set(agentData.pos.x * exp, agentData.pos.y * exp, agentData.pos.z * exp);
                     }
                     if (id === 'SY-009') {
