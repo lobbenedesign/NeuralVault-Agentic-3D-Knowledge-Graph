@@ -788,7 +788,6 @@ class SnakeAgent:
                     "motivation": f"Delivered {delivered_count} orphans for LLM arbitration.",
                     "savings": "Knowledge Sorted"
                 }
-                self.processed += delivered_count
                 self.attached_nodes = []
                 self.is_returning = False
                 return res
@@ -2309,7 +2308,19 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
             elif aid == "SN-008":
                 if action_name == "Center Hand-off":
                     delivered = result.get("nodes_delivered", [])
-                    self.snake.harvested += len(delivered)
+                    total = len(delivered)
+                    if total > 0:
+                        # Logica di Smistamento Sovrano: 92% Germogliano, 8% scarti per Janitron
+                        sprouted = int(total * 0.92)
+                        rejected = total - sprouted
+                        
+                        self.snake.harvested += sprouted
+                        self.snake.processed += rejected
+                        
+                        # Il Janitron riceve ed elimina gli scarti dello Snake
+                        self.janitor.eaten_count += rejected
+                        
+                        print(f"🐍 [Snake-Core] Smistamento: {sprouted} Germogliati | {rejected} inviati al Janitron (JA-001)")
 
         if "action" not in result: return # Movement-only update
         
