@@ -1535,7 +1535,7 @@ class SkyWalkerAgent:
             "status": self.status,
             "web_hits": self.web_hits,
             "hits": self.web_hits,
-            "nodes": self.nodes_created,
+            "nodes_created": self.nodes_created,
             "laser_active": self.laser_active
         }
 
@@ -2563,6 +2563,7 @@ Rispondi ESCLUSIVAMENTE in formato JSON:
                     "status": "Active",
                     "found": self.snake.found,
                     "crafted": self.snake.harvested,
+                    "nodes_created": self.snake.harvested,
                     "deleted": self.snake.processed
                 },
                 "SY-009": {

@@ -3555,7 +3555,7 @@ const NEURAL_LANG_PACK = {
     "stat_purged": ["Nodi Eliminati", "Nodes Eaten"],
     "stat_healed": ["Auto-Riparazione", "Self-Heal"],
     "stat_found": ["Nodi Trovati", "Nodes Found"],
-    "stat_crafted": ["Nodi Creati", "Nodes Crafted"],
+    "stat_crafted": ["Nodi Germogliati", "Sprouted Nodes"],
     "stat_fused": ["Cluster Fusi", "Clusters Fused"],
     "stat_validated": ["Validati", "Validated"],
     "stat_bridges": ["Super-Ponti", "Super-Bridges"],
@@ -3871,6 +3871,7 @@ const NEURAL_LANG_PACK = {
     "label_critique": ["CR", "CR"],
     "label_polishing": ["PO", "PO"],
     "label_rgb_arcs": ["Archi RGB", "RGB Arcs"],
+    "label_nodes_added": ["Nodi Forgiati", "Nodes Forged"],
     "label_synaptic_integrity_check": ["Controllo Integrità Link Sinaptico: Verificato", "Synaptic Link Integrity Check: Verified"]
 };
 
